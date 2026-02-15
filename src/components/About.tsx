@@ -44,10 +44,10 @@ export default function About() {
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">
+            <h2 className="bg-linear-to-r from-foreground to-muted bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl">
               Two decades across
               <br />
-              <span className="text-accent-bright">every layer of the stack.</span>
+              <span className="bg-linear-to-r from-accent-bright to-accent bg-clip-text text-transparent">every layer of the stack.</span>
             </h2>
 
             <p className="mt-6 text-lg leading-relaxed text-muted">

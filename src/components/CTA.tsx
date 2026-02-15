@@ -18,7 +18,16 @@ export default function CTA() {
           {/* Background glow */}
           <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-accent/15 blur-[100px]" />
 
-          <h2 className="relative text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
+          {/* Circuit pattern */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.04]"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0v20M0 30h20M40 30h20M30 40v20' stroke='%2360a5fa' fill='none' stroke-width='1'/%3E%3Ccircle cx='30' cy='30' r='3' fill='%2360a5fa'/%3E%3Ccircle cx='30' cy='20' r='1.5' fill='%2360a5fa'/%3E%3Ccircle cx='20' cy='30' r='1.5' fill='%2360a5fa'/%3E%3Ccircle cx='40' cy='30' r='1.5' fill='%2360a5fa'/%3E%3Ccircle cx='30' cy='40' r='1.5' fill='%2360a5fa'/%3E%3C/svg%3E")`,
+              backgroundSize: "60px 60px",
+            }}
+          />
+
+          <h2 className="relative bg-linear-to-r from-foreground to-muted bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl lg:text-5xl">
             Ready to upgrade your<br />
             technology partner?
           </h2>

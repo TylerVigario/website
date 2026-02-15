@@ -1,9 +1,34 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useTransform, animate } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+
+function CountUp({ target, suffix = "" }: { target: number; suffix?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const count = useMotionValue(0);
+  const rounded = useTransform(count, (v) => `${Math.round(v)}${suffix}`);
+
+  useEffect(() => {
+    if (!ref.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !hasAnimated) {
+          setHasAnimated(true);
+          animate(count, target, { duration: 1.5, ease: "easeOut" });
+        }
+      },
+      { threshold: 0.5 }
+    );
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [count, target, hasAnimated]);
+
+  return <motion.span ref={ref}>{rounded}</motion.span>;
+}
 
 const credentials = [
-  { label: "21+ Years Experience", detail: "Writing code since 2005" },
+  { label: <><CountUp target={21} suffix="+" /> Years Experience</>, detail: "Writing code since 2005" },
   { label: "CompTIA A+ Certified", detail: "Self-studied, passed as a teen" },
   { label: "Pursuing BICSI", detail: "Commercial & institutional cabling" },
   { label: "Full Stack", detail: "Software through infrastructure" },
@@ -20,8 +45,8 @@ export default function Trust() {
           transition={{ duration: 0.6 }}
           className="grid grid-cols-2 gap-8 lg:grid-cols-4"
         >
-          {credentials.map((c) => (
-            <div key={c.label} className="text-center">
+          {credentials.map((c, i) => (
+            <div key={i} className="text-center">
               <div className="text-sm font-semibold uppercase tracking-wider text-accent-bright">
                 {c.label}
               </div>
