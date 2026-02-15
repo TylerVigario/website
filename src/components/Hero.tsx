@@ -26,19 +26,20 @@ export default function Hero() {
         >
           <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/5 px-4 py-1.5 text-sm text-accent-bright">
             <span className="h-2 w-2 rounded-full bg-accent-bright animate-pulse" />
-            Available for new projects
+            Accepting new contracts
           </div>
 
           <h1 className="text-5xl font-bold leading-tight tracking-tight sm:text-6xl lg:text-7xl">
-            Your tech is broken.
+            Enterprise-grade solutions.
             <br />
-            <span className="text-accent-bright">We fix it.</span>
+            <span className="text-accent-bright">Independent-scale attention.</span>
           </h1>
 
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted sm:text-xl">
-            Software development, network engineering, IT consulting &mdash;
-            if it runs on electricity, we solve it. No ticket queues,
-            no runaround. Just answers.
+            Custom software, network engineering, and IT strategy for
+            businesses that can&apos;t afford to get it wrong. 21 years of
+            hands-on experience &mdash; no layers of management between
+            you and the person doing the work.
           </p>
 
           <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -55,7 +56,7 @@ export default function Hero() {
               href="#services"
               className="flex items-center justify-center gap-2 rounded-xl border border-white/10 px-8 py-4 text-lg font-medium text-foreground transition-colors hover:border-white/20 hover:bg-surface-light"
             >
-              See what we do
+              Our services
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
                 <path fillRule="evenodd" d="M5.22 14.78a.75.75 0 001.06 0l7.22-7.22v5.69a.75.75 0 001.5 0v-7.5a.75.75 0 00-.75-.75h-7.5a.75.75 0 000 1.5h5.69l-7.22 7.22a.75.75 0 000 1.06z" clipRule="evenodd" />
               </svg>

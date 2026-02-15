@@ -19,12 +19,12 @@ export default function CTA() {
           <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-accent/15 blur-[100px]" />
 
           <h2 className="relative text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
-            Got a problem nobody<br />
-            else can solve?
+            Ready to upgrade your<br />
+            technology partner?
           </h2>
           <p className="relative mt-6 max-w-lg text-lg text-muted">
-            Skip the support ticket. Pick up the phone and talk to someone
-            who'll actually understand what you're dealing with.
+            No sales team, no account managers, no runaround. Talk directly
+            to the engineer who&apos;ll be doing the work.
           </p>
 
           <div className="relative mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">

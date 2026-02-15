@@ -3,18 +3,19 @@
 import { motion } from "framer-motion";
 
 const stats = [
-  { value: "21+", label: "Years of Experience" },
-  { value: "7", label: "Languages & Stacks" },
-  { value: "100%", label: "Problems Solved" },
+  { value: "21+", label: "Years in Technology" },
+  { value: "Full Stack", label: "Software to Infrastructure" },
+  { value: "BICSI", label: "Certification In Progress" },
 ];
 
 const timeline = [
-  { year: "2005", label: "Started coding with AutoIt at 14" },
-  { year: "2008", label: "Moved to C# and built desktop applications" },
-  { year: "2011", label: "PHP & full-stack web development" },
-  { year: "2015", label: "Deep dive into modern JavaScript & TypeScript" },
-  { year: "2020", label: "Network engineering & infrastructure" },
-  { year: "Now", label: "Vigario Technology Solutions — solving everything" },
+  { year: "2005", label: "First lines of code at 14 — self-taught from day one" },
+  { year: "2006", label: "Passed CompTIA A+ exam as a teenager, book study only" },
+  { year: "2008", label: "C# application development & desktop automation" },
+  { year: "2011", label: "Full-stack web — PHP, databases, server management" },
+  { year: "2015", label: "Modern JS/TS, enterprise web platforms & APIs" },
+  { year: "2020", label: "Network engineering, structured cabling & infrastructure" },
+  { year: "Now", label: "Vigario Technology Solutions — pursuing BICSI certification" },
 ];
 
 export default function About() {
@@ -33,22 +34,25 @@ export default function About() {
             transition={{ duration: 0.6 }}
           >
             <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">
-              21 years writing code.
+              Two decades across
               <br />
-              <span className="text-accent-bright">Zero unsolved problems.</span>
+              <span className="text-accent-bright">every layer of the stack.</span>
             </h2>
 
             <p className="mt-6 text-lg leading-relaxed text-muted">
-              I started programming at 14 — not because someone told me to,
-              but because I wanted to build things that didn't exist yet.
-              Two decades later, that hasn't changed.
+              Most firms hand you off to a junior tech reading from a
+              runbook. When you work with Vigario, you get the owner &mdash;
+              someone with 21 years of hands-on experience across software
+              development, network engineering, and IT infrastructure.
             </p>
 
             <p className="mt-4 text-lg leading-relaxed text-muted">
-              From low-level automation scripts to enterprise web platforms,
-              from network architecture to cloud infrastructure — I've touched
-              every layer of the stack. When you call Vigario, you get someone
-              who's actually done the work, not someone reading from a playbook.
+              I passed CompTIA A+ as a teenager from self-study alone.
+              I&apos;ve built everything from desktop automation tools to
+              enterprise web platforms. Now I&apos;m bringing that same
+              depth to commercial infrastructure &mdash; currently pursuing
+              BICSI certification for structured cabling in institutional
+              and commercial environments.
             </p>
 
             {/* Stats */}
