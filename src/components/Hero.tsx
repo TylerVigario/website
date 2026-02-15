@@ -2,6 +2,28 @@
 
 import { motion } from "framer-motion";
 
+const nodes = [
+  { x: 65, y: 20, size: 4, delay: 0 },
+  { x: 80, y: 35, size: 3, delay: 0.5 },
+  { x: 55, y: 45, size: 5, delay: 1 },
+  { x: 90, y: 55, size: 3, delay: 0.3 },
+  { x: 70, y: 65, size: 4, delay: 0.8 },
+  { x: 85, y: 18, size: 3, delay: 1.2 },
+  { x: 60, y: 75, size: 4, delay: 0.6 },
+  { x: 78, y: 80, size: 3, delay: 0.2 },
+  { x: 95, y: 40, size: 3, delay: 0.9 },
+  { x: 50, y: 30, size: 4, delay: 1.5 },
+  { x: 72, y: 50, size: 6, delay: 0.4 },
+  { x: 88, y: 70, size: 3, delay: 1.1 },
+];
+
+const connections = [
+  [0, 1], [0, 5], [1, 3], [1, 4], [2, 4],
+  [2, 9], [3, 8], [4, 6], [4, 10], [5, 8],
+  [6, 7], [7, 11], [10, 1], [10, 6], [9, 0],
+  [3, 11], [8, 5],
+];
+
 export default function Hero() {
   return (
     <section className="relative flex min-h-screen items-center overflow-hidden pt-20">
@@ -16,6 +38,80 @@ export default function Hero() {
 
       {/* Glow */}
       <div className="pointer-events-none absolute left-1/2 top-1/4 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-accent/10 blur-[120px]" />
+
+      {/* Network constellation */}
+      <div className="pointer-events-none absolute inset-0 hidden opacity-40 md:block">
+        <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
+          {/* Connection lines */}
+          {connections.map(([from, to], i) => (
+            <motion.line
+              key={`line-${i}`}
+              x1={nodes[from].x}
+              y1={nodes[from].y}
+              x2={nodes[to].x}
+              y2={nodes[to].y}
+              stroke="rgba(59, 130, 246, 0.12)"
+              strokeWidth="0.15"
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 1 }}
+              transition={{ duration: 1.5, delay: 0.5 + i * 0.08, ease: "easeOut" }}
+            />
+          ))}
+
+          {/* Data pulse along connections */}
+          {connections.filter((_, i) => i % 3 === 0).map(([from, to], i) => (
+            <motion.circle
+              key={`pulse-${i}`}
+              r="0.4"
+              fill="#60a5fa"
+              initial={{ opacity: 0 }}
+              animate={{
+                cx: [nodes[from].x, nodes[to].x],
+                cy: [nodes[from].y, nodes[to].y],
+                opacity: [0, 0.8, 0],
+              }}
+              transition={{
+                duration: 3,
+                delay: 2 + i * 1.5,
+                repeat: Infinity,
+                repeatDelay: 4 + i,
+                ease: "easeInOut",
+              }}
+            />
+          ))}
+
+          {/* Nodes */}
+          {nodes.map((node, i) => (
+            <g key={`node-${i}`}>
+              {/* Outer glow */}
+              <motion.circle
+                cx={node.x}
+                cy={node.y}
+                r={node.size * 0.6}
+                fill="rgba(96, 165, 250, 0.08)"
+                initial={{ scale: 0 }}
+                animate={{ scale: [1, 1.5, 1] }}
+                transition={{
+                  scale: { duration: 4, delay: node.delay + 1, repeat: Infinity, ease: "easeInOut" },
+                }}
+              />
+              {/* Core dot */}
+              <motion.circle
+                cx={node.x}
+                cy={node.y}
+                r={node.size * 0.25}
+                fill="#60a5fa"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: [0.4, 0.9, 0.4] }}
+                transition={{
+                  scale: { duration: 0.5, delay: node.delay },
+                  opacity: { duration: 3, delay: node.delay + 0.5, repeat: Infinity, ease: "easeInOut" },
+                }}
+              />
+            </g>
+          ))}
+        </svg>
+      </div>
 
       <div className="relative mx-auto max-w-6xl px-6">
         <motion.div

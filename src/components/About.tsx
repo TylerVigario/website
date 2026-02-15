@@ -21,10 +21,21 @@ const timeline = [
 export default function About() {
   return (
     <section id="about" className="relative py-16 lg:py-20">
-      {/* Subtle divider */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+      {/* Background image */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <img
+          src="/images/retro-tech.jpg"
+          alt=""
+          className="h-full w-full object-cover opacity-[0.07] grayscale"
+        />
+        <div className="absolute inset-0 bg-linear-to-b from-background via-transparent to-background" />
+        <div className="absolute inset-0 bg-linear-to-r from-background via-transparent to-background" />
+      </div>
 
-      <div className="mx-auto max-w-6xl px-6">
+      {/* Subtle divider */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-white/10 to-transparent" />
+
+      <div className="relative mx-auto max-w-6xl px-6">
         <div className="grid gap-10 lg:grid-cols-2 lg:items-start lg:gap-16">
           {/* Left — story */}
           <motion.div
@@ -80,7 +91,7 @@ export default function About() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="relative"
           >
-            <div className="absolute left-4 top-2 bottom-2 w-px bg-gradient-to-b from-accent/40 via-accent/20 to-transparent" />
+            <div className="absolute left-4 top-2 bottom-2 w-px bg-linear-to-b from-accent/40 via-accent/20 to-transparent" />
 
             <div className="space-y-8">
               {timeline.map((t, i) => (
