@@ -1,0 +1,86 @@
+"use client";
+
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
+const links = [
+  { label: "Services", href: "#services" },
+  { label: "About", href: "#about" },
+  { label: "Contact", href: "#contact" },
+];
+
+export default function Nav() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/80 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <a href="#" className="text-xl font-bold tracking-tight">
+          <span className="text-accent-bright">V</span>igario
+          <span className="ml-1 text-sm font-normal text-muted">Technology Solutions</span>
+        </a>
+
+        {/* Desktop */}
+        <div className="hidden items-center gap-8 md:flex">
+          {links.map((l) => (
+            <a
+              key={l.href}
+              href={l.href}
+              className="text-sm text-muted transition-colors hover:text-foreground"
+            >
+              {l.label}
+            </a>
+          ))}
+          <a
+            href="tel:+15599001400"
+            className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-bright"
+          >
+            (559) 900-1400
+          </a>
+        </div>
+
+        {/* Mobile toggle */}
+        <button
+          onClick={() => setOpen(!open)}
+          className="flex flex-col gap-1.5 md:hidden"
+          aria-label="Toggle menu"
+        >
+          <span className={`h-0.5 w-6 bg-foreground transition-transform ${open ? "translate-y-2 rotate-45" : ""}`} />
+          <span className={`h-0.5 w-6 bg-foreground transition-opacity ${open ? "opacity-0" : ""}`} />
+          <span className={`h-0.5 w-6 bg-foreground transition-transform ${open ? "-translate-y-2 -rotate-45" : ""}`} />
+        </button>
+      </div>
+
+      {/* Mobile menu */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden border-t border-white/5 md:hidden"
+          >
+            <div className="flex flex-col gap-4 px-6 py-6">
+              {links.map((l) => (
+                <a
+                  key={l.href}
+                  href={l.href}
+                  onClick={() => setOpen(false)}
+                  className="text-muted transition-colors hover:text-foreground"
+                >
+                  {l.label}
+                </a>
+              ))}
+              <a
+                href="tel:+15599001400"
+                className="mt-2 rounded-lg bg-accent px-5 py-3 text-center font-semibold text-white"
+              >
+                (559) 900-1400
+              </a>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </nav>
+  );
+}
