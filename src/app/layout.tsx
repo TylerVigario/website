@@ -14,7 +14,19 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Vigario Technology Solutions",
-  description: "We solve the tech problems others can't. Custom software, IT consulting, network engineering, and more.",
+  description: "Enterprise-grade IT services with independent-scale attention. Custom software, network engineering, and IT strategy for businesses in Fresno, CA and nationwide.",
+  metadataBase: new URL("https://vigario.tech"),
+  openGraph: {
+    title: "Vigario Technology Solutions",
+    description: "Enterprise-grade IT services with independent-scale attention. Custom software, network engineering, and IT strategy.",
+    url: "https://vigario.tech",
+    siteName: "Vigario Technology Solutions",
+    locale: "en_US",
+    type: "website",
+  },
+  other: {
+    "theme-color": "#0a0a0f",
+  },
 };
 
 export default function RootLayout({

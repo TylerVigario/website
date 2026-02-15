@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-
 const stats = [
   { value: "21+", label: "Years in Technology" },
   { value: "Full Stack", label: "Software to Infrastructure" },
