@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 export default function CTA() {
   return (
-    <section className="relative py-32">
+    <section className="relative pb-8 pt-16 lg:py-20">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
       <div className="mx-auto max-w-6xl px-6">
@@ -13,7 +13,7 @@ export default function CTA() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6 }}
-          className="relative overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-br from-accent/10 via-surface to-surface p-12 sm:p-16 lg:p-20"
+          className="relative overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-br from-accent/10 via-surface to-surface p-8 sm:p-12 lg:p-20"
         >
           {/* Background glow */}
           <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-accent/15 blur-[100px]" />

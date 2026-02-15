@@ -11,7 +11,7 @@ const credentials = [
 
 export default function Trust() {
   return (
-    <section className="relative border-y border-white/5 bg-surface py-14">
+    <section className="relative border-y border-white/5 bg-surface py-10 lg:py-14">
       <div className="mx-auto max-w-6xl px-6">
         <motion.div
           initial={{ opacity: 0 }}

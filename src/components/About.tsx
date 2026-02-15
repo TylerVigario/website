@@ -20,12 +20,12 @@ const timeline = [
 
 export default function About() {
   return (
-    <section id="about" className="relative py-32">
+    <section id="about" className="relative py-16 lg:py-20">
       {/* Subtle divider */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
       <div className="mx-auto max-w-6xl px-6">
-        <div className="grid gap-16 lg:grid-cols-2 lg:items-start">
+        <div className="grid gap-10 lg:grid-cols-2 lg:items-start lg:gap-16">
           {/* Left — story */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}

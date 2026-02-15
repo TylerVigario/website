@@ -74,14 +74,14 @@ const item = {
 
 export default function Services() {
   return (
-    <section id="services" className="relative py-32">
+    <section id="services" className="relative py-16 lg:py-20">
       <div className="mx-auto max-w-6xl px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6 }}
-          className="mb-16"
+          className="mb-10 lg:mb-16"
         >
           <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">
             Services
