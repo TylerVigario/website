@@ -43,7 +43,7 @@ export default function About() {
             viewport={{ once: true, margin: "-100px" }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="bg-linear-to-r from-foreground to-muted bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl">
+            <h2 className="bg-linear-to-r from-foreground to-muted bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl md:text-5xl">
               Two decades across
               <br />
               <span className="bg-linear-to-r from-accent-bright to-accent bg-clip-text text-transparent">every layer of the stack.</span>
@@ -66,7 +66,7 @@ export default function About() {
             </p>
 
             {/* Stats */}
-            <div className="mt-10 flex gap-10">
+            <div className="mt-10 grid grid-cols-3 gap-4 sm:flex sm:gap-10">
               {stats.map((s) => (
                 <motion.div
                   key={s.label}
@@ -75,8 +75,8 @@ export default function About() {
                   viewport={{ once: true }}
                   transition={{ duration: 0.5 }}
                 >
-                  <div className="text-3xl font-bold text-accent-bright">{s.value}</div>
-                  <div className="mt-1 text-sm text-muted">{s.label}</div>
+                  <div className="text-2xl font-bold text-accent-bright sm:text-3xl">{s.value}</div>
+                  <div className="mt-1 text-xs text-muted sm:text-sm">{s.label}</div>
                 </motion.div>
               ))}
             </div>

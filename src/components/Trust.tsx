@@ -43,7 +43,7 @@ export default function Trust() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true, margin: "-50px" }}
           transition={{ duration: 0.6 }}
-          className="grid grid-cols-2 gap-8 lg:grid-cols-4"
+          className="grid grid-cols-2 gap-x-6 gap-y-6 sm:gap-8 lg:grid-cols-4"
         >
           {credentials.map((c, i) => (
             <div key={i} className="text-center">

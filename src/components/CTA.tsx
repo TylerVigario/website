@@ -27,7 +27,7 @@ export default function CTA() {
             }}
           />
 
-          <h2 className="relative bg-linear-to-r from-foreground to-muted bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl lg:text-5xl">
+          <h2 className="relative bg-linear-to-r from-foreground to-muted bg-clip-text text-2xl font-bold tracking-tight text-transparent sm:text-4xl lg:text-5xl">
             Ready to upgrade your<br />
             technology partner?
           </h2>
@@ -39,7 +39,7 @@ export default function CTA() {
           <div className="relative mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
             <a
               href="tel:+15599001400"
-              className="group inline-flex items-center justify-center gap-3 rounded-xl bg-accent px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-accent-bright hover:shadow-lg hover:shadow-accent/25"
+              className="group inline-flex items-center justify-center gap-3 rounded-xl bg-accent px-6 py-3 text-base font-semibold text-white transition-all sm:px-8 sm:py-4 sm:text-lg hover:bg-accent-bright hover:shadow-lg hover:shadow-accent/25"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden="true">
                 <path fillRule="evenodd" d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z" clipRule="evenodd" />

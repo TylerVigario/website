@@ -83,7 +83,7 @@ export default function Services() {
           transition={{ duration: 0.6 }}
           className="mb-10 lg:mb-16"
         >
-          <h2 className="bg-linear-to-r from-foreground to-muted bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl">
+          <h2 className="bg-linear-to-r from-foreground to-muted bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl md:text-5xl">
             Services
           </h2>
           <p className="mt-4 max-w-xl text-lg text-muted">
@@ -104,7 +104,7 @@ export default function Services() {
             <motion.div
               key={s.title}
               variants={item}
-              className="group rounded-2xl border border-white/5 bg-surface-light p-8 transition-all hover:border-accent/20 hover:-translate-y-1 hover:shadow-lg hover:shadow-accent/5"
+              className="group rounded-2xl border border-white/5 bg-surface-light p-6 transition-all sm:p-8 hover:border-accent/20 hover:-translate-y-1 hover:shadow-lg hover:shadow-accent/5"
             >
               <div className="mb-5 inline-flex rounded-xl bg-accent/10 p-3 text-accent-bright">
                 {s.icon}

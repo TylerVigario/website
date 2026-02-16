@@ -125,23 +125,23 @@ export default function Hero() {
             Accepting new contracts
           </div>
 
-          <h1 className="text-5xl font-bold leading-tight tracking-tight sm:text-6xl lg:text-7xl">
+          <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
             Enterprise-grade solutions.
             <br />
             <span className="text-accent-bright">Independent-scale attention.</span>
           </h1>
 
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted sm:text-xl">
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-muted sm:mt-6 sm:text-lg md:text-xl">
             Custom software, network engineering, and IT strategy for
             businesses that can&apos;t afford to get it wrong. 21 years of
             hands-on experience &mdash; no layers of management between
             you and the person doing the work.
           </p>
 
-          <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:items-center sm:gap-4">
             <a
               href="tel:+15599001400"
-              className="group flex items-center justify-center gap-3 rounded-xl bg-accent px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-accent-bright hover:shadow-lg hover:shadow-accent/25"
+              className="group flex items-center justify-center gap-3 rounded-xl bg-accent px-6 py-3 text-base font-semibold text-white transition-all sm:px-8 sm:py-4 sm:text-lg hover:bg-accent-bright hover:shadow-lg hover:shadow-accent/25"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5" aria-hidden="true">
                 <path fillRule="evenodd" d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z" clipRule="evenodd" />
@@ -150,7 +150,7 @@ export default function Hero() {
             </a>
             <a
               href="#services"
-              className="flex items-center justify-center gap-2 rounded-xl border border-white/10 px-8 py-4 text-lg font-medium text-foreground transition-colors hover:border-white/20 hover:bg-surface-light"
+              className="flex items-center justify-center gap-2 rounded-xl border border-white/10 px-6 py-3 text-base font-medium text-foreground transition-colors sm:px-8 sm:py-4 sm:text-lg hover:border-white/20 hover:bg-surface-light"
             >
               Our services
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden="true">
