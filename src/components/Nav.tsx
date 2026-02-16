@@ -42,7 +42,7 @@ export default function Nav() {
             e.preventDefault();
             window.scrollTo({ top: 0, behavior: "smooth" });
           }}
-          className="flex items-center"
+          className="flex items-center py-1.5"
         >
           <img
             src="/images/VTS Main Logo.png"
@@ -57,7 +57,7 @@ export default function Nav() {
             <a
               key={l.href}
               href={l.href}
-              className={`text-sm transition-colors hover:text-foreground ${
+              className={`py-3 text-sm transition-colors hover:text-foreground ${
                 active === l.href ? "text-accent font-medium" : "text-muted"
               }`}
             >
@@ -66,7 +66,7 @@ export default function Nav() {
           ))}
           <a
             href="tel:+15599001400"
-            className="rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-bright"
+            className="rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-bright"
           >
             (559) 900-1400
           </a>
@@ -75,7 +75,7 @@ export default function Nav() {
         {/* Mobile toggle */}
         <button
           onClick={() => setOpen(!open)}
-          className="flex flex-col gap-1.5 md:hidden"
+          className="flex min-h-11 min-w-11 flex-col items-center justify-center gap-1.5 p-3 md:hidden"
           aria-label="Toggle menu"
         >
           <span className={`h-0.5 w-6 bg-foreground transition-transform ${open ? "translate-y-2 rotate-45" : ""}`} />
@@ -99,7 +99,7 @@ export default function Nav() {
                   key={l.href}
                   href={l.href}
                   onClick={() => setOpen(false)}
-                  className={`transition-colors hover:text-foreground ${
+                  className={`py-2.5 transition-colors hover:text-foreground ${
                     active === l.href ? "text-accent font-medium" : "text-muted"
                   }`}
                 >
