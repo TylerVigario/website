@@ -45,7 +45,7 @@ export default function RootLayout({
       >
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-100 focus:rounded-lg focus:bg-accent focus:px-4 focus:py-3 focus:text-white focus:outline-none"
+          className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-2 focus-visible:left-2 focus-visible:z-100 focus-visible:rounded-lg focus-visible:bg-accent focus-visible:px-4 focus-visible:py-3 focus-visible:text-white focus-visible:outline-none"
         >
           Skip to content
         </a>
