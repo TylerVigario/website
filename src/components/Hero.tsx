@@ -5,7 +5,7 @@ import Image from "next/image";
 
 export default function Hero() {
   return (
-    <section className="relative flex items-center overflow-hidden pt-20 pb-12 sm:pb-16 lg:pb-20 lg:pt-32">
+    <section className="relative flex items-center overflow-hidden pt-24 pb-12 sm:pb-16 lg:pb-20 lg:pt-32">
       {/* Soft decorative gradient */}
       <div className="pointer-events-none absolute -top-40 right-0 h-[600px] w-[600px] rounded-full bg-accent/5 blur-[120px]" />
 
@@ -60,7 +60,7 @@ export default function Hero() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
-            className="relative w-full max-w-sm lg:max-w-md lg:shrink-0"
+            className="relative hidden w-full max-w-sm sm:block lg:max-w-md lg:shrink-0"
           >
             <div className="relative overflow-hidden rounded-2xl shadow-2xl shadow-navy/10 max-h-112 lg:max-h-128">
               <Image

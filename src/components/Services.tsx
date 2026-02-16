@@ -74,7 +74,7 @@ const item = {
 
 export default function Services() {
   return (
-    <section id="services" className="relative scroll-mt-20 bg-surface py-16 lg:py-20">
+    <section id="services" className="relative scroll-mt-24 bg-surface py-16 lg:py-20">
       <div className="mx-auto max-w-6xl px-6">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

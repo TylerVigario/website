@@ -80,7 +80,7 @@ export default function CTA() {
   }
 
   return (
-    <section id="contact" className="relative scroll-mt-20 pb-8 pt-16 lg:py-20">
+    <section id="contact" className="relative scroll-mt-24 pb-8 pt-16 lg:py-20">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-border to-transparent" />
 
       <div className="mx-auto max-w-6xl px-6">
