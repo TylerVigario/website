@@ -14,11 +14,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Vigario Technology Solutions | IT Services in Fresno, CA",
-  description: "Local IT shop in Fresno, CA — networking, cameras, cabling, servers, and custom software. Full-stack tech help backed by 20+ years of experience.",
+  description: "Local IT shop in Fresno, CA — networking, cameras, cabling, servers, and custom software. Full-stack tech help backed by 20+ years of hands-on experience.",
   metadataBase: new URL("https://tylervigario.com"),
   openGraph: {
     title: "Vigario Technology Solutions | IT Services in Fresno, CA",
-    description: "Local IT shop in Fresno, CA — networking, cameras, cabling, servers, and custom software. Full-stack tech help backed by 20+ years of experience.",
+    description: "Local IT shop in Fresno, CA — networking, cameras, cabling, servers, and custom software. Full-stack tech help backed by 20+ years of hands-on experience.",
     url: "https://tylervigario.com",
     siteName: "Vigario Technology Solutions",
     locale: "en_US",
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Vigario Technology Solutions | IT Services in Fresno, CA",
-    description: "Local IT shop in Fresno, CA — networking, cameras, cabling, servers, and custom software. Full-stack tech help backed by 20+ years of experience.",
+    description: "Local IT shop in Fresno, CA — networking, cameras, cabling, servers, and custom software. Full-stack tech help backed by 20+ years of hands-on experience.",
   },
   other: {
     "theme-color": "#fafaf9",

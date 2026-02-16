@@ -26,7 +26,7 @@ export default function About() {
             className="lg:col-span-2"
           >
             <h2 className="text-3xl font-bold tracking-tight text-navy sm:text-4xl md:text-5xl">
-              Small team. No runaround.
+              We build. We don&apos;t resell.
             </h2>
 
             <div className="mt-8 space-y-5">
@@ -48,10 +48,9 @@ export default function About() {
               </p>
 
               <p className="text-lg leading-relaxed text-muted">
-                We know every client we take on is trusting us with something
-                that matters to them. That&apos;s not lost on us &mdash; it&apos;s
-                why we treat every project like our reputation depends on it.
-                Because it does.
+                We&apos;re not a vendor collecting a toll &mdash; we&apos;re
+                builders who stake our name on every project. No layers, no
+                ticket queues, no runaround.
               </p>
             </div>
           </motion.div>
