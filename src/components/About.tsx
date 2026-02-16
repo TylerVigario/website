@@ -34,7 +34,7 @@ export default function About() {
                 VTS launched in 2021, but our founder&apos;s been in the
                 game since 2005 &mdash; starting with web and server work. Clients
                 like{" "}
-                <a href="https://bravofarms.com" target="_blank" rel="noopener" className="font-medium text-foreground underline decoration-accent/30 hover:text-accent transition-colors">Bravo Farms</a>{" "}
+                <a href="https://bravofarms.com" target="_blank" rel="noopener noreferrer" className="font-medium text-foreground underline decoration-accent/30 hover:text-accent transition-colors">Bravo Farms</a>{" "}
                 kept asking for more &mdash; networking, security cameras,
                 structured cabling &mdash; so we invested in the tools and
                 training to do it all properly. Most IT shops don&apos;t write

@@ -4,7 +4,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
       url: "https://tylervigario.com",
-      lastModified: new Date(),
+      lastModified: "2026-02-16",
       changeFrequency: "monthly",
       priority: 1,
     },

@@ -5,8 +5,8 @@ export default function Footer() {
     <footer className="border-t border-border py-8 sm:py-12">
       <div className="mx-auto max-w-6xl px-6">
         <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
-          <div className="text-center md:text-left">
-            <a href="#" className="inline-block py-2">
+          <address className="not-italic text-center md:text-left">
+            <a href="/" className="inline-block py-2">
               <Image
                 src="/images/vts-logo.png"
                 alt="Vigario Technology Solutions"
@@ -18,7 +18,7 @@ export default function Footer() {
             <p className="mt-2 text-sm text-muted">
               Fresno, CA &middot; Available remotely nationwide
             </p>
-          </div>
+          </address>
 
           <div className="flex flex-col items-center gap-3 text-sm text-muted md:flex-row md:gap-6">
             <a href="tel:+15599001400" className="py-3 transition-colors hover:text-foreground">

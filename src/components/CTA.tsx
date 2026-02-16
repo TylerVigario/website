@@ -168,6 +168,7 @@ export default function CTA() {
                       id="name"
                       type="text"
                       required
+                      autoComplete="name"
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
                       className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground placeholder:text-muted/60 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
@@ -183,6 +184,7 @@ export default function CTA() {
                       id="contact"
                       type="text"
                       required
+                      autoComplete="email"
                       value={form.contact}
                       onChange={(e) => setForm({ ...form, contact: e.target.value })}
                       className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground placeholder:text-muted/60 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"

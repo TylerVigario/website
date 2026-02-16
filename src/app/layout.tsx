@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   title: "Vigario Technology Solutions | IT Services in Fresno, CA",
   description: "Local IT shop in Fresno, CA — networking, cameras, cabling, servers, and custom software. Full-stack tech help backed by 20+ years of hands-on experience.",
   metadataBase: new URL("https://tylervigario.com"),
+  alternates: {
+    canonical: "https://tylervigario.com",
+  },
   openGraph: {
     title: "Vigario Technology Solutions | IT Services in Fresno, CA",
     description: "Local IT shop in Fresno, CA — networking, cameras, cabling, servers, and custom software. Full-stack tech help backed by 20+ years of hands-on experience.",

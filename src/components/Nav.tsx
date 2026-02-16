@@ -38,7 +38,7 @@ export default function Nav() {
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
         <a
-          href="#"
+          href="/"
           onClick={(e) => {
             e.preventDefault();
             window.scrollTo({ top: 0, behavior: "smooth" });
@@ -80,6 +80,7 @@ export default function Nav() {
           onClick={() => setOpen(!open)}
           className="flex min-h-11 min-w-11 flex-col items-center justify-center gap-1.5 p-3 md:hidden"
           aria-label="Toggle menu"
+          aria-expanded={open}
         >
           <span className={`h-0.5 w-6 bg-foreground transition-transform ${open ? "translate-y-2 rotate-45" : ""}`} />
           <span className={`h-0.5 w-6 bg-foreground transition-opacity ${open ? "opacity-0" : ""}`} />
