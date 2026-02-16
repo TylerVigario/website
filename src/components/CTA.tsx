@@ -189,11 +189,11 @@ export default function CTA() {
                   </div>
 
                   <div>
-                    <label htmlFor="contact" className="mb-1.5 block text-sm font-medium text-foreground">
+                    <label htmlFor="contact-info" className="mb-1.5 block text-sm font-medium text-foreground">
                       Phone or email
                     </label>
                     <input
-                      id="contact"
+                      id="contact-info"
                       type="text"
                       required
                       autoComplete="email"
