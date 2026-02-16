@@ -30,7 +30,7 @@ export default function Hero() {
             <p className="mt-4 max-w-xl text-base leading-relaxed text-muted sm:mt-6 sm:text-lg">
               From pulling cable to building custom software, we handle the full
               stack &mdash; and we actually pick up the phone. Based in the
-              Central Valley, serving clients since 2005.
+              Central Valley, backed by 20+ years of experience.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:items-center sm:gap-4">

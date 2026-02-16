@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 
 const credentials = [
-  { value: "Since 2005", label: "20+ Years in the Field" },
+  { value: "Since 2005", label: "20+ Years in Tech" },
   { value: "Full Stack", label: "Software to Infrastructure" },
   { value: "Founder-Led", label: "Real Accountability" },
   { value: "Central Valley", label: "On-Site & Remote" },
@@ -31,7 +31,8 @@ export default function About() {
 
             <div className="mt-8 space-y-5">
               <p className="text-lg leading-relaxed text-muted">
-                VTS started in 2005 doing web and server work. Clients
+                VTS launched in 2021, but our founder&apos;s been in the
+                game since 2005 &mdash; starting with web and server work. Clients
                 like{" "}
                 <a href="https://bravofarms.com" target="_blank" rel="noopener" className="font-medium text-foreground underline decoration-accent/30 hover:text-accent transition-colors">Bravo Farms</a>{" "}
                 kept asking for more &mdash; networking, security cameras,
