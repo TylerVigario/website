@@ -14,18 +14,18 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Vigario Technology Solutions",
-  description: "Enterprise-grade IT services with independent-scale attention. Custom software, network engineering, and IT strategy for businesses in Fresno, CA and nationwide.",
+  description: "Friendly, experienced tech help for homes and businesses in Fresno, CA and beyond. Networking, security cameras, cabling, computer repair, and more from someone who's been at it for 21 years.",
   metadataBase: new URL("https://vigario.tech"),
   openGraph: {
     title: "Vigario Technology Solutions",
-    description: "Enterprise-grade IT services with independent-scale attention. Custom software, network engineering, and IT strategy.",
+    description: "Friendly, experienced tech help for homes and businesses in Fresno and beyond. Networking, security cameras, cabling, computer repair, and more.",
     url: "https://vigario.tech",
     siteName: "Vigario Technology Solutions",
     locale: "en_US",
     type: "website",
   },
   other: {
-    "theme-color": "#0a0a0f",
+    "theme-color": "#fafaf9",
   },
 };
 
@@ -35,7 +35,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased overflow-x-hidden`}
       >

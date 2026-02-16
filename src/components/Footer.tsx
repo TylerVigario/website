@@ -1,14 +1,17 @@
 export default function Footer() {
   return (
-    <footer className="border-t border-white/5 py-8 sm:py-12">
+    <footer className="border-t border-border py-8 sm:py-12">
       <div className="mx-auto max-w-6xl px-6">
         <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
           <div className="text-center md:text-left">
-            <div className="text-lg font-bold tracking-tight">
-              <span className="text-accent-bright">V</span>igario
-              <span className="ml-1 text-sm font-normal text-muted">Technology Solutions</span>
-            </div>
-            <p className="mt-1 text-sm text-muted">
+            <a href="#" className="inline-block">
+              <img
+                src="/images/VTS Black Logo.png"
+                alt="Vigario Technology Solutions"
+                className="h-7 w-auto"
+              />
+            </a>
+            <p className="mt-2 text-sm text-muted">
               Fresno, CA &middot; Available remotely nationwide
             </p>
           </div>
@@ -17,11 +20,11 @@ export default function Footer() {
             <a href="tel:+15599001400" className="transition-colors hover:text-foreground">
               (559) 900-1400
             </a>
-            <span className="hidden text-white/10 md:inline">|</span>
+            <span className="hidden text-border md:inline">|</span>
             <a href="mailto:tyler@vigario.tech" className="transition-colors hover:text-foreground">
               tyler@vigario.tech
             </a>
-            <span className="hidden text-white/10 md:inline">|</span>
+            <span className="hidden text-border md:inline">|</span>
             <a
               href="https://github.com/tylervigario"
               target="_blank"
@@ -33,7 +36,7 @@ export default function Footer() {
               </svg>
               GitHub
             </a>
-            <span className="hidden text-white/10 md:inline">|</span>
+            <span className="hidden text-border md:inline">|</span>
             <a
               href="https://g.co/kgs/wyVQ2pD"
               target="_blank"

@@ -13,11 +13,14 @@ export default function Nav() {
   const [open, setOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-background/80 backdrop-blur-xl">
+    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <a href="#" className="text-xl font-bold tracking-tight">
-          <span className="text-accent-bright">V</span>igario
-          <span className="ml-1 text-sm font-normal text-muted">Technology Solutions</span>
+        <a href="#" className="flex items-center">
+          <img
+            src="/images/VTS Black Logo.png"
+            alt="Vigario Technology Solutions"
+            className="h-8 w-auto"
+          />
         </a>
 
         {/* Desktop */}
@@ -58,7 +61,7 @@ export default function Nav() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-t border-white/5 md:hidden"
+            className="overflow-hidden border-t border-border md:hidden"
           >
             <div className="flex flex-col gap-4 px-6 py-6">
               {links.map((l) => (

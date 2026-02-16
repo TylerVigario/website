@@ -4,26 +4,8 @@ import { motion } from "framer-motion";
 
 const services = [
   {
-    title: "Custom Software Development",
-    desc: "Line-of-business applications, workflow automation, and integrations built for your operations. When off-the-shelf can't keep up, we engineer what you actually need.",
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-7 w-7" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
-      </svg>
-    ),
-  },
-  {
-    title: "IT Strategy & Consulting",
-    desc: "Technology roadmaps, vendor evaluation, and infrastructure planning for organizations scaling past their current setup. Straight talk, no sales pitch.",
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-7 w-7" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
-      </svg>
-    ),
-  },
-  {
-    title: "Network Engineering",
-    desc: "Structured cabling, switching, routing, firewalls, and wireless for commercial environments. Designed to spec, documented to standard, built to last.",
+    title: "WiFi & Networking",
+    desc: "Home or business, I'll get your network running fast and reliably. Setup, troubleshooting, upgrades — whatever you need to stay connected.",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-7 w-7" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z" />
@@ -31,30 +13,48 @@ const services = [
     ),
   },
   {
-    title: "Security & Compliance",
-    desc: "Risk assessments, security hardening, and compliance preparation for regulated industries. We help you meet the requirements before the audit shows up.",
+    title: "Security Cameras",
+    desc: "Keep an eye on what matters. I install and configure camera systems so you can check in from anywhere, anytime.",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-7 w-7" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
       </svg>
     ),
   },
   {
-    title: "Cloud & Infrastructure",
-    desc: "Cloud migrations, hybrid deployments, and infrastructure-as-code. Whether you're moving to the cloud or managing what's on-prem, we architect it right.",
+    title: "Point-of-Sale Systems",
+    desc: "POS setup, integration, and support for retail, restaurants, and service businesses. I'll get your registers running smoothly.",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-7 w-7" aria-hidden="true">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
       </svg>
     ),
   },
   {
-    title: "Managed IT Support",
-    desc: "Proactive monitoring, maintenance, and rapid response for your critical systems. One point of contact who already knows your environment.",
+    title: "Low-Voltage Cabling",
+    desc: "Structured cabling, cable runs, patch panels, and terminations done right. Clean installs, properly labeled, built to last.",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-7 w-7" aria-hidden="true">
         <path strokeLinecap="round" strokeLinejoin="round" d="M11.42 15.17l-5.1-3.06a.75.75 0 010-1.28l5.1-3.06a.75.75 0 011.08.67v6.06a.75.75 0 01-1.08.67z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 7.5v9m0 0l-3-3m3 3l3-3" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m8.25 3v6.75m0 0l-3-3m3 3l3-3M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+      </svg>
+    ),
+  },
+  {
+    title: "Computer & Server Repair",
+    desc: "Custom builds, upgrades, diagnostics, and repairs for desktops, laptops, and servers. I'll figure out what's wrong and fix it.",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-7 w-7" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 5.25z" />
+      </svg>
+    ),
+  },
+  {
+    title: "Home Theater & Smart Home",
+    desc: "Audio, video, and smart home automation set up the way you want it. I'll make everything work together so you don't have to think about it.",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-7 w-7" aria-hidden="true">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545m0 6.205l3 1m1.5.5l-1.5-.5M6.75 7.364V3h-3v18m3-13.636l10.5-3.819" />
       </svg>
     ),
   },
@@ -83,13 +83,12 @@ export default function Services() {
           transition={{ duration: 0.6 }}
           className="mb-10 lg:mb-16"
         >
-          <h2 className="bg-linear-to-r from-foreground to-muted bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl md:text-5xl">
-            Services
+          <h2 className="text-3xl font-bold tracking-tight text-navy sm:text-4xl md:text-5xl">
+            Here&apos;s what I do
           </h2>
           <p className="mt-4 max-w-xl text-lg text-muted">
-            Transparent pricing &mdash; flat hourly rate plus materials.
-            No retainers, no surprise invoices, no nickel-and-diming.
-            Every engagement scoped upfront.
+            Flat hourly rate, no retainers, no surprises. I&apos;ll scope it
+            out before we start so you know exactly what you&apos;re getting.
           </p>
         </motion.div>
 
@@ -104,12 +103,12 @@ export default function Services() {
             <motion.div
               key={s.title}
               variants={item}
-              className="group rounded-2xl border border-white/5 bg-surface-light p-6 transition-all sm:p-8 hover:border-accent/20 hover:-translate-y-1 hover:shadow-lg hover:shadow-accent/5"
+              className="group rounded-2xl border border-border bg-surface-light p-6 transition-all sm:p-8 hover:border-accent/30 hover:-translate-y-1 hover:shadow-lg"
             >
-              <div className="mb-5 inline-flex rounded-xl bg-accent/10 p-3 text-accent-bright">
+              <div className="mb-5 inline-flex rounded-xl bg-accent-soft p-3 text-accent">
                 {s.icon}
               </div>
-              <h3 className="mb-3 text-xl font-semibold">{s.title}</h3>
+              <h3 className="mb-3 text-xl font-semibold text-navy">{s.title}</h3>
               <p className="leading-relaxed text-muted">{s.desc}</p>
             </motion.div>
           ))}
