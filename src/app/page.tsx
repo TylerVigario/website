@@ -68,6 +68,17 @@ const jsonLd = {
     "https://github.com/tylervigario",
     "https://g.co/kgs/wyVQ2pD",
   ],
+  slogan: "IT that writes code.",
+  knowsAbout: [
+    "Network Infrastructure",
+    "Wireless Networking",
+    "Video Surveillance Systems",
+    "Structured Cabling",
+    "Server Administration",
+    "Cloud Infrastructure",
+    "Custom Web Applications",
+    "IT Consulting",
+  ],
   priceRange: "$$",
 };
 
