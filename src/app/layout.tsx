@@ -39,6 +39,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased overflow-x-hidden`}
       >
+        <a
+          href="#services"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-100 focus:rounded-lg focus:bg-accent focus:px-4 focus:py-2 focus:text-white focus:outline-none"
+        >
+          Skip to content
+        </a>
         {children}
       </body>
     </html>

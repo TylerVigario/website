@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const links = [
@@ -11,11 +11,39 @@ const links = [
 
 export default function Nav() {
   const [open, setOpen] = useState(false);
+  const [active, setActive] = useState("");
+
+  useEffect(() => {
+    const sections = links.map((l) =>
+      document.querySelector(l.href) as HTMLElement | null
+    ).filter(Boolean) as HTMLElement[];
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setActive(`#${entry.target.id}`);
+          }
+        }
+      },
+      { rootMargin: "-40% 0px -55% 0px" }
+    );
+
+    sections.forEach((s) => observer.observe(s));
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <a href="#" className="flex items-center">
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          className="flex items-center"
+        >
           <img
             src="/images/VTS Main Logo.png"
             alt="Vigario Technology Solutions"
@@ -29,7 +57,9 @@ export default function Nav() {
             <a
               key={l.href}
               href={l.href}
-              className="text-sm text-muted transition-colors hover:text-foreground"
+              className={`text-sm transition-colors hover:text-foreground ${
+                active === l.href ? "text-accent font-medium" : "text-muted"
+              }`}
             >
               {l.label}
             </a>
@@ -69,13 +99,16 @@ export default function Nav() {
                   key={l.href}
                   href={l.href}
                   onClick={() => setOpen(false)}
-                  className="text-muted transition-colors hover:text-foreground"
+                  className={`transition-colors hover:text-foreground ${
+                    active === l.href ? "text-accent font-medium" : "text-muted"
+                  }`}
                 >
                   {l.label}
                 </a>
               ))}
               <a
                 href="tel:+15599001400"
+                onClick={() => setOpen(false)}
                 className="mt-2 rounded-lg bg-accent px-5 py-3 text-center font-semibold text-white"
               >
                 (559) 900-1400

@@ -6,7 +6,7 @@ export default function Footer() {
           <div className="text-center md:text-left">
             <a href="#" className="inline-block">
               <img
-                src="/images/VTS Black Logo.png"
+                src="/images/VTS Main Logo.png"
                 alt="Vigario Technology Solutions"
                 className="h-7 w-auto"
               />

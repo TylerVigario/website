@@ -11,7 +11,7 @@ const credentials = [
 
 export default function About() {
   return (
-    <section id="about" className="relative py-16 lg:py-20">
+    <section id="about" className="relative scroll-mt-20 py-16 lg:py-20">
       {/* Subtle divider */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-border to-transparent" />
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 
 const serviceOptions = [
@@ -22,16 +22,39 @@ export default function CTA() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
-  function toggleService(service: string) {
+  const toggleService = useCallback((service: string) => {
     setForm((prev) => ({
       ...prev,
       services: prev.services.includes(service)
         ? prev.services.filter((s) => s !== service)
         : [...prev.services, service],
     }));
-  }
+  }, []);
 
-  async function handleSubmit(e: React.FormEvent) {
+  // Listen for service pre-selection from service cards
+  useEffect(() => {
+    function handleSelect(e: Event) {
+      const service = (e as CustomEvent<string>).detail;
+      if (serviceOptions.includes(service)) {
+        setForm((prev) => ({
+          ...prev,
+          services: prev.services.includes(service) ? prev.services : [...prev.services, service],
+        }));
+        setStatus("idle");
+      }
+    }
+    window.addEventListener("select-service", handleSelect);
+    return () => window.removeEventListener("select-service", handleSelect);
+  }, []);
+
+  // Auto-reset success state after 10 seconds
+  useEffect(() => {
+    if (status !== "sent") return;
+    const timer = setTimeout(() => setStatus("idle"), 10000);
+    return () => clearTimeout(timer);
+  }, [status]);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setStatus("sending");
     setErrorMsg("");
@@ -57,7 +80,7 @@ export default function CTA() {
   }
 
   return (
-    <section id="contact" className="relative pb-8 pt-16 lg:py-20">
+    <section id="contact" className="relative scroll-mt-20 pb-8 pt-16 lg:py-20">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-border to-transparent" />
 
       <div className="mx-auto max-w-6xl px-6">
@@ -129,7 +152,7 @@ export default function CTA() {
                   <p className="mt-2 text-muted">I&apos;ll review your request and get back to you soon.</p>
                   <button
                     onClick={() => setStatus("idle")}
-                    className="mt-6 text-sm text-accent hover:underline"
+                    className="mt-6 rounded-lg border border-border px-4 py-2 text-sm text-muted transition-colors hover:border-accent/30 hover:text-foreground"
                   >
                     Submit another request
                   </button>
@@ -203,15 +226,33 @@ export default function CTA() {
                   </div>
 
                   {status === "error" && (
-                    <p className="text-sm text-red-600">{errorMsg}</p>
+                    <div className="flex items-center justify-between rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+                      <span>{errorMsg}</span>
+                      <button
+                        type="submit"
+                        className="ml-3 shrink-0 font-medium underline hover:no-underline"
+                      >
+                        Try again
+                      </button>
+                    </div>
                   )}
 
                   <button
                     type="submit"
                     disabled={status === "sending"}
-                    className="w-full rounded-xl bg-accent px-6 py-3 text-base font-semibold text-white transition-all hover:bg-accent-bright hover:shadow-lg hover:shadow-accent/15 disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3 text-base font-semibold text-white transition-all hover:bg-accent-bright hover:shadow-lg hover:shadow-accent/15 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {status === "sending" ? "Sending..." : "Request a free quote"}
+                    {status === "sending" ? (
+                      <>
+                        <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Sending...
+                      </>
+                    ) : (
+                      "Request a free quote"
+                    )}
                   </button>
                 </form>
               )}
