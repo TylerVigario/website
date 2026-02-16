@@ -3,9 +3,9 @@
 import { motion } from "framer-motion";
 
 const credentials = [
-  { value: "20+ Years", label: "In Tech" },
-  { value: "Self-Taught", label: "Builder Since Age 14" },
+  { value: "Since 2005", label: "20+ Years in the Field" },
   { value: "Full Stack", label: "Software to Infrastructure" },
+  { value: "Founder-Led", label: "Real Accountability" },
   { value: "Central Valley", label: "On-Site & Remote" },
 ];
 
@@ -26,31 +26,31 @@ export default function About() {
             className="lg:col-span-2"
           >
             <h2 className="text-3xl font-bold tracking-tight text-navy sm:text-4xl md:text-5xl">
-              A bit about me
+              Small team. No runaround.
             </h2>
 
             <div className="mt-8 space-y-5">
               <p className="text-lg leading-relaxed text-muted">
-                I&apos;m Tyler &mdash; self-taught since 2005 and comfortable
-                working on everything from custom web applications to Windows
-                Server deployments to pulling cable through ceilings. Most IT
-                guys don&apos;t write software, and most developers don&apos;t
-                pull cable. I do both.
-              </p>
-
-              <p className="text-lg leading-relaxed text-muted">
-                VTS grew out of clients like{" "}
+                VTS started in 2005 doing web and server work. Clients
+                like{" "}
                 <a href="https://bravofarms.com" target="_blank" rel="noopener" className="font-medium text-foreground underline decoration-accent/30 hover:text-accent transition-colors">Bravo Farms</a>{" "}
-                wanting to work with me directly. What started as website and
-                server work turned into networking, security cameras, and
-                full-on structured cabling installs. I invested in the tools and
-                training to do it all properly &mdash; because that&apos;s what
-                they needed and I don&apos;t do things halfway.
+                kept asking for more &mdash; networking, security cameras,
+                structured cabling &mdash; so we invested in the tools and
+                training to do it all properly. Most IT shops don&apos;t write
+                software, and most dev shops don&apos;t pull cable. We do both.
               </p>
 
               <p className="text-lg leading-relaxed text-muted">
-                No call centers, no runaround. Just me &mdash; always learning,
-                always improving, always picking up the phone.
+                Every project is led by our founder, who&apos;s been hands-on
+                in tech since age 14. That means real accountability &mdash; not
+                a rotating cast of contractors who don&apos;t know your setup.
+              </p>
+
+              <p className="text-lg leading-relaxed text-muted">
+                We know every client we take on is trusting us with something
+                that matters to them. That&apos;s not lost on us &mdash; it&apos;s
+                why we treat every project like our reputation depends on it.
+                Because it does.
               </p>
             </div>
           </motion.div>

@@ -24,13 +24,13 @@ export default function Hero() {
             </div>
 
             <h1 className="text-3xl font-bold leading-tight tracking-tight text-navy sm:text-5xl md:text-6xl">
-              Your IT guy<br className="hidden sm:block" /> in the Central Valley.
+              IT that writes code.<br className="hidden sm:block" /> Imagine that.
             </h1>
 
             <p className="mt-4 max-w-xl text-base leading-relaxed text-muted sm:mt-6 sm:text-lg">
-              Networks, cameras, cabling, servers, software &mdash; I&apos;ve been
-              doing it all since 2005. No call centers, no ticket queues. Just
-              one experienced person who picks up the phone.
+              From pulling cable to building custom software, we handle the full
+              stack &mdash; and we actually pick up the phone. Based in the
+              Central Valley, serving clients since 2005.
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:items-center sm:gap-4">

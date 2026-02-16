@@ -97,8 +97,9 @@ export default function CTA() {
                 Get a free quote
               </h2>
               <p className="mt-4 text-lg text-muted">
-                Tell me a bit about what you need and I&apos;ll get back to you
-                with a clear scope and honest estimate. No obligations.
+                Tell us a bit about what you need and we&apos;ll get back to you
+                with a clear scope and honest estimate &mdash; free, before you
+                commit to anything.
               </p>
 
               <div className="mt-8 space-y-4">
@@ -149,7 +150,7 @@ export default function CTA() {
                     </svg>
                   </div>
                   <h3 className="text-xl font-semibold text-navy">Got it!</h3>
-                  <p className="mt-2 text-muted">I&apos;ll review your request and get back to you soon.</p>
+                  <p className="mt-2 text-muted">We&apos;ll review your request and get back to you soon.</p>
                   <button
                     onClick={() => setStatus("idle")}
                     className="mt-6 rounded-lg border border-border px-4 py-2 text-sm text-muted transition-colors hover:border-accent/30 hover:text-foreground"

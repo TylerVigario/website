@@ -14,11 +14,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Vigario Technology Solutions",
-  description: "Friendly, experienced tech help for homes and businesses in Fresno, CA and beyond. Networking, security cameras, cabling, computer repair, and more from someone who's been at it since 2005.",
+  description: "Local IT shop in Fresno, CA — networking, cameras, cabling, servers, and custom software. Full-stack tech help from a small team that's been at it since 2005.",
   metadataBase: new URL("https://vigario.tech"),
   openGraph: {
     title: "Vigario Technology Solutions",
-    description: "Friendly, experienced tech help for homes and businesses in Fresno and beyond. Networking, security cameras, cabling, computer repair, and more.",
+    description: "Local IT shop in Fresno, CA — networking, cameras, cabling, servers, and custom software. Full-stack tech help since 2005.",
     url: "https://vigario.tech",
     siteName: "Vigario Technology Solutions",
     locale: "en_US",
