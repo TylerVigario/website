@@ -13,16 +13,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vigario Technology Solutions",
+  title: "Vigario Technology Solutions | IT Services in Fresno, CA",
   description: "Local IT shop in Fresno, CA — networking, cameras, cabling, servers, and custom software. Full-stack tech help backed by 20+ years of experience.",
-  metadataBase: new URL("https://vigario.tech"),
+  metadataBase: new URL("https://tylervigario.com"),
   openGraph: {
-    title: "Vigario Technology Solutions",
+    title: "Vigario Technology Solutions | IT Services in Fresno, CA",
     description: "Local IT shop in Fresno, CA — networking, cameras, cabling, servers, and custom software. Full-stack tech help backed by 20+ years of experience.",
-    url: "https://vigario.tech",
+    url: "https://tylervigario.com",
     siteName: "Vigario Technology Solutions",
     locale: "en_US",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Vigario Technology Solutions | IT Services in Fresno, CA",
+    description: "Local IT shop in Fresno, CA — networking, cameras, cabling, servers, and custom software. Full-stack tech help backed by 20+ years of experience.",
   },
   other: {
     "theme-color": "#fafaf9",
@@ -40,7 +45,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} font-sans antialiased overflow-x-hidden`}
       >
         <a
-          href="#services"
+          href="#main"
           className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-100 focus:rounded-lg focus:bg-accent focus:px-4 focus:py-3 focus:text-white focus:outline-none"
         >
           Skip to content

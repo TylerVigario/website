@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export default function Footer() {
   return (
     <footer className="border-t border-border py-8 sm:py-12">
@@ -5,9 +7,11 @@ export default function Footer() {
         <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
           <div className="text-center md:text-left">
             <a href="#" className="inline-block py-2">
-              <img
-                src="/images/VTS Main Logo.png"
+              <Image
+                src="/images/vts-logo.png"
                 alt="Vigario Technology Solutions"
+                width={330}
+                height={124}
                 className="h-7 w-auto"
               />
             </a>
@@ -21,8 +25,8 @@ export default function Footer() {
               (559) 900-1400
             </a>
             <span className="hidden text-border md:inline">|</span>
-            <a href="mailto:tyler@vigario.tech" className="py-3 transition-colors hover:text-foreground">
-              tyler@vigario.tech
+            <a href="mailto:tyler@tylervigario.com" className="py-3 transition-colors hover:text-foreground">
+              tyler@tylervigario.com
             </a>
             <span className="hidden text-border md:inline">|</span>
             <a

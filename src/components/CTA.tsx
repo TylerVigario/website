@@ -114,7 +114,7 @@ export default function CTA() {
                     <path d="M1.5 8.67v8.58a3 3 0 003 3h15a3 3 0 003-3V8.67l-8.928 5.493a3 3 0 01-3.144 0L1.5 8.67z" />
                     <path d="M22.5 6.908V6.75a3 3 0 00-3-3h-15a3 3 0 00-3 3v.158l9.714 5.978a1.5 1.5 0 001.572 0L22.5 6.908z" />
                   </svg>
-                  <span>Email: <a href="mailto:tyler@vigario.tech" className="inline-block py-2.5 -my-2.5 font-medium text-foreground hover:text-accent">tyler@vigario.tech</a></span>
+                  <span>Email: <a href="mailto:tyler@tylervigario.com" className="inline-block py-2.5 -my-2.5 font-medium text-foreground hover:text-accent">tyler@tylervigario.com</a></span>
                 </div>
               </div>
 

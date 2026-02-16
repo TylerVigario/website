@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 
 const links = [
   { label: "Services", href: "#services" },
@@ -44,9 +45,11 @@ export default function Nav() {
           }}
           className="flex items-center py-1.5"
         >
-          <img
-            src="/images/VTS Main Logo.png"
+          <Image
+            src="/images/vts-logo.png"
             alt="Vigario Technology Solutions"
+            width={330}
+            height={124}
             className="h-8 w-auto"
           />
         </a>
