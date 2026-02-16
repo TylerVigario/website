@@ -87,8 +87,9 @@ export default function Services() {
             You know the cost upfront.
           </h2>
           <p className="mt-4 max-w-xl text-lg text-muted">
-            Simple hourly rate, no retainers, no surprises. We&apos;ll scope it
-            out before we start so you know exactly what you&apos;re getting.
+            Transparent hourly rate, no retainers, no surprises. We&apos;ll
+            scope it before we start &mdash; whether it&apos;s a full network
+            buildout or just getting your WiFi working again.
           </p>
         </motion.div>
 
