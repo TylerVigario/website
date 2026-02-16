@@ -23,7 +23,7 @@ const jsonLd = {
   foundingDate: "2021",
   address: {
     "@type": "PostalAddress",
-    streetAddress: "3318 W Tiger Ave",
+    streetAddress: "3304 W Tiger Ave",
     addressLocality: "Riverdale",
     addressRegion: "CA",
     postalCode: "93656",
