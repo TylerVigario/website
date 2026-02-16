@@ -23,6 +23,13 @@ body {
 html {
   scroll-behavior: smooth;
   overflow-x: hidden;
+  scroll-snap-type: y proximity;
+}
+
+@media (min-width: 640px) {
+  html {
+    scroll-snap-type: none;
+  }
 }
 
 ::selection {
