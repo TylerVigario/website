@@ -4,9 +4,9 @@ import { motion } from "framer-motion";
 
 const credentials = [
   { value: "20+ Years", label: "In Tech" },
-  { value: "CompTIA A+", label: "Certified" },
-  { value: "BICSI", label: "In Progress" },
+  { value: "Self-Taught", label: "Builder Since Age 14" },
   { value: "Full Stack", label: "Software to Infrastructure" },
+  { value: "Central Valley", label: "On-Site & Remote" },
 ];
 
 export default function About() {
@@ -31,11 +31,11 @@ export default function About() {
 
             <div className="mt-8 space-y-5">
               <p className="text-lg leading-relaxed text-muted">
-                I&apos;m Tyler &mdash; self-taught since 2005, CompTIA A+ certified,
-                and comfortable working on everything from custom web applications
-                to Windows Server deployments to pulling cable through ceilings. I&apos;ve
-                spent years as a professional web developer building sites, internal
-                tools, and infrastructure for businesses across the Central Valley.
+                I&apos;m Tyler &mdash; self-taught since 2005 and comfortable
+                working on everything from custom web applications to Windows
+                Server deployments to pulling cable through ceilings. Most IT
+                guys don&apos;t write software, and most developers don&apos;t
+                pull cable. I do both.
               </p>
 
               <p className="text-lg leading-relaxed text-muted">
@@ -49,9 +49,8 @@ export default function About() {
               </p>
 
               <p className="text-lg leading-relaxed text-muted">
-                No call centers, no runaround. Just me. I&apos;m currently
-                pursuing BICSI certification to round out my infrastructure
-                credentials &mdash; always learning, always improving.
+                No call centers, no runaround. Just me &mdash; always learning,
+                always improving, always picking up the phone.
               </p>
             </div>
           </motion.div>
