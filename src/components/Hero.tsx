@@ -4,9 +4,9 @@ import { motion } from "framer-motion";
 
 export default function Hero() {
   return (
-    <section className="relative flex items-center overflow-hidden pt-20 pb-16 sm:pb-20 lg:pb-28 lg:pt-32">
-      {/* Faded logo watermark */}
-      <div className="pointer-events-none absolute right-[-5%] top-1/2 -translate-y-1/2 w-125 h-125 sm:w-150 sm:h-150 lg:w-175 lg:h-175 opacity-[0.04]">
+    <section className="relative flex items-center overflow-hidden pt-20 pb-12 sm:pb-16 lg:pb-20 lg:pt-32">
+      {/* Faded logo watermark — pushed further right, pulled back opacity */}
+      <div className="pointer-events-none absolute right-[-10%] top-1/2 -translate-y-1/2 w-125 h-125 sm:w-150 sm:h-150 lg:w-175 lg:h-175 opacity-[0.03]">
         <img
           src="/images/VTS Logo Symbol.png"
           alt=""
@@ -15,7 +15,7 @@ export default function Hero() {
       </div>
 
       {/* Soft decorative gradient */}
-      <div className="pointer-events-none absolute -top-40 right-0 h-[600px] w-[600px] rounded-full bg-accent/[0.06] blur-[100px]" />
+      <div className="pointer-events-none absolute -top-40 right-0 h-[600px] w-[600px] rounded-full bg-accent/5 blur-[120px]" />
 
       <div className="relative mx-auto max-w-6xl px-6">
         <motion.div
@@ -30,14 +30,13 @@ export default function Hero() {
           </div>
 
           <h1 className="text-3xl font-bold leading-tight tracking-tight text-navy sm:text-5xl md:text-6xl">
-            Good tech help shouldn&apos;t be
-            this hard to find.
+            Your IT guy<br className="hidden sm:block" /> in the Central Valley.
           </h1>
 
           <p className="mt-4 max-w-xl text-base leading-relaxed text-muted sm:mt-6 sm:text-lg">
-            I&apos;m Tyler &mdash; I&apos;ve been building networks, fixing
-            computers, and wiring up businesses since 2005. No call centers,
-            no ticket queues. Just one experienced person who picks up the phone.
+            Networks, cameras, cabling, servers, software &mdash; I&apos;ve been
+            doing it all since 2005. No call centers, no ticket queues. Just
+            one experienced person who picks up the phone.
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:items-center sm:gap-4">
@@ -47,7 +46,7 @@ export default function Hero() {
             >
               Get a free quote
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden="true">
-                <path fillRule="evenodd" d="M5.22 14.78a.75.75 0 001.06 0l7.22-7.22v5.69a.75.75 0 001.5 0v-7.5a.75.75 0 00-.75-.75h-7.5a.75.75 0 000 1.5h5.69l-7.22 7.22a.75.75 0 000 1.06z" clipRule="evenodd" />
+                <path fillRule="evenodd" d="M10 3a.75.75 0 01.75.75v10.638l3.96-4.158a.75.75 0 111.08 1.04l-5.25 5.5a.75.75 0 01-1.08 0l-5.25-5.5a.75.75 0 111.08-1.04l3.96 4.158V3.75A.75.75 0 0110 3z" clipRule="evenodd" />
               </svg>
             </a>
             <a
