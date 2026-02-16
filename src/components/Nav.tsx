@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
+
 
 const links = [
   { label: "Services", href: "#services" },
@@ -44,13 +44,14 @@ export default function Nav() {
           }}
           className="flex items-center py-1.5"
         >
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src="/images/vts-logo.png"
             alt="Vigario Technology Solutions"
             width={330}
             height={124}
             className="h-8 w-auto"
-            priority
+            fetchPriority="high"
           />
         </a>
 
