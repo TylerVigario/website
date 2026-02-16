@@ -64,7 +64,7 @@ export default function Hero() {
           >
             <div className="relative overflow-hidden rounded-2xl shadow-2xl shadow-navy/10 max-h-112 lg:max-h-128">
               <Image
-                src="/images/hero.jpg"
+                src="/images/hero.webp"
                 alt="Server rack with ethernet cables and network infrastructure"
                 width={640}
                 height={960}
