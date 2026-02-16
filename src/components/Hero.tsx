@@ -1,7 +1,5 @@
-"use client";
-
-import { motion } from "framer-motion";
 import Image from "next/image";
+import FadeIn from "./FadeIn";
 
 export default function Hero() {
   return (
@@ -12,12 +10,7 @@ export default function Hero() {
       <div className="relative mx-auto max-w-6xl px-6">
         <div className="flex flex-col items-center gap-10 lg:flex-row lg:gap-16">
           {/* Text content */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="max-w-2xl lg:flex-1"
-          >
+          <FadeIn animation="fade-in-up" className="max-w-2xl lg:flex-1" margin="0px">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-accent-soft px-4 py-1.5 text-sm text-accent">
               <span className="h-2 w-2 rounded-full bg-accent animate-pulse" />
               Accepting new projects
@@ -53,15 +46,10 @@ export default function Hero() {
                 (559) 900-1400
               </a>
             </div>
-          </motion.div>
+          </FadeIn>
 
           {/* Hero image */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.7, ease: "easeOut", delay: 0.2 }}
-            className="relative hidden w-full max-w-sm sm:block lg:max-w-md lg:shrink-0"
-          >
+          <FadeIn animation="fade-in-scale" className="relative hidden w-full max-w-sm sm:block lg:max-w-md lg:shrink-0" delay={0.2} margin="0px">
             <div className="relative overflow-hidden rounded-2xl shadow-2xl shadow-navy/10 max-h-112 lg:max-h-128">
               <Image
                 src="/images/hero.webp"
@@ -69,14 +57,15 @@ export default function Hero() {
                 width={640}
                 height={960}
                 className="h-full w-full object-cover saturate-[0.6] brightness-95"
-                priority
+                sizes="(max-width: 639px) 0px, (max-width: 1023px) 384px, 448px"
+                loading="eager"
               />
               {/* Blue brand tint overlay */}
               <div className="pointer-events-none absolute inset-0 bg-accent/15 mix-blend-multiply" />
             </div>
             {/* Subtle glow behind image */}
             <div className="pointer-events-none absolute -inset-4 -z-10 rounded-3xl bg-accent/8 blur-2xl" />
-          </motion.div>
+          </FadeIn>
         </div>
       </div>
     </section>

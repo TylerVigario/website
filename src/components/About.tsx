@@ -1,6 +1,4 @@
-"use client";
-
-import { motion } from "framer-motion";
+import FadeIn from "./FadeIn";
 
 const credentials = [
   { value: "Since 2005", label: "20+ Years in Tech" },
@@ -18,13 +16,7 @@ export default function About() {
       <div className="relative mx-auto max-w-6xl px-6">
         <div className="grid gap-10 lg:grid-cols-3 lg:gap-16">
           {/* Left — story (2/3) */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6 }}
-            className="lg:col-span-2"
-          >
+          <FadeIn className="lg:col-span-2">
             <h2 className="text-3xl font-bold tracking-tight text-navy sm:text-4xl md:text-5xl">
               We build. We don&apos;t resell.
             </h2>
@@ -53,30 +45,20 @@ export default function About() {
                 ticket queues, no runaround.
               </p>
             </div>
-          </motion.div>
+          </FadeIn>
 
           {/* Right — credentials (1/3) */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="grid grid-cols-2 gap-4 lg:grid-cols-1 lg:content-start"
-          >
+          <FadeIn delay={0.2} className="grid grid-cols-2 gap-4 lg:grid-cols-1 lg:content-start">
             {credentials.map((c, i) => (
-              <motion.div
+              <div
                 key={i}
-                initial={{ opacity: 0, y: 15 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
                 className="rounded-xl border border-border bg-surface-light p-4 text-center lg:p-5"
               >
                 <div className="text-lg font-bold text-accent sm:text-xl">{c.value}</div>
                 <div className="mt-1 text-xs text-muted">{c.label}</div>
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </FadeIn>
         </div>
       </div>
     </section>

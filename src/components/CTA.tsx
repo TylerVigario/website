@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 const serviceOptions = [
   "Networking & WiFi",
@@ -79,17 +78,30 @@ export default function CTA() {
     }
   }
 
+  const sectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          el.classList.add("visible");
+          observer.unobserve(el);
+        }
+      },
+      { rootMargin: "-100px 0px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <section id="contact" className="relative scroll-mt-24 pb-8 pt-16 lg:py-20">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-border to-transparent" />
 
       <div className="mx-auto max-w-6xl px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-100px" }}
-          transition={{ duration: 0.6 }}
-        >
+        <div ref={sectionRef} className="fade-in">
           <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
             {/* Left — copy */}
             <div className="lg:py-4">
@@ -261,7 +273,7 @@ export default function CTA() {
               )}
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

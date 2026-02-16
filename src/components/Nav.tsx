@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 
 const links = [
@@ -51,6 +50,7 @@ export default function Nav() {
             width={330}
             height={124}
             className="h-8 w-auto"
+            priority
           />
         </a>
 
@@ -89,38 +89,35 @@ export default function Nav() {
       </div>
 
       {/* Mobile menu */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-t border-border md:hidden"
-          >
-            <div className="flex flex-col gap-4 px-6 py-6">
-              {links.map((l) => (
-                <a
-                  key={l.href}
-                  href={l.href}
-                  onClick={() => setOpen(false)}
-                  className={`py-2.5 transition-colors hover:text-foreground ${
-                    active === l.href ? "text-accent font-medium" : "text-muted"
-                  }`}
-                >
-                  {l.label}
-                </a>
-              ))}
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-out border-t border-border md:hidden ${
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="flex flex-col gap-4 px-6 py-6">
+            {links.map((l) => (
               <a
-                href="tel:+15599001400"
+                key={l.href}
+                href={l.href}
                 onClick={() => setOpen(false)}
-                className="mt-2 rounded-lg bg-accent px-5 py-3 text-center font-semibold text-white"
+                className={`py-2.5 transition-colors hover:text-foreground ${
+                  active === l.href ? "text-accent font-medium" : "text-muted"
+                }`}
               >
-                (559) 900-1400
+                {l.label}
               </a>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            ))}
+            <a
+              href="tel:+15599001400"
+              onClick={() => setOpen(false)}
+              className="mt-2 rounded-lg bg-accent px-5 py-3 text-center font-semibold text-white"
+            >
+              (559) 900-1400
+            </a>
+          </div>
+        </div>
+      </div>
     </nav>
   );
 }
