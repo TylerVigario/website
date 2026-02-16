@@ -69,7 +69,7 @@ export default function CTA() {
         >
           <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
             {/* Left — copy */}
-            <div>
+            <div className="lg:py-4">
               <h2 className="text-2xl font-bold tracking-tight text-navy sm:text-4xl lg:text-5xl">
                 Get a free quote
               </h2>
@@ -91,6 +91,27 @@ export default function CTA() {
                     <path d="M22.5 6.908V6.75a3 3 0 00-3-3h-15a3 3 0 00-3 3v.158l9.714 5.978a1.5 1.5 0 001.572 0L22.5 6.908z" />
                   </svg>
                   <span>Email: <a href="mailto:tyler@vigario.tech" className="font-medium text-foreground hover:text-accent">tyler@vigario.tech</a></span>
+                </div>
+              </div>
+
+              <div className="mt-10 space-y-3 text-sm text-muted">
+                <div className="flex items-start gap-2.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                  <span>Flat hourly rate &mdash; no retainers or surprise fees</span>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                  <span>Scope and estimate before any work starts</span>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden="true">
+                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+                  </svg>
+                  <span>Fresno area on-site &mdash; remote available anywhere</span>
                 </div>
               </div>
             </div>
