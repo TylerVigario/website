@@ -18,6 +18,12 @@ export const metadata: Metadata = {
     locale: "en_US",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "About Tyler Vigario | Vigario Technology Solutions",
+    description:
+      "20+ years in tech, from pulling cable to writing custom software. Tyler Vigario founded VTS in 2021 to bring full-stack IT expertise to Central Valley businesses.",
+  },
 };
 
 const jsonLd = {

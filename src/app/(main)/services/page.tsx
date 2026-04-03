@@ -19,6 +19,12 @@ export const metadata: Metadata = {
     locale: "en_US",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "IT Services | Vigario Technology Solutions",
+    description:
+      "Full-stack IT services in Fresno, CA — networking, security cameras, Windows & Linux systems, cabling, custom software, and IT strategy. Transparent hourly rate, no retainers.",
+  },
 };
 
 const jsonLd = {
