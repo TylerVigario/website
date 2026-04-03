@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import FadeIn from "./FadeIn";
 
 export default function Hero() {
@@ -27,15 +28,15 @@ export default function Hero() {
             </p>
 
             <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:items-center sm:gap-4">
-              <a
-                href="#contact"
+              <Link
+                href="/contact"
                 className="flex items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-accent px-5 py-3 text-base font-semibold text-white transition-all sm:px-8 sm:py-4 sm:text-lg hover:bg-accent-bright hover:shadow-lg hover:shadow-accent/15"
               >
                 Get a free quote
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden="true">
-                  <path fillRule="evenodd" d="M10 3a.75.75 0 01.75.75v10.638l3.96-4.158a.75.75 0 111.08 1.04l-5.25 5.5a.75.75 0 01-1.08 0l-5.25-5.5a.75.75 0 111.08-1.04l3.96 4.158V3.75A.75.75 0 0110 3z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z" clipRule="evenodd" />
                 </svg>
-              </a>
+              </Link>
               <a
                 href="tel:+15599001400"
                 className="flex items-center justify-center gap-3 whitespace-nowrap rounded-xl border border-border px-5 py-3 text-base font-medium text-foreground transition-colors sm:px-8 sm:py-4 sm:text-lg hover:border-accent/30 hover:bg-surface"

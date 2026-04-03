@@ -7,9 +7,9 @@ const credentials = [
   { value: "Central Valley", label: "On-Site & Remote" },
 ];
 
-export default function About() {
+export default function About({ preview = false }: { preview?: boolean }) {
   return (
-    <section id="about" className="relative scroll-mt-24 py-16 lg:py-20">
+    <section className="relative py-16 lg:py-20">
       {/* Subtle divider */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-border to-transparent" />
 
@@ -39,11 +39,13 @@ export default function About() {
                 a rotating cast of contractors who don&apos;t know your setup.
               </p>
 
-              <p className="text-lg leading-relaxed text-muted">
-                We&apos;re not a vendor collecting a toll &mdash; we&apos;re
-                builders who stake our name on every project. No layers, no
-                ticket queues, no runaround.
-              </p>
+              {!preview && (
+                <p className="text-lg leading-relaxed text-muted">
+                  We&apos;re not a vendor collecting a toll &mdash; we&apos;re
+                  builders who stake our name on every project. No layers, no
+                  ticket queues, no runaround.
+                </p>
+              )}
             </div>
           </FadeIn>
 

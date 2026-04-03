@@ -1,72 +1,48 @@
 "use client";
 
-import { useState, useEffect } from "react";
-
+import { useState } from "react";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
 
 const links = [
-  { label: "Services", href: "#services" },
-  { label: "About", href: "#about" },
-  { label: "Contact", href: "#contact" },
+  { label: "Services", href: "/services" },
+  { label: "About", href: "/about" },
+  { label: "Contact", href: "/contact" },
 ];
 
 export default function Nav() {
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState("");
-
-  useEffect(() => {
-    const sections = links.map((l) =>
-      document.querySelector(l.href) as HTMLElement | null
-    ).filter(Boolean) as HTMLElement[];
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setActive(`#${entry.target.id}`);
-          }
-        }
-      },
-      { rootMargin: "-40% 0px -55% 0px" }
-    );
-
-    sections.forEach((s) => observer.observe(s));
-    return () => observer.disconnect();
-  }, []);
+  const pathname = usePathname();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <a
-          href="/"
-          onClick={(e) => {
-            e.preventDefault();
-            window.scrollTo({ top: 0, behavior: "smooth" });
-          }}
-          className="flex items-center py-1.5"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+        <Link href="/" className="flex items-center py-1.5">
+          <Image
             src="/images/vts-logo.png"
             alt="Vigario Technology Solutions"
             width={330}
             height={124}
             className="h-8 w-auto"
-            fetchPriority="high"
+            priority
           />
-        </a>
+        </Link>
 
         {/* Desktop */}
         <div className="hidden items-center gap-8 md:flex">
           {links.map((l) => (
-            <a
+            <Link
               key={l.href}
               href={l.href}
               className={`py-3 text-sm transition-colors hover:text-foreground ${
-                active === l.href ? "text-accent font-medium" : "text-muted"
+                pathname === l.href || pathname.startsWith(l.href + "/")
+                  ? "text-accent font-medium"
+                  : "text-muted"
               }`}
             >
               {l.label}
-            </a>
+            </Link>
           ))}
           <a
             href="tel:+15599001400"
@@ -98,16 +74,18 @@ export default function Nav() {
         <div className="overflow-hidden">
           <div className="flex flex-col gap-4 px-6 py-6">
             {links.map((l) => (
-              <a
+              <Link
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
                 className={`py-2.5 transition-colors hover:text-foreground ${
-                  active === l.href ? "text-accent font-medium" : "text-muted"
+                  pathname === l.href || pathname.startsWith(l.href + "/")
+                    ? "text-accent font-medium"
+                    : "text-muted"
                 }`}
               >
                 {l.label}
-              </a>
+              </Link>
             ))}
             <a
               href="tel:+15599001400"
