@@ -15,6 +15,30 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: "https://tylervigario.com/services/networking",
+      lastModified: "2026-04-02",
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: "https://tylervigario.com/services/security-cameras",
+      lastModified: "2026-04-02",
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: "https://tylervigario.com/services/windows",
+      lastModified: "2026-04-02",
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: "https://tylervigario.com/services/linux",
+      lastModified: "2026-04-02",
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
       url: "https://tylervigario.com/about",
       lastModified: "2026-04-02",
       changeFrequency: "monthly",
