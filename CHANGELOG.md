@@ -11,54 +11,41 @@
 
 ## [1.0.0](https://github.com/TylerVigario/website/releases/tag/v1.0.0) (2026-04-03)
 
+Marketing site as it existed before the v2 artifact deploy contract —
+built and iterated under the old git-pull-and-build pipeline.
+
 ### Features
 
-* Scaffold VTS landing page
-* Add hero constellation and retro-tech background to about section
-* Visual polish — section surfaces, card hovers, gradient text, counter, CTA texture
-* Custom favicon, Google Business link, GitHub icon in footer
-* Complete site redesign — light theme, new branding, updated services
-* Quote form, merged services, About rewrite, Hero CTA rework
-* Hero image, two-column hero layout, color nav logo
-* Full-viewport hero with scroll snap on mobile
-* SEO overhaul — JSON-LD, meta, sitemap, robots, domain update
-* SEO round 2 — canonical, JSON-LD expansion, manifest, apple icon, accessibility
-* JSON-LD — add slogan and knowsAbout for richer search signals
-* Add CSP and security headers
-* Add COOP header for origin isolation
-* Add POTS-to-VoIP migration landing page
-* Add dedicated service pages for networking, cameras, Windows, and Linux
+* Multi-page B2B site on Next.js 16 (App Router) and Tailwind v4: home,
+  about, contact, plus dedicated pages under `/services/` for networking,
+  security cameras, Windows, and Linux
+* POTS-to-VoIP migration landing page with bill-audit checklist and form
+* Form submission pipeline: zod-validated, persisted to SQLite, optional
+  SMTP email notification when `SMTP_USER` + `SMTP_PASS` are set
+* Brand identity: light-theme redesign, two-column hero with full-viewport
+  + mobile scroll-snap, sticky nav with mobile hamburger, custom favicon
+* SEO surface: JSON-LD (Organization, slogan, knowsAbout, address),
+  sitemap, robots, canonical URLs, custom 404, web manifest, Apple icons,
+  Twitter cards
+* Security headers: CSP, X-Frame-Options, X-Content-Type-Options,
+  Referrer-Policy, Cross-Origin-Opener-Policy
+* Accessibility floor: WCAG AA contrast (accent darkened to `#2970b5`),
+  44px minimum touch targets, skip-to-content link with focus-visible
 
 ### Bug Fixes
 
-* Responsive spacing and overflow fixes
-* SEO meta, accessibility, contact nav target, image optimization
-* Mobile responsive sizing for small screens (iPhone SE)
-* Hero polish — line break, watermark, CTA icon, spacing
-* Layout balance — service cards, About sidebar, CTA trust signals
-* UX improvements — nav highlighting, scroll offsets, form polish, clickable services
-* Remove double focus outline on form inputs
-* Add brand colors to GitHub and Google Business footer icons
-* Replace unverifiable credentials with honest differentiators in About
-* Enforce 44px minimum touch targets across all interactive elements
-* Hide hero image on mobile, increase nav clearance
-* Correct VTS founding date — company 2021, founder experience since 2005
-* Sharpen copy — builder identity, anti-middleman positioning
-* Pricing language — transparent rate, approachable for all clients
-* Favicon — bold V on navy, readable at any size
-* Darken accent to #2970b5 for WCAG AA contrast ratio
-* Duplicate ARIA ID — rename contact input to contact-info
+* Responsive sizing all the way down to iPhone SE
+* Duplicate ARIA ID conflict in the contact form (renamed to `contact-info`)
+* Honest copy pass — dropped unverifiable credentials, repositioned
+  around transparent pricing and anti-middleman framing
+* Correct founding date (company 2021, builder experience since 2005)
 * Correct business address in JSON-LD
-* Skip-to-content link — use focus-visible to prevent resize flash
-* SEO quick wins — custom 404, Twitter cards, trailing slash config
 
 ### Refactoring
 
-* Reposition copy for B2B market
-* Rewrite site copy — company voice, benefit-led headings, honest tone
-* Drop framer-motion, CSS animations, server components, font/image optimization
-* Use plain img for nav logo — immediate LCP discovery
-* Enable standalone output for self-hosted deployment
-* Convert single-page site to multi-page architecture
-* Increase color contrast and redesign hero section
+* Site converted from single-page to multi-page architecture
+* Standalone Next.js output enabled for self-hosted deployment
+* Dropped framer-motion in favor of CSS animations
+* Plain `<img>` for nav logo to win LCP discovery
+* Site copy rewrite — company voice, benefit-led headings, honest tone
 
