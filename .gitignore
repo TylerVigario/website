@@ -48,3 +48,6 @@ next-env.d.ts
 
 # lint cache
 .eslintcache
+
+# claude code per-developer overrides (settings.json stays tracked)
+.claude/settings.local.json
