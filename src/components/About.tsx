@@ -23,27 +23,32 @@ export default function About({ preview = false }: { preview?: boolean }) {
 
             <div className="mt-8 space-y-5">
               <p className="text-lg leading-relaxed text-muted">
-                VTS launched in 2021, but our founder&apos;s been in the
-                game since 2005 &mdash; starting with web and server work. Clients
-                like{" "}
-                <a href="https://bravofarms.com" target="_blank" rel="noopener noreferrer" className="font-medium text-foreground underline decoration-accent/30 hover:text-accent transition-colors">Bravo Farms</a>{" "}
-                kept asking for more &mdash; networking, security cameras,
-                structured cabling &mdash; so we invested in the tools and
-                training to do it all properly. Most IT shops don&apos;t write
-                software, and most dev shops don&apos;t pull cable. We do both.
+                VTS launched in 2021, but our founder&apos;s been in the game since 2005 &mdash;
+                starting with web and server work. Clients like{" "}
+                <a
+                  href="https://bravofarms.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-foreground underline decoration-accent/30 hover:text-accent transition-colors"
+                >
+                  Bravo Farms
+                </a>{" "}
+                kept asking for more &mdash; networking, security cameras, structured cabling
+                &mdash; so we invested in the tools and training to do it all properly. Most IT
+                shops don&apos;t write software, and most dev shops don&apos;t pull cable. We do
+                both.
               </p>
 
               <p className="text-lg leading-relaxed text-muted">
-                Every project is led by our founder, who&apos;s been hands-on
-                in tech since age 14. That means real accountability &mdash; not
-                a rotating cast of contractors who don&apos;t know your setup.
+                Every project is led by our founder, who&apos;s been hands-on in tech since age 14.
+                That means real accountability &mdash; not a rotating cast of contractors who
+                don&apos;t know your setup.
               </p>
 
               {!preview && (
                 <p className="text-lg leading-relaxed text-muted">
-                  We&apos;re not a vendor collecting a toll &mdash; we&apos;re
-                  builders who stake our name on every project. No layers, no
-                  ticket queues, no runaround.
+                  We&apos;re not a vendor collecting a toll &mdash; we&apos;re builders who stake
+                  our name on every project. No layers, no ticket queues, no runaround.
                 </p>
               )}
             </div>

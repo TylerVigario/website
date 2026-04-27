@@ -21,7 +21,7 @@ Output lands in `out/` — pure static HTML/CSS/JS. No Node server needed at run
 
 ### Deployment Pipeline
 
-```
+```text
 git push → post-receive git hook → triggers systemd service → runs admin deploy script
 ```
 
@@ -43,7 +43,7 @@ What needs to be set up on the server:
 
 ## Project Structure
 
-```
+```text
 src/
   app/
     layout.tsx       # Root layout, fonts, metadata

@@ -34,7 +34,7 @@ export default function FadeIn({
           observer.unobserve(el);
         }
       },
-      { rootMargin: `${margin} 0px` }
+      { rootMargin: `${margin} 0px` },
     );
 
     observer.observe(el);

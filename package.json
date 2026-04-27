@@ -1,21 +1,36 @@
 {
   "name": "tylervigario",
   "version": "0.1.0",
+  "type": "module",
   "private": true,
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "lint": "npm run lint:js && npm run lint:md",
+    "lint:js": "eslint",
+    "lint:js:fix": "eslint --fix",
+    "lint:md": "markdownlint-cli2",
+    "lint:md:fix": "markdownlint-cli2 --fix",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky"
   },
   "dependencies": {
     "better-sqlite3": "^12.9.0",
     "next": "16.2.4",
     "nodemailer": "^8.0.6",
     "react": "19.2.5",
-    "react-dom": "19.2.5"
+    "react-dom": "19.2.5",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.5.2",
+    "@commitlint/config-conventional": "^20.5.0",
     "@tailwindcss/postcss": "^4.2.4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24.12.2",
@@ -24,7 +39,25 @@
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.4",
     "eslint-config-next": "16.2.4",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "markdownlint-cli2": "^0.22.1",
+    "prettier": "^3.8.3",
     "tailwindcss": "^4.2.4",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --cache --fix --max-warnings=0 --no-warn-ignored",
+      "prettier --write"
+    ],
+    "*.md": [
+      "markdownlint-cli2 --fix"
+    ],
+    "*.{json,css}": [
+      "prettier --write"
+    ]
   }
 }

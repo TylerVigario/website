@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { services } from "@/lib/services";
+import { ApiError } from "@/lib/api/response";
 
 const serviceOptions = services.map((s) => s.title);
 
@@ -13,8 +14,7 @@ export default function ContactForm({ initialService }: ContactFormProps) {
   const [form, setForm] = useState(() => ({
     name: "",
     contact: "",
-    services:
-      initialService && serviceOptions.includes(initialService) ? [initialService] : [],
+    services: initialService && serviceOptions.includes(initialService) ? [initialService] : [],
     details: "",
   }));
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -49,8 +49,8 @@ export default function ContactForm({ initialService }: ContactFormProps) {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Something went wrong.");
+        const data = ApiError.safeParse(await res.json());
+        throw new Error(data.success ? data.data.error : "Something went wrong.");
       }
 
       setStatus("sent");
@@ -65,8 +65,18 @@ export default function ContactForm({ initialService }: ContactFormProps) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-center">
         <div className="mb-4 inline-flex rounded-full bg-accent-soft p-3 text-accent">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-8 w-8" aria-hidden="true">
-            <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="h-8 w-8"
+            aria-hidden="true"
+          >
+            <path
+              fillRule="evenodd"
+              d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z"
+              clipRule="evenodd"
+            />
           </svg>
         </div>
         <h3 className="text-xl font-semibold text-navy">Got it!</h3>
@@ -82,7 +92,12 @@ export default function ContactForm({ initialService }: ContactFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form
+      onSubmit={(e) => {
+        void handleSubmit(e);
+      }}
+      className="space-y-5"
+    >
       <div>
         <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-foreground">
           Your name
@@ -170,9 +185,25 @@ export default function ContactForm({ initialService }: ContactFormProps) {
       >
         {status === "sending" ? (
           <>
-            <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            <svg
+              className="h-5 w-5 animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+              />
             </svg>
             Sending...
           </>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { getDb } from "@/lib/db";
+import { PotsAuditRequest } from "@/lib/api/pots-audit";
 
 const NOTIFY_EMAIL = "tylervigario90@gmail.com";
 
@@ -16,47 +17,41 @@ const transporter = nodemailer.createTransport({
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { business, name, contact, bill, details } = body;
-
-    if (!business?.trim() || !name?.trim() || !contact?.trim() || !bill?.trim()) {
+    const parsed = PotsAuditRequest.safeParse(await req.json());
+    if (!parsed.success) {
       return NextResponse.json(
         { error: "Business name, your name, contact info, and bill range are required." },
-        { status: 400 }
+        { status: 400 },
       );
     }
+    const { business, name, contact, bill, details } = parsed.data;
 
-    // Save to SQLite (reuse quotes table with service = "POTS Migration Audit")
+    // Reuse quotes table; service column tags this as a POTS audit.
     const db = getDb();
     const stmt = db.prepare(
-      "INSERT INTO quotes (name, contact, services, details) VALUES (?, ?, ?, ?)"
+      "INSERT INTO quotes (name, contact, services, details) VALUES (?, ?, ?, ?)",
     );
     stmt.run(
-      name.trim(),
-      contact.trim(),
+      name,
+      contact,
       "POTS Migration Audit",
-      [
-        `Business: ${business.trim()}`,
-        `Monthly bill: ${bill.trim()}`,
-        details?.trim() ? `Details: ${details.trim()}` : "",
-      ]
+      [`Business: ${business}`, `Monthly bill: ${bill}`, details ? `Details: ${details}` : ""]
         .filter(Boolean)
-        .join("\n")
+        .join("\n"),
     );
 
-    // Send email notification
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
       try {
         await transporter.sendMail({
           from: `"VTS Website" <${process.env.SMTP_USER}>`,
           to: NOTIFY_EMAIL,
-          subject: `POTS Audit Request from ${business.trim()}`,
+          subject: `POTS Audit Request from ${business}`,
           text: [
-            `Business: ${business.trim()}`,
-            `Name: ${name.trim()}`,
-            `Contact: ${contact.trim()}`,
-            `Monthly Bill: ${bill.trim()}`,
-            `Details: ${details?.trim() || "(none)"}`,
+            `Business: ${business}`,
+            `Name: ${name}`,
+            `Contact: ${contact}`,
+            `Monthly Bill: ${bill}`,
+            `Details: ${details || "(none)"}`,
             "",
             `Submitted: ${new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}`,
             `Source: /pots-migration landing page`,
@@ -64,11 +59,11 @@ export async function POST(req: NextRequest) {
           html: `
             <h2>POTS Migration Audit Request</h2>
             <table style="border-collapse:collapse;font-family:sans-serif;">
-              <tr><td style="padding:8px;font-weight:bold;">Business</td><td style="padding:8px;">${escapeHtml(business.trim())}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold;">Name</td><td style="padding:8px;">${escapeHtml(name.trim())}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold;">Contact</td><td style="padding:8px;">${escapeHtml(contact.trim())}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold;">Monthly Bill</td><td style="padding:8px;">${escapeHtml(bill.trim())}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold;vertical-align:top;">Details</td><td style="padding:8px;">${escapeHtml(details?.trim() || "(none)")}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold;">Business</td><td style="padding:8px;">${escapeHtml(business)}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold;">Name</td><td style="padding:8px;">${escapeHtml(name)}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold;">Contact</td><td style="padding:8px;">${escapeHtml(contact)}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold;">Monthly Bill</td><td style="padding:8px;">${escapeHtml(bill)}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold;vertical-align:top;">Details</td><td style="padding:8px;">${escapeHtml(details || "(none)")}</td></tr>
             </table>
             <p style="color:#78716c;font-size:12px;margin-top:16px;">Source: /pots-migration landing page</p>
           `,
@@ -83,7 +78,7 @@ export async function POST(req: NextRequest) {
     console.error("POTS audit submission error:", err);
     return NextResponse.json(
       { error: "Something went wrong. Please try again or call us directly." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

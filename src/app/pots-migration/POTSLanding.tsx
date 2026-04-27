@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
+import { ApiError } from "@/lib/api/response";
 
 /* ------------------------------------------------------------------ */
 /*  Checklist items                                                   */
@@ -11,11 +12,11 @@ import FadeIn from "@/components/FadeIn";
 const checklistItems = [
   "Your monthly phone bill is over $200 for basic service",
   "You're paying for lines nobody uses",
-  "You received a letter about \"copper retirement\" or \"network modernization\"",
+  'You received a letter about "copper retirement" or "network modernization"',
   "Your rates have increased without explanation",
   "You received a new contract or BSA you don't remember agreeing to",
   "You've been told there's an early termination fee to leave",
-  "Your carrier offered an \"alternative plan\" that's still more expensive than VoIP",
+  'Your carrier offered an "alternative plan" that\'s still more expensive than VoIP',
   "You've been with the same carrier for 10+ years and never audited your bill",
 ];
 
@@ -70,15 +71,31 @@ const billRanges = [
 /* ------------------------------------------------------------------ */
 function PhoneIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-      <path fillRule="evenodd" d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z" clipRule="evenodd" />
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        fillRule="evenodd"
+        d="M1.5 4.5a3 3 0 013-3h1.372c.86 0 1.61.586 1.819 1.42l1.105 4.423a1.875 1.875 0 01-.694 1.955l-1.293.97c-.135.101-.164.249-.126.352a11.285 11.285 0 006.697 6.697c.103.038.25.009.352-.126l.97-1.293a1.875 1.875 0 011.955-.694l4.423 1.105c.834.209 1.42.959 1.42 1.82V19.5a3 3 0 01-3 3h-2.25C8.552 22.5 1.5 15.448 1.5 6.75V4.5z"
+        clipRule="evenodd"
+      />
     </svg>
   );
 }
 
 function EmailIcon({ className = "h-5 w-5" }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
       <path d="M1.5 8.67v8.58a3 3 0 003 3h15a3 3 0 003-3V8.67l-8.928 5.493a3 3 0 01-3.144 0L1.5 8.67z" />
       <path d="M22.5 6.908V6.75a3 3 0 00-3-3h-15a3 3 0 00-3 3v.158l9.714 5.978a1.5 1.5 0 001.572 0L22.5 6.908z" />
     </svg>
@@ -87,8 +104,18 @@ function EmailIcon({ className = "h-5 w-5" }: { className?: string }) {
 
 function CheckIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className} aria-hidden="true">
-      <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path
+        fillRule="evenodd"
+        d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+        clipRule="evenodd"
+      />
     </svg>
   );
 }
@@ -102,7 +129,11 @@ function ChevronIcon({ open }: { open: boolean }) {
       className={`h-5 w-5 shrink-0 text-muted transition-transform duration-200 ${open ? "rotate-180" : ""}`}
       aria-hidden="true"
     >
-      <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 011.06 0L10 11.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 9.28a.75.75 0 010-1.06z" clipRule="evenodd" />
+      <path
+        fillRule="evenodd"
+        d="M5.22 8.22a.75.75 0 011.06 0L10 11.94l3.72-3.72a.75.75 0 111.06 1.06l-4.25 4.25a.75.75 0 01-1.06 0L5.22 9.28a.75.75 0 010-1.06z"
+        clipRule="evenodd"
+      />
     </svg>
   );
 }
@@ -140,8 +171,8 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 /* ------------------------------------------------------------------ */
 export default function POTSLanding() {
   /* --- Checklist state --- */
-  const [checked, setChecked] = useState<boolean[]>(
-    () => new Array(checklistItems.length).fill(false)
+  const [checked, setChecked] = useState<boolean[]>(() =>
+    Array.from({ length: checklistItems.length }, () => false),
   );
   const checkedCount = checked.filter(Boolean).length;
 
@@ -176,8 +207,8 @@ export default function POTSLanding() {
         });
 
         if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Something went wrong.");
+          const data = ApiError.safeParse(await res.json());
+          throw new Error(data.success ? data.data.error : "Something went wrong.");
         }
 
         setStatus("sent");
@@ -187,7 +218,7 @@ export default function POTSLanding() {
         setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
       }
     },
-    [form]
+    [form],
   );
 
   /* --- Scroll to form --- */
@@ -239,9 +270,8 @@ export default function POTSLanding() {
                   Your phone carrier is betting you won&apos;t fight back.
                 </h1>
                 <p className="mt-6 text-lg text-muted sm:text-xl">
-                  I help small businesses escape overpriced legacy phone contracts,
-                  fight unauthorized fees, and migrate to modern VoIP &mdash; saving
-                  thousands per year.
+                  I help small businesses escape overpriced legacy phone contracts, fight
+                  unauthorized fees, and migrate to modern VoIP &mdash; saving thousands per year.
                 </p>
                 <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                   <button
@@ -276,27 +306,25 @@ export default function POTSLanding() {
             <FadeIn animation="fade-in" delay={0.1}>
               <div className="mt-8 space-y-5 text-muted leading-relaxed sm:text-lg">
                 <p>
-                  Major carriers &mdash; AT&amp;T, Verizon, Lumen, Frontier &mdash; are
-                  actively retiring their copper POTS networks. AT&amp;T plans to shut down
-                  nearly all copper infrastructure by 2029, and the FCC has relaxed
-                  regulations to let them do it faster.
+                  Major carriers &mdash; AT&amp;T, Verizon, Lumen, Frontier &mdash; are actively
+                  retiring their copper POTS networks. AT&amp;T plans to shut down nearly all copper
+                  infrastructure by 2029, and the FCC has relaxed regulations to let them do it
+                  faster.
                 </p>
                 <p>
-                  But before they pull the plug, they&apos;re squeezing every dollar
-                  they can out of the businesses still connected. Lines that cost
-                  $30&ndash;$60/month a few years ago now bill at $150&ndash;$400/month.
-                  Some per-line prices have climbed past $1,000. Industry insiders have
-                  called these rate hikes{" "}
+                  But before they pull the plug, they&apos;re squeezing every dollar they can out of
+                  the businesses still connected. Lines that cost $30&ndash;$60/month a few years
+                  ago now bill at $150&ndash;$400/month. Some per-line prices have climbed past
+                  $1,000. Industry insiders have called these rate hikes{" "}
                   <span className="font-medium text-foreground">
                     &ldquo;borderline extortion.&rdquo;
                   </span>
                 </p>
                 <p>
-                  When businesses try to leave, carriers hit them with surprise
-                  contracts and early termination fees &mdash; sometimes generated
-                  without the customer&apos;s knowledge or consent. They&apos;re
-                  counting on small businesses not knowing their rights or not having
-                  the energy to fight back.
+                  When businesses try to leave, carriers hit them with surprise contracts and early
+                  termination fees &mdash; sometimes generated without the customer&apos;s knowledge
+                  or consent. They&apos;re counting on small businesses not knowing their rights or
+                  not having the energy to fight back.
                 </p>
                 <p className="font-medium text-foreground">
                   This isn&apos;t a theory. It happened to one of my clients.
@@ -317,9 +345,7 @@ export default function POTSLanding() {
                     key={stat.label}
                     className="rounded-xl border border-border bg-surface-light p-5 text-center"
                   >
-                    <div className="text-2xl font-bold text-accent sm:text-3xl">
-                      {stat.value}
-                    </div>
+                    <div className="text-2xl font-bold text-accent sm:text-3xl">{stat.value}</div>
                     <div className="mt-1 text-sm text-muted">{stat.label}</div>
                   </div>
                 ))}
@@ -344,33 +370,32 @@ export default function POTSLanding() {
               <FadeIn animation="fade-in" delay={0.1} className="lg:col-span-3">
                 <div className="space-y-5 text-muted leading-relaxed sm:text-lg">
                   <p>
-                    Bravo Farms &mdash; a family business in Traver, CA operating since
-                    1979 &mdash; had been a loyal AT&amp;T customer for 47 years. They were
-                    paying roughly <span className="font-medium text-foreground">$945/month</span> for
-                    POTS lines, including lines that weren&apos;t even in use.
+                    Bravo Farms &mdash; a family business in Traver, CA operating since 1979 &mdash;
+                    had been a loyal AT&amp;T customer for 47 years. They were paying roughly{" "}
+                    <span className="font-medium text-foreground">$945/month</span> for POTS lines,
+                    including lines that weren&apos;t even in use.
                   </p>
                   <p>
-                    After an audit, we recommended migrating to VoIP. On February 24, 2026,
-                    they canceled two unused lines. AT&amp;T&apos;s rep confirmed the
-                    cancellation via email &mdash; no mention of any contract or new terms.
+                    After an audit, we recommended migrating to VoIP. On February 24, 2026, they
+                    canceled two unused lines. AT&amp;T&apos;s rep confirmed the cancellation via
+                    email &mdash; no mention of any contract or new terms.
                   </p>
                   <p>
-                    On March 1, a port request was submitted to move the remaining lines to
-                    VoIP. Two days later, AT&amp;T sent an automated email claiming a new
-                    Business Service Agreement had been created &mdash; a one-year contract
-                    with a{" "}
+                    On March 1, a port request was submitted to move the remaining lines to VoIP.
+                    Two days later, AT&amp;T sent an automated email claiming a new Business Service
+                    Agreement had been created &mdash; a one-year contract with a{" "}
                     <span className="font-medium text-foreground">
                       ~$5,000 early termination fee
                     </span>
                     . Bravo Farms never signed, agreed to, or consented to any contract.
                   </p>
                   <p>
-                    We built the case, assembled the timeline, identified the violations, and
-                    filed an FCC complaint. Within{" "}
-                    <span className="font-medium text-foreground">15 days</span>,
-                    AT&amp;T&apos;s Office of the President responded. The account was fully
-                    disconnected, no early termination fee was charged, and prorated credits
-                    were refunded. AT&amp;T acknowledged that{" "}
+                    We built the case, assembled the timeline, identified the violations, and filed
+                    an FCC complaint. Within{" "}
+                    <span className="font-medium text-foreground">15 days</span>, AT&amp;T&apos;s
+                    Office of the President responded. The account was fully disconnected, no early
+                    termination fee was charged, and prorated credits were refunded. AT&amp;T
+                    acknowledged that{" "}
                     <span className="font-medium text-foreground">
                       &ldquo;renewals must be accepted by the account holder&rdquo;
                     </span>{" "}
@@ -389,7 +414,9 @@ export default function POTSLanding() {
                       <div className="text-sm font-medium text-muted">Monthly cost</div>
                       <div className="mt-1 flex items-center gap-3">
                         <span className="text-lg line-through text-muted/60">~$945</span>
-                        <span aria-hidden="true" className="text-muted">&rarr;</span>
+                        <span aria-hidden="true" className="text-muted">
+                          &rarr;
+                        </span>
                         <span className="text-xl font-bold text-accent">~$30&ndash;50</span>
                       </div>
                     </div>
@@ -397,7 +424,9 @@ export default function POTSLanding() {
                       <div className="text-sm font-medium text-muted">Early termination fee</div>
                       <div className="mt-1 flex items-center gap-3">
                         <span className="text-lg line-through text-muted/60">~$5,000</span>
-                        <span aria-hidden="true" className="text-muted">&rarr;</span>
+                        <span aria-hidden="true" className="text-muted">
+                          &rarr;
+                        </span>
                         <span className="text-xl font-bold text-accent">$0</span>
                       </div>
                     </div>
@@ -405,7 +434,9 @@ export default function POTSLanding() {
                       <div className="text-sm font-medium text-muted">Lines</div>
                       <div className="mt-1 flex items-center gap-3">
                         <span className="text-lg line-through text-muted/60">4 (2 unused)</span>
-                        <span aria-hidden="true" className="text-muted">&rarr;</span>
+                        <span aria-hidden="true" className="text-muted">
+                          &rarr;
+                        </span>
                         <span className="text-xl font-bold text-accent">2 active</span>
                       </div>
                     </div>
@@ -431,9 +462,7 @@ export default function POTSLanding() {
         <section className="bg-surface py-16 lg:py-20">
           <div className="mx-auto max-w-6xl px-6">
             <FadeIn animation="fade-in-up">
-              <h2 className="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
-                What I do
-              </h2>
+              <h2 className="text-2xl font-bold tracking-tight text-navy sm:text-4xl">What I do</h2>
             </FadeIn>
 
             <div className="mt-10 grid gap-6 sm:grid-cols-2">
@@ -500,7 +529,9 @@ export default function POTSLanding() {
                       }
                       className="mt-0.5 h-5 w-5 shrink-0 rounded border-border text-accent accent-accent"
                     />
-                    <span className={`text-sm sm:text-base ${checked[i] ? "text-foreground" : "text-muted"}`}>
+                    <span
+                      className={`text-sm sm:text-base ${checked[i] ? "text-foreground" : "text-muted"}`}
+                    >
                       {item}
                     </span>
                   </label>
@@ -518,20 +549,16 @@ export default function POTSLanding() {
                 }`}
               >
                 {checkedCount === 0 ? (
-                  <p className="text-muted">
-                    Check any that apply to see your risk level.
-                  </p>
+                  <p className="text-muted">Check any that apply to see your risk level.</p>
                 ) : checkedCount < 3 ? (
                   <p className="text-foreground">
-                    <span className="font-semibold">{checkedCount} checked.</span>{" "}
-                    You&apos;re probably overpaying. A free audit would tell you exactly
-                    how much.
+                    <span className="font-semibold">{checkedCount} checked.</span> You&apos;re
+                    probably overpaying. A free audit would tell you exactly how much.
                   </p>
                 ) : (
                   <p className="text-foreground">
-                    <span className="font-semibold text-accent">{checkedCount} checked.</span>{" "}
-                    Your carrier is counting on you not doing anything about it.
-                    Let&apos;s change that.
+                    <span className="font-semibold text-accent">{checkedCount} checked.</span> Your
+                    carrier is counting on you not doing anything about it. Let&apos;s change that.
                   </p>
                 )}
                 {checkedCount > 0 && (
@@ -559,18 +586,18 @@ export default function POTSLanding() {
                 </h2>
                 <div className="mt-6 space-y-4 text-muted leading-relaxed sm:text-lg">
                   <p>
-                    I&apos;m Tyler Vigario, an independent IT consultant based in
-                    California&apos;s Central Valley. I&apos;m not a telecom vendor. I&apos;m
-                    not an AT&amp;T reseller. I don&apos;t take commissions from carriers. I
-                    work for the client, not the phone company.
+                    I&apos;m Tyler Vigario, an independent IT consultant based in California&apos;s
+                    Central Valley. I&apos;m not a telecom vendor. I&apos;m not an AT&amp;T
+                    reseller. I don&apos;t take commissions from carriers. I work for the client,
+                    not the phone company.
                   </p>
                   <p>
-                    I got into this because I saw a client &mdash; a family business
-                    that&apos;s been around since 1979 &mdash; getting squeezed by their
-                    carrier for thousands of dollars on service they weren&apos;t even fully
-                    using. When they tried to leave, the carrier generated a contract they
-                    never agreed to and threatened a $5,000 fee. That&apos;s not right. I
-                    helped them fight it, and now I help other businesses do the same.
+                    I got into this because I saw a client &mdash; a family business that&apos;s
+                    been around since 1979 &mdash; getting squeezed by their carrier for thousands
+                    of dollars on service they weren&apos;t even fully using. When they tried to
+                    leave, the carrier generated a contract they never agreed to and threatened a
+                    $5,000 fee. That&apos;s not right. I helped them fight it, and now I help other
+                    businesses do the same.
                   </p>
                 </div>
 
@@ -582,9 +609,7 @@ export default function POTSLanding() {
                     { value: "15 days", label: "FCC resolution" },
                   ].map((cred) => (
                     <div key={cred.label} className="text-center">
-                      <div className="text-xl font-bold text-accent sm:text-2xl">
-                        {cred.value}
-                      </div>
+                      <div className="text-xl font-bold text-accent sm:text-2xl">{cred.value}</div>
                       <div className="mt-1 text-xs text-muted sm:text-sm">{cred.label}</div>
                     </div>
                   ))}
@@ -628,8 +653,8 @@ export default function POTSLanding() {
                     Stop overpaying. Start here.
                   </h2>
                   <p className="mt-4 text-lg text-muted">
-                    Tell me about your current phone setup and I&apos;ll tell you
-                    exactly what you could be saving &mdash; free, no strings attached.
+                    Tell me about your current phone setup and I&apos;ll tell you exactly what you
+                    could be saving &mdash; free, no strings attached.
                   </p>
 
                   <div className="mt-8 space-y-4">
@@ -680,8 +705,18 @@ export default function POTSLanding() {
                   {status === "sent" ? (
                     <div className="flex flex-col items-center justify-center py-8 text-center">
                       <div className="mb-4 inline-flex rounded-full bg-accent-soft p-3 text-accent">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-8 w-8" aria-hidden="true">
-                          <path fillRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" clipRule="evenodd" />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className="h-8 w-8"
+                          aria-hidden="true"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       </div>
                       <h3 className="text-xl font-semibold text-navy">Got it!</h3>
@@ -696,9 +731,17 @@ export default function POTSLanding() {
                       </button>
                     </div>
                   ) : (
-                    <form onSubmit={handleSubmit} className="space-y-5">
+                    <form
+                      onSubmit={(e) => {
+                        void handleSubmit(e);
+                      }}
+                      className="space-y-5"
+                    >
                       <div>
-                        <label htmlFor="pots-business" className="mb-1.5 block text-sm font-medium text-foreground">
+                        <label
+                          htmlFor="pots-business"
+                          className="mb-1.5 block text-sm font-medium text-foreground"
+                        >
                           Business name
                         </label>
                         <input
@@ -714,7 +757,10 @@ export default function POTSLanding() {
                       </div>
 
                       <div>
-                        <label htmlFor="pots-name" className="mb-1.5 block text-sm font-medium text-foreground">
+                        <label
+                          htmlFor="pots-name"
+                          className="mb-1.5 block text-sm font-medium text-foreground"
+                        >
                           Your name
                         </label>
                         <input
@@ -730,7 +776,10 @@ export default function POTSLanding() {
                       </div>
 
                       <div>
-                        <label htmlFor="pots-contact" className="mb-1.5 block text-sm font-medium text-foreground">
+                        <label
+                          htmlFor="pots-contact"
+                          className="mb-1.5 block text-sm font-medium text-foreground"
+                        >
                           Phone or email
                         </label>
                         <input
@@ -746,8 +795,12 @@ export default function POTSLanding() {
                       </div>
 
                       <div>
-                        <label htmlFor="pots-bill" className="mb-1.5 block text-sm font-medium text-foreground">
-                          Current monthly phone bill <span className="font-normal text-muted">(approximate)</span>
+                        <label
+                          htmlFor="pots-bill"
+                          className="mb-1.5 block text-sm font-medium text-foreground"
+                        >
+                          Current monthly phone bill{" "}
+                          <span className="font-normal text-muted">(approximate)</span>
                         </label>
                         <select
                           id="pots-bill"
@@ -770,8 +823,12 @@ export default function POTSLanding() {
                       </div>
 
                       <div>
-                        <label htmlFor="pots-details" className="mb-1.5 block text-sm font-medium text-foreground">
-                          What&apos;s going on? <span className="font-normal text-muted">(optional)</span>
+                        <label
+                          htmlFor="pots-details"
+                          className="mb-1.5 block text-sm font-medium text-foreground"
+                        >
+                          What&apos;s going on?{" "}
+                          <span className="font-normal text-muted">(optional)</span>
                         </label>
                         <textarea
                           id="pots-details"
@@ -802,9 +859,25 @@ export default function POTSLanding() {
                       >
                         {status === "sending" ? (
                           <>
-                            <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                            <svg
+                              className="h-5 w-5 animate-spin"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              aria-hidden="true"
+                            >
+                              <circle
+                                className="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                strokeWidth="4"
+                              />
+                              <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                              />
                             </svg>
                             Sending...
                           </>
@@ -841,7 +914,10 @@ export default function POTSLanding() {
                 (559) 900-1400
               </a>
               <span className="text-border">|</span>
-              <a href="mailto:tyler@tylervigario.com" className="py-2 transition-colors hover:text-foreground">
+              <a
+                href="mailto:tyler@tylervigario.com"
+                className="py-2 transition-colors hover:text-foreground"
+              >
                 tyler@tylervigario.com
               </a>
             </div>

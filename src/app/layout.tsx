@@ -7,7 +7,6 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
-
 export const metadata: Metadata = {
   metadataBase: new URL("https://tylervigario.com"),
   title: {
@@ -26,9 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} font-sans antialiased overflow-x-hidden`}
-      >
+      <body className={`${geistSans.variable} font-sans antialiased overflow-x-hidden`}>
         <a
           href="#main"
           className="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-2 focus-visible:left-2 focus-visible:z-100 focus-visible:rounded-lg focus-visible:bg-accent focus-visible:px-4 focus-visible:py-3 focus-visible:text-white focus-visible:outline-none"
