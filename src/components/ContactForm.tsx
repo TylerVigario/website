@@ -10,26 +10,15 @@ interface ContactFormProps {
 }
 
 export default function ContactForm({ initialService }: ContactFormProps) {
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     name: "",
     contact: "",
-    services: [] as string[],
+    services:
+      initialService && serviceOptions.includes(initialService) ? [initialService] : [],
     details: "",
-  });
+  }));
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
-
-  // Pre-select service from URL param
-  useEffect(() => {
-    if (initialService && serviceOptions.includes(initialService)) {
-      setForm((prev) => ({
-        ...prev,
-        services: prev.services.includes(initialService)
-          ? prev.services
-          : [...prev.services, initialService],
-      }));
-    }
-  }, [initialService]);
 
   const toggleService = useCallback((service: string) => {
     setForm((prev) => ({

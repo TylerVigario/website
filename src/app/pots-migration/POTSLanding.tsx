@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
 
 /* ------------------------------------------------------------------ */
@@ -202,7 +203,7 @@ export default function POTSLanding() {
       {/* ============================================================ */}
       <header className="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-          <a href="/" aria-label="Vigario Technology Solutions home">
+          <Link href="/" aria-label="Vigario Technology Solutions home">
             <Image
               src="/images/vts-logo.png"
               alt="Vigario Technology Solutions"
@@ -211,7 +212,7 @@ export default function POTSLanding() {
               className="h-7 w-auto"
               priority
             />
-          </a>
+          </Link>
           <a
             href="tel:+15599001400"
             className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-bright"
@@ -826,7 +827,7 @@ export default function POTSLanding() {
       <footer className="border-t border-border py-8">
         <div className="mx-auto max-w-6xl px-6">
           <div className="flex flex-col items-center justify-between gap-4 text-sm text-muted sm:flex-row">
-            <a href="/" className="inline-block py-2">
+            <Link href="/" className="inline-block py-2">
               <Image
                 src="/images/vts-logo.png"
                 alt="Vigario Technology Solutions"
@@ -834,7 +835,7 @@ export default function POTSLanding() {
                 height={124}
                 className="h-6 w-auto"
               />
-            </a>
+            </Link>
             <div className="flex items-center gap-4">
               <a href="tel:+15599001400" className="py-2 transition-colors hover:text-foreground">
                 (559) 900-1400
