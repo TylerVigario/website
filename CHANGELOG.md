@@ -1,1 +1,64 @@
 # Changelog
+## [1.1.0](https://github.com/TylerVigario/website/compare/v1.0.0...v1.1.0) (2026-04-27)
+
+### Features
+
+* Add deployment contract surface (sqlite-path, health endpoint)
+
+### Bug Fixes
+
+* Resolve lint errors in ContactForm and POTSLanding
+
+## [1.0.0](https://github.com/TylerVigario/website/releases/tag/v1.0.0) (2026-04-03)
+
+### Features
+
+* Scaffold VTS landing page
+* Add hero constellation and retro-tech background to about section
+* Visual polish — section surfaces, card hovers, gradient text, counter, CTA texture
+* Custom favicon, Google Business link, GitHub icon in footer
+* Complete site redesign — light theme, new branding, updated services
+* Quote form, merged services, About rewrite, Hero CTA rework
+* Hero image, two-column hero layout, color nav logo
+* Full-viewport hero with scroll snap on mobile
+* SEO overhaul — JSON-LD, meta, sitemap, robots, domain update
+* SEO round 2 — canonical, JSON-LD expansion, manifest, apple icon, accessibility
+* JSON-LD — add slogan and knowsAbout for richer search signals
+* Add CSP and security headers
+* Add COOP header for origin isolation
+* Add POTS-to-VoIP migration landing page
+* Add dedicated service pages for networking, cameras, Windows, and Linux
+
+### Bug Fixes
+
+* Responsive spacing and overflow fixes
+* SEO meta, accessibility, contact nav target, image optimization
+* Mobile responsive sizing for small screens (iPhone SE)
+* Hero polish — line break, watermark, CTA icon, spacing
+* Layout balance — service cards, About sidebar, CTA trust signals
+* UX improvements — nav highlighting, scroll offsets, form polish, clickable services
+* Remove double focus outline on form inputs
+* Add brand colors to GitHub and Google Business footer icons
+* Replace unverifiable credentials with honest differentiators in About
+* Enforce 44px minimum touch targets across all interactive elements
+* Hide hero image on mobile, increase nav clearance
+* Correct VTS founding date — company 2021, founder experience since 2005
+* Sharpen copy — builder identity, anti-middleman positioning
+* Pricing language — transparent rate, approachable for all clients
+* Favicon — bold V on navy, readable at any size
+* Darken accent to #2970b5 for WCAG AA contrast ratio
+* Duplicate ARIA ID — rename contact input to contact-info
+* Correct business address in JSON-LD
+* Skip-to-content link — use focus-visible to prevent resize flash
+* SEO quick wins — custom 404, Twitter cards, trailing slash config
+
+### Refactoring
+
+* Reposition copy for B2B market
+* Rewrite site copy — company voice, benefit-led headings, honest tone
+* Drop framer-motion, CSS animations, server components, font/image optimization
+* Use plain img for nav logo — immediate LCP discovery
+* Enable standalone output for self-hosted deployment
+* Convert single-page site to multi-page architecture
+* Increase color contrast and redesign hero section
+
