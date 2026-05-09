@@ -1,8 +1,36 @@
 import type { NextConfig } from "next";
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const { version } = JSON.parse(readFileSync("./package.json", "utf-8")) as { version: string };
+
+/**
+ * Read the runtime-deps manifest produced by scripts/build-server.ts
+ * (esbuild bundle of server.ts → bin/server.mjs, then @vercel/nft on
+ * the bundle → bin/server.trace.json). We fold those paths into
+ * outputFileTracingIncludes below so the standalone tar carries the
+ * runtime deps server.mjs needs at startup — most importantly each
+ * traced package's package.json, without which ESM resolution from
+ * the unpacked tar fails (v1.2.0 shipped @sentry/nextjs sans its
+ * package.json and prod died with ERR_MODULE_NOT_FOUND on swap).
+ *
+ * Missing manifest is non-fatal: a developer running `next build`
+ * without first running `build:server` (e.g. for local Next-only
+ * validation) gets a warning, not a failure. The package.json
+ * prebuild script always runs build:server before next build so
+ * production builds have the manifest on disk before this evaluates.
+ */
+function readBundleTrace(path: string): string[] {
+  if (!existsSync(path)) {
+    console.warn(
+      `[next.config] ${path} missing — its bundle's runtime deps won't ship in the standalone tar. Run \`npm run build:server\` to generate.`,
+    );
+    return [];
+  }
+  return JSON.parse(readFileSync(path, "utf-8")) as string[];
+}
+
+const bundleTraceIncludes = readBundleTrace("./bin/server.trace.json");
 
 // Sentry release identifier. The `service-name@version` shape is
 // Sentry's recommended convention — keeps releases unique across
@@ -27,6 +55,19 @@ const nextConfig: NextConfig = {
   // standalone tracer then includes it in node_modules/ via the app's
   // import graph.
   serverExternalPackages: ["better-sqlite3"],
+
+  // Fold server.mjs's nft trace into Next's standalone copy step.
+  // server.ts → bin/server.mjs is built outside Next's tracer view,
+  // so its externals (@sentry/nextjs, next, etc.) aren't in Next's
+  // server import graph and don't get fully copied into the
+  // standalone tar by default. v1.2.0 hit this exact gap. The "*"
+  // page key applies the include to every entry — we want the
+  // server's deps shipped regardless of which route's trace is
+  // being computed. See scripts/build-server.ts for how the manifest
+  // is produced.
+  outputFileTracingIncludes: {
+    "*": bundleTraceIncludes,
+  },
   headers: () =>
     Promise.resolve([
       {

@@ -178,6 +178,22 @@ jobs:
         if: steps.version.outputs.skip != 'true'
         run: npm version ${{ steps.version.outputs.version }} --no-git-tag-version
 
+      - name: Build server entrypoint
+        if: steps.version.outputs.skip != 'true'
+        # Emits bin/server.mjs (esbuild bundle of server.ts) and
+        # bin/server.trace.json (its nft-traced runtime deps). The
+        # trace is read by next.config.ts and folded into
+        # outputFileTracingIncludes so the standalone tar carries
+        # server.mjs's full runtime contract — without this, prod
+        # ships a partial @sentry/nextjs (build/ but no package.json)
+        # and dies with ERR_MODULE_NOT_FOUND on swap (v1.2.0). Build
+        # script runs its own --check smoke test internally.
+        # `npm run build` triggers prebuild which also runs this, so
+        # this step is largely for log-section visibility — and to
+        # surface a build-server-specific failure before the long
+        # `next build` step.
+        run: npm run build:server
+
       - name: Build
         if: steps.version.outputs.skip != 'true'
         run: npm run build
