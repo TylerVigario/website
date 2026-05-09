@@ -1,5 +1,5 @@
 {
-  "name": "tylervigario",
+  "name": "vigario-technology-solutions",
   "version": "1.1.0",
   "type": "module",
   "private": true,
@@ -8,8 +8,11 @@
   },
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run check:public-env",
     "build": "next build",
+    "postbuild": "node -e \"import('node:fs').then(fs=>fs.copyFileSync('server.mjs', '.next/standalone/server.mjs'))\"",
     "start": "next start",
+    "check:public-env": "tsx scripts/check-public-env.ts",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "lint": "npm run lint:js && npm run lint:md",
@@ -21,32 +24,35 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.52.0",
     "better-sqlite3": "^12.9.0",
-    "next": "16.2.4",
-    "nodemailer": "^8.0.6",
-    "react": "19.2.5",
-    "react-dom": "19.2.5",
-    "zod": "^4.3.6"
+    "next": "^16.2.6",
+    "nodemailer": "^8.0.7",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.5.2",
-    "@commitlint/config-conventional": "^20.5.0",
-    "@tailwindcss/postcss": "^4.2.4",
+    "@commitlint/cli": "^20.5.3",
+    "@commitlint/config-conventional": "^20.5.3",
+    "@tailwindcss/postcss": "^4.3.0",
     "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^24.12.2",
+    "@types/node": "^24.12.3",
     "@types/nodemailer": "^8.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "dotenv": "^17.4.2",
     "eslint": "^9.39.4",
-    "eslint-config-next": "16.2.4",
+    "eslint-config-next": "^16.2.6",
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "markdownlint-cli2": "^0.22.1",
     "prettier": "^3.8.3",
-    "tailwindcss": "^4.2.4",
+    "tailwindcss": "^4.3.0",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.0"
+    "typescript-eslint": "^8.59.2"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [

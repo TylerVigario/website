@@ -3,7 +3,8 @@
   "config": {
     "MD013": false, // line-length: disabled (prose doesn't hard-wrap)
     "MD033": false, // no-inline-html: allowed for occasional <kbd>, <details>, etc.
-    "MD041": false // first-line-h1: not every fragment needs to start with h1
+    "MD041": false, // first-line-h1: not every fragment needs to start with h1
+    "MD060": false // table-column-style: short-form tables preferred; not auto-fixable so the rule just nags
   },
   "globs": ["**/*.md"],
   "ignores": ["node_modules/**", ".next/**", "CHANGELOG.md"]

@@ -33,11 +33,16 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
+# Sentry source-map upload auth token. Created on demand by the
+# Sentry CLI / build plugin; contains a project-scoped secret.
+.env.sentry-build-plugin
 
 # sqlite database (path comes from SQLITE_PATH; dev convention is ./data/)
 /data/
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
 
 # vercel
 .vercel

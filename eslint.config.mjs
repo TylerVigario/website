@@ -49,6 +49,9 @@ const eslintConfig = defineConfig([
     ".commitlintrc.mjs",
     "eslint.config.mjs",
     "postcss.config.mjs",
+    // Build / pipeline scripts (run via tsx, not part of the app
+    // type graph)
+    "scripts/**",
   ]),
 ]);
 

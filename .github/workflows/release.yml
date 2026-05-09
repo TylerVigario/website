@@ -53,12 +53,47 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+      # Cache key derived from package.json's deps fields ONLY, not
+      # the full lockfile. The Release workflow rewrites
+      # package-lock.json's root `version` on every run, so a key
+      # based on `hashFiles('**/package-lock.json')` (what setup-node's
+      # `cache: "npm"` shorthand uses) rotates every release and
+      # accumulates one stale cache per run. Hashing only the deps
+      # subtree means the key is stable until you actually change a
+      # dep — typical week of releases shares one cache entry.
+      - name: Compute npm cache key
+        id: cache-key
+        run: |
+          HASH=$(jq -S '{dependencies,devDependencies,optionalDependencies,peerDependencies}' package.json | sha256sum | cut -c1-16)
+          echo "key=npm-${{ runner.os }}-node${{ env.NODE_VERSION }}-${HASH}" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ steps.cache-key.outputs.key }}
+          restore-keys: |
+            npm-${{ runner.os }}-node${{ env.NODE_VERSION }}-
       - run: npm ci --prefer-offline
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format
       - run: npm run build
+        env:
+          # Sentry build-time secrets. NEXT_PUBLIC_SENTRY_DSN is inlined
+          # into the client bundle (Next inlines NEXT_PUBLIC_* at
+          # build); SENTRY_DSN here is harmless extra exposure to the
+          # build, the actual server-runtime read is from prod's env at
+          # start. SENTRY_ORG / SENTRY_PROJECT / SENTRY_AUTH_TOKEN are
+          # read by withSentryConfig to upload source maps so production
+          # stack traces resolve back to readable TS. Without these the
+          # build still succeeds but stack traces stay minified. All
+          # optional — Sentry init is a no-op when DSNs are unset, and
+          # the gate must work the first time CI runs (before the
+          # secrets are populated).
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
   # =========================================================================
   # Release — depends on gate. Bumps version, builds the standalone tar,
@@ -84,7 +119,19 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+
+      # See the Gate job for the rationale on hashing deps-only.
+      - name: Compute npm cache key
+        id: cache-key
+        run: |
+          HASH=$(jq -S '{dependencies,devDependencies,optionalDependencies,peerDependencies}' package.json | sha256sum | cut -c1-16)
+          echo "key=npm-${{ runner.os }}-node${{ env.NODE_VERSION }}-${HASH}" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ steps.cache-key.outputs.key }}
+          restore-keys: |
+            npm-${{ runner.os }}-node${{ env.NODE_VERSION }}-
 
       - name: Install dependencies
         run: npm ci --prefer-offline
@@ -134,9 +181,15 @@ jobs:
       - name: Build
         if: steps.version.outputs.skip != 'true'
         run: npm run build
-        # No NEXT_PUBLIC_* and no build-time secrets. SQLITE_PATH is
-        # runtime-only — the bundle reads it from /opt/website/.env at
-        # server start, never from the build env.
+        env:
+          # See the Gate job for the rationale. SQLITE_PATH is
+          # runtime-only — the bundle reads it from /opt/website/.env
+          # at server start, never from the build env.
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
       - name: Package standalone
         if: steps.version.outputs.skip != 'true'
@@ -144,11 +197,15 @@ jobs:
           # Standalone bundle is self-contained. cp -rT (treat dest as
           # a file, not a dir to nest into) so this works whether the
           # target already exists or not.
+          # server.mjs is already in .next/standalone/ — copied there
+          # by the `postbuild` script in package.json so local
+          # `npm run build` also produces a fully-working bundle.
           cp -rT public .next/standalone/public
           cp -rT .next/static .next/standalone/.next/static
 
           # .env.example documents the runtime contract (SQLITE_PATH +
-          # SMTP_*); ships in the tar so first-time deploys can copy it.
+          # SMTP_* + SENTRY_*); ships in the tar so first-time deploys
+          # can copy it.
           cp .env.example .next/standalone/.env.example
 
           # BUILD_INFO so prod can verify Node + glibc + arch match
@@ -161,47 +218,60 @@ jobs:
             --arg os "$(. /etc/os-release && echo "$ID-$VERSION_ID")" \
             --arg arch "$(uname -m)" \
             --arg glibcVersion "$(ldd --version | head -1 | awk '{print $NF}')" \
-            --arg assetName "tylervigario-${{ steps.version.outputs.tag }}.tar.gz" \
+            --arg assetName "vigario-technology-solutions-${{ steps.version.outputs.tag }}.tar.gz" \
             '{tag: $tag, commit: $commit, buildTime: $buildTime, nodeVersion: $nodeVersion, os: $os, arch: $arch, glibcVersion: $glibcVersion, assetName: $assetName}' \
             > .next/standalone/BUILD_INFO
 
           # MANIFEST schemaVersion 2 contract (canonical shape from
-          # vis-daily-tracker). tylervigario specifics:
-          #   - cli omitted: no CLI binary shipped (deploy script
-          #     skips discovery on absent .cli)
+          # vis-daily-tracker — see docs/deployment.md). Specifics:
+          #   - cli omitted: no CLI binary shipped
           #   - preStartCommands []: SQLite init is on-demand on first
           #     request; no migration step (deploy short-circuits on
           #     length 0)
           #   - requiredTools {}: just Node — explicit empty object
           #     signals "considered, none" rather than "forgot"
-          #   - requiredEnv: SQLITE_PATH (sourced from /opt/website/.env)
+          #   - requiredEnv: read from src/lib/required-env.json — same
+          #     file src/lib/runtime-config.ts validates at startup, so
+          #     what prod's MANIFEST advertises and what the app
+          #     enforces stay in lockstep
           #   - optionalEnv: SMTP_* (when both USER+PASS set, route
-          #     handlers send notification emails; otherwise degrade
-          #     gracefully)
+          #     handlers send notification emails) + SENTRY_DSN (server-
+          #     side Sentry init); both degrade gracefully when unset
+          #   - startCommand: node server.mjs — the custom entrypoint
+          #     in the tar root (graceful shutdown drain + Sentry
+          #     flush). Source can change this without prod editing
+          #     systemd; the contract reads it from MANIFEST.
           NODE_MAJOR=$(node -p "require('./package.json').engines.node.match(/\d+/)[0]")
           jq -n \
             --arg tag "${{ steps.version.outputs.tag }}" \
             --arg nodeMajor "$NODE_MAJOR" \
+            --slurpfile requiredEnv src/lib/required-env.json \
             '{
               schemaVersion: 2,
               tag: $tag,
-              startCommand: "node server.js",
+              startCommand: "node server.mjs",
               preStartCommands: [],
               port: 3000,
               healthCheckPath: "/api/health",
-              requiredEnv: ["SQLITE_PATH"],
-              optionalEnv: ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS"],
+              requiredEnv: $requiredEnv[0],
+              optionalEnv: [
+                "SMTP_HOST",
+                "SMTP_PORT",
+                "SMTP_USER",
+                "SMTP_PASS",
+                "SENTRY_DSN"
+              ],
               nodeVersion: $nodeMajor,
               requiredTools: {}
             }' \
             > .next/standalone/MANIFEST
 
-          tar -czf tylervigario-${{ steps.version.outputs.tag }}.tar.gz -C .next/standalone .
+          tar -czf vigario-technology-solutions-${{ steps.version.outputs.tag }}.tar.gz -C .next/standalone .
 
       - name: Compute SHA256SUMS
         if: steps.version.outputs.skip != 'true'
         run: |
-          sha256sum tylervigario-${{ steps.version.outputs.tag }}.tar.gz > SHA256SUMS
+          sha256sum vigario-technology-solutions-${{ steps.version.outputs.tag }}.tar.gz > SHA256SUMS
           cat SHA256SUMS
 
       - name: Generate changelog
@@ -233,7 +303,7 @@ jobs:
           body_path: RELEASE_NOTES.md
           draft: true
           files: |
-            tylervigario-${{ steps.version.outputs.tag }}.tar.gz
+            vigario-technology-solutions-${{ steps.version.outputs.tag }}.tar.gz
             SHA256SUMS
 
       - name: Publish Release
