@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 import { getDb } from "@/lib/db";
 import { QuoteRequest } from "@/lib/api/quote";
+import { zodError } from "@/lib/api/error";
 
 const NOTIFY_EMAIL = "tylervigario90@gmail.com";
 
@@ -16,38 +17,37 @@ const transporter = nodemailer.createTransport({
 });
 
 export async function POST(req: NextRequest) {
-  try {
-    const parsed = QuoteRequest.safeParse(await req.json());
-    if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Name, contact info, and at least one service are required." },
-        { status: 400 },
-      );
-    }
-    const { name, contact, services, details } = parsed.data;
-    const servicesStr = services.join(", ");
+  // .catch(() => null) so a malformed-JSON body becomes a 400
+  // (Validation Error) instead of an unhandled throw → Sentry event.
+  // Genuine bugs past this point still propagate to onRequestError.
+  const body: unknown = await req.json().catch(() => null);
+  const parsed = QuoteRequest.safeParse(body);
+  if (!parsed.success) return zodError(parsed);
 
-    const db = getDb();
-    const stmt = db.prepare(
-      "INSERT INTO quotes (name, contact, services, details) VALUES (?, ?, ?, ?)",
-    );
-    stmt.run(name, contact, servicesStr, details || null);
+  const { name, contact, services, details } = parsed.data;
+  const servicesStr = services.join(", ");
 
-    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-      try {
-        await transporter.sendMail({
-          from: `"VTS Website" <${process.env.SMTP_USER}>`,
-          to: NOTIFY_EMAIL,
-          subject: `New Quote Request from ${name}`,
-          text: [
-            `Name: ${name}`,
-            `Contact: ${contact}`,
-            `Services: ${servicesStr}`,
-            `Details: ${details || "(none)"}`,
-            "",
-            `Submitted: ${new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}`,
-          ].join("\n"),
-          html: `
+  const db = getDb();
+  const stmt = db.prepare(
+    "INSERT INTO quotes (name, contact, services, details) VALUES (?, ?, ?, ?)",
+  );
+  stmt.run(name, contact, servicesStr, details || null);
+
+  if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    try {
+      await transporter.sendMail({
+        from: `"VTS Website" <${process.env.SMTP_USER}>`,
+        to: NOTIFY_EMAIL,
+        subject: `New Quote Request from ${name}`,
+        text: [
+          `Name: ${name}`,
+          `Contact: ${contact}`,
+          `Services: ${servicesStr}`,
+          `Details: ${details || "(none)"}`,
+          "",
+          `Submitted: ${new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" })}`,
+        ].join("\n"),
+        html: `
             <h2>New Quote Request</h2>
             <table style="border-collapse:collapse;font-family:sans-serif;">
               <tr><td style="padding:8px;font-weight:bold;">Name</td><td style="padding:8px;">${escapeHtml(name)}</td></tr>
@@ -56,21 +56,15 @@ export async function POST(req: NextRequest) {
               <tr><td style="padding:8px;font-weight:bold;vertical-align:top;">Details</td><td style="padding:8px;">${escapeHtml(details || "(none)")}</td></tr>
             </table>
           `,
-        });
-      } catch (emailErr) {
-        // Log but don't fail the request — the quote is already saved
-        console.error("Failed to send email notification:", emailErr);
-      }
+      });
+    } catch (emailErr) {
+      // Email is best-effort; the quote is already saved. Log so it
+      // surfaces in journalctl if SMTP credentials drift.
+      console.error("Failed to send email notification:", emailErr);
     }
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error("Quote submission error:", err);
-    return NextResponse.json(
-      { error: "Something went wrong. Please try again or call us directly." },
-      { status: 500 },
-    );
   }
+
+  return NextResponse.json({ success: true });
 }
 
 function escapeHtml(str: string) {

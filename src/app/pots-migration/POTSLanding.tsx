@@ -1,10 +1,22 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useForm, useWatch, type SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
 import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
-import { ApiError } from "@/lib/api/response";
+import { PotsAuditRequest } from "@/lib/api/pots-audit";
+import { ProblemDetails } from "@/lib/api/error";
+
+// Field-name guard for Problem Details errors[].field strings.
+// Derived from the zod schema so it can't drift if a field is added.
+const FIELD_NAMES = Object.keys(PotsAuditRequest.shape) as (keyof PotsAuditRequest)[];
+function isFieldName(field: string): field is keyof PotsAuditRequest {
+  return (FIELD_NAMES as readonly string[]).includes(field);
+}
+
+type FormValues = PotsAuditRequest;
 
 /* ------------------------------------------------------------------ */
 /*  Checklist items                                                   */
@@ -176,50 +188,72 @@ export default function POTSLanding() {
   );
   const checkedCount = checked.filter(Boolean).length;
 
-  /* --- Form state --- */
-  const [form, setForm] = useState({
-    business: "",
-    name: "",
-    contact: "",
-    bill: "",
-    details: "",
+  /* --- Form (RHF + zod resolver shared with the route handler) --- */
+  const {
+    register,
+    handleSubmit,
+    setError,
+    reset,
+    control,
+    formState: { errors, isSubmitting, isSubmitSuccessful },
+  } = useForm<FormValues>({
+    resolver: zodResolver(PotsAuditRequest),
+    // onTouched: stay quiet until the user tabs out; validate on blur,
+    // re-validate on every change. Server-set errors auto-clear when
+    // the user fixes the field.
+    mode: "onTouched",
+    defaultValues: { business: "", name: "", contact: "", bill: "", details: "" },
   });
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [errorMsg, setErrorMsg] = useState("");
 
+  // useWatch (vs the form's `watch`) is React-Compiler-safe — drives
+  // the bill <select>'s placeholder-grey vs picked-foreground styling.
+  const bill = useWatch({ control, name: "bill" });
+
+  // Auto-dismiss the success view after 10s — reset() flips
+  // isSubmitSuccessful back to false, putting the form back.
   useEffect(() => {
-    if (status !== "sent") return;
-    const timer = setTimeout(() => setStatus("idle"), 10000);
+    if (!isSubmitSuccessful) return;
+    const timer = setTimeout(() => reset(), 10000);
     return () => clearTimeout(timer);
-  }, [status]);
+  }, [isSubmitSuccessful, reset]);
 
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent<HTMLFormElement>) => {
-      e.preventDefault();
-      setStatus("sending");
-      setErrorMsg("");
+  const onSubmit: SubmitHandler<FormValues> = async (data) => {
+    let res: Response;
+    try {
+      res = await fetch("/api/pots-audit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+    } catch {
+      setError("root", { type: "network", message: "Network error. Please try again." });
+      return;
+    }
 
-      try {
-        const res = await fetch("/api/pots-audit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
-        });
+    if (res.ok) return;
 
-        if (!res.ok) {
-          const data = ApiError.safeParse(await res.json());
-          throw new Error(data.success ? data.data.error : "Something went wrong.");
+    // Map Problem Details errors[] back to inline field errors. If
+    // the body isn't Problem Details (or all error fields are
+    // unknown), fall back to a single banner-level message.
+    const problem = ProblemDetails.safeParse(await res.json().catch(() => null));
+    if (problem.success && problem.data.errors?.length) {
+      let mappedAny = false;
+      for (const e of problem.data.errors) {
+        if (isFieldName(e.field)) {
+          setError(e.field, { type: "server", message: e.message });
+          mappedAny = true;
         }
-
-        setStatus("sent");
-        setForm({ business: "", name: "", contact: "", bill: "", details: "" });
-      } catch (err) {
-        setStatus("error");
-        setErrorMsg(err instanceof Error ? err.message : "Something went wrong.");
       }
-    },
-    [form],
-  );
+      if (mappedAny) return;
+    }
+
+    setError("root", {
+      type: "server",
+      message: problem.success
+        ? (problem.data.detail ?? problem.data.title)
+        : "Something went wrong.",
+    });
+  };
 
   /* --- Scroll to form --- */
   const formRef = useRef<HTMLElement>(null);
@@ -702,7 +736,7 @@ export default function POTSLanding() {
               {/* Right — form */}
               <FadeIn animation="fade-in-scale" delay={0.1}>
                 <div className="rounded-2xl border border-border bg-surface-light p-6 sm:p-8">
-                  {status === "sent" ? (
+                  {isSubmitSuccessful ? (
                     <div className="flex flex-col items-center justify-center py-8 text-center">
                       <div className="mb-4 inline-flex rounded-full bg-accent-soft p-3 text-accent">
                         <svg
@@ -724,7 +758,7 @@ export default function POTSLanding() {
                         I&apos;ll review your setup and get back to you soon.
                       </p>
                       <button
-                        onClick={() => setStatus("idle")}
+                        onClick={() => reset()}
                         className="mt-6 rounded-lg border border-border px-4 py-3 text-sm text-muted transition-colors hover:border-accent/30 hover:text-foreground"
                       >
                         Submit another request
@@ -732,10 +766,9 @@ export default function POTSLanding() {
                     </div>
                   ) : (
                     <form
-                      onSubmit={(e) => {
-                        void handleSubmit(e);
-                      }}
+                      onSubmit={(e) => void handleSubmit(onSubmit)(e)}
                       className="space-y-5"
+                      noValidate
                     >
                       <div>
                         <label
@@ -747,13 +780,23 @@ export default function POTSLanding() {
                         <input
                           id="pots-business"
                           type="text"
-                          required
                           autoComplete="organization"
-                          value={form.business}
-                          onChange={(e) => setForm({ ...form, business: e.target.value })}
-                          className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground placeholder:text-muted/60 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                          aria-required="true"
+                          aria-invalid={errors.business ? true : undefined}
+                          aria-describedby={errors.business ? "pots-business-error" : undefined}
+                          {...register("business")}
+                          className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground placeholder:text-muted/60 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent aria-invalid:border-red-500"
                           placeholder="Acme Co."
                         />
+                        {errors.business && (
+                          <p
+                            id="pots-business-error"
+                            role="alert"
+                            className="mt-1.5 text-sm text-red-600"
+                          >
+                            {errors.business.message}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -766,13 +809,23 @@ export default function POTSLanding() {
                         <input
                           id="pots-name"
                           type="text"
-                          required
                           autoComplete="name"
-                          value={form.name}
-                          onChange={(e) => setForm({ ...form, name: e.target.value })}
-                          className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground placeholder:text-muted/60 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                          aria-required="true"
+                          aria-invalid={errors.name ? true : undefined}
+                          aria-describedby={errors.name ? "pots-name-error" : undefined}
+                          {...register("name")}
+                          className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground placeholder:text-muted/60 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent aria-invalid:border-red-500"
                           placeholder="Jane Smith"
                         />
+                        {errors.name && (
+                          <p
+                            id="pots-name-error"
+                            role="alert"
+                            className="mt-1.5 text-sm text-red-600"
+                          >
+                            {errors.name.message}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -785,13 +838,23 @@ export default function POTSLanding() {
                         <input
                           id="pots-contact"
                           type="text"
-                          required
                           autoComplete="email"
-                          value={form.contact}
-                          onChange={(e) => setForm({ ...form, contact: e.target.value })}
-                          className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground placeholder:text-muted/60 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+                          aria-required="true"
+                          aria-invalid={errors.contact ? true : undefined}
+                          aria-describedby={errors.contact ? "pots-contact-error" : undefined}
+                          {...register("contact")}
+                          className="w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground placeholder:text-muted/60 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent aria-invalid:border-red-500"
                           placeholder="you@example.com or (559) 555-1234"
                         />
+                        {errors.contact && (
+                          <p
+                            id="pots-contact-error"
+                            role="alert"
+                            className="mt-1.5 text-sm text-red-600"
+                          >
+                            {errors.contact.message}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -804,11 +867,12 @@ export default function POTSLanding() {
                         </label>
                         <select
                           id="pots-bill"
-                          required
-                          value={form.bill}
-                          onChange={(e) => setForm({ ...form, bill: e.target.value })}
-                          className={`w-full rounded-lg border border-border bg-background px-4 py-2.5 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent ${
-                            form.bill ? "text-foreground" : "text-muted/60"
+                          aria-required="true"
+                          aria-invalid={errors.bill ? true : undefined}
+                          aria-describedby={errors.bill ? "pots-bill-error" : undefined}
+                          {...register("bill")}
+                          className={`w-full rounded-lg border border-border bg-background px-4 py-2.5 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent aria-invalid:border-red-500 ${
+                            bill ? "text-foreground" : "text-muted/60"
                           }`}
                         >
                           <option value="" disabled>
@@ -820,6 +884,15 @@ export default function POTSLanding() {
                             </option>
                           ))}
                         </select>
+                        {errors.bill && (
+                          <p
+                            id="pots-bill-error"
+                            role="alert"
+                            className="mt-1.5 text-sm text-red-600"
+                          >
+                            {errors.bill.message}
+                          </p>
+                        )}
                       </div>
 
                       <div>
@@ -833,16 +906,18 @@ export default function POTSLanding() {
                         <textarea
                           id="pots-details"
                           rows={4}
-                          value={form.details}
-                          onChange={(e) => setForm({ ...form, details: e.target.value })}
+                          {...register("details")}
                           className="w-full resize-none rounded-lg border border-border bg-background px-4 py-2.5 text-foreground placeholder:text-muted/60 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
                           placeholder="How many lines do you have? Have you received any surprise contracts or fee notices? Any other details."
                         />
                       </div>
 
-                      {status === "error" && (
-                        <div className="flex items-center justify-between rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
-                          <span>{errorMsg}</span>
+                      {errors.root && (
+                        <div
+                          role="alert"
+                          className="flex items-center justify-between rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700"
+                        >
+                          <span>{errors.root.message}</span>
                           <button
                             type="submit"
                             className="ml-3 shrink-0 py-2.5 -my-2.5 font-medium underline hover:no-underline"
@@ -854,13 +929,13 @@ export default function POTSLanding() {
 
                       <button
                         type="submit"
-                        disabled={status === "sending"}
+                        disabled={isSubmitting}
                         className="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3 text-base font-semibold text-white transition-all hover:bg-accent-bright hover:shadow-lg hover:shadow-accent/15 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        {status === "sending" ? (
+                        {isSubmitting ? (
                           <>
                             <svg
-                              className="h-5 w-5 animate-spin"
+                              className="h-5 w-5 motion-safe:animate-spin"
                               viewBox="0 0 24 24"
                               fill="none"
                               aria-hidden="true"
