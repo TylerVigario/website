@@ -12,10 +12,11 @@
  * the build is config-free and runtime stays fail-fast.
  *
  * Single source for the required-var names: `./required-env.json`.
- * The release workflow's `MANIFEST.requiredEnv` reads from the same
- * file (jq slurpfile), so the contract emitted to prod stays aligned
- * with what this module enforces. Adding a required var = add to
- * the JSON, add a format validator below.
+ * docs/deployment.md cites this path as the canonical list the
+ * production environment must source — keeping the runtime check and
+ * the deploy contract pointed at the same file means they can't
+ * drift. Adding a required var = add to the JSON, add a format
+ * validator below.
  */
 
 import path from "node:path";

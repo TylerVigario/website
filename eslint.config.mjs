@@ -43,7 +43,7 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
-    "bin/**",
+    "server.mjs",
     // Generated files
     "next-env.d.ts",
     // Root config files (not in tsconfig)

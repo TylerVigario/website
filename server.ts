@@ -1,36 +1,34 @@
 /**
- * Custom entrypoint for the standalone Next.js server.
+ * Custom server entrypoint.
  *
- * Compiled by scripts/build-server.ts via esbuild → bin/server.mjs,
- * then copied to .next/standalone/server.mjs by scripts/postbuild.ts
- * (the tarball-root path that MANIFEST.startCommand targets).
+ * Compiled by scripts/build-server.ts via esbuild → server.mjs at
+ * the repo root. `npm start` (= `node server.mjs`) is what invokes
+ * it.
  *
- * Replaces direct invocation of the auto-generated `server.js` so we
- * can drain in-flight requests, close the SQLite handle, flush queued
- * Sentry envelopes, and exit 0 on SIGTERM/SIGINT instead of dying 143
- * mid-response (which made `OnFailure=systemd-failure-notify` fire on
- * every deploy). See docs/deployment.md "Shutdown contract".
+ * Reason this exists instead of `next start`: graceful SIGTERM/SIGINT
+ * — drains in-flight HTTP requests, closes the SQLite handle, flushes
+ * Sentry, exits 0. systemd's `systemctl stop` gets a clean exit code
+ * so `OnFailure=systemd-failure-notify` stays diagnostic-only. See
+ * docs/deployment.md "Shutdown contract".
  *
- * Bundled-from-TypeScript so the entry can declare its own runtime
- * contract via @vercel/nft (build-server.ts walks this bundle's
- * import graph and feeds the result into next.config's
- * outputFileTracingIncludes). v1.2.0 shipped a hand-written .mjs
- * postbuild-copied alongside the standalone — Next's tracer never
- * saw server.mjs's own imports, the standalone tar landed without
- * @sentry/nextjs's package.json, prod died with ERR_MODULE_NOT_FOUND
- * on swap. Same pattern vis-daily-tracker uses for bin/seed.js etc.
+ * Uses the documented Next custom-server API:
+ * `next({...}) + app.prepare() + http.createServer(handle)`. Works
+ * because the build-on-prod model ships full production deps —
+ * `loadConfig`'s dynamic require of `next/dist/compiled/webpack/*`
+ * resolves cleanly. Under the prior `output: "standalone"` model
+ * the standalone tracer stripped the webpack tree, which broke this
+ * pattern at boot.
  */
 
-import { createServer, type Server } from "node:http";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import next from "next";
-import * as Sentry from "@sentry/nextjs";
+import http, { type Server } from "node:http";
+import Sentry from "@sentry/nextjs";
 
-// --check escape hatch — used by scripts/build-server.ts and
-// scripts/postbuild.ts as smoke tests that exercise module-level
-// imports without starting the server. Must come after imports
-// (ESM constraint) but before any side-effecting setup.
+// --check escape hatch: exits before app.prepare() so build-time
+// smokes can validate module-level imports without booting Next.
+// scripts/build-server.ts calls --check after compile to catch
+// ERR_MODULE_NOT_FOUND early; scripts/postbuild.ts runs the real
+// boot.
 if (process.argv.includes("--check")) {
   process.exit(0);
 }
@@ -38,13 +36,39 @@ if (process.argv.includes("--check")) {
 const DRAIN_TIMEOUT_MS = 30_000;
 const SENTRY_FLUSH_TIMEOUT_MS = 2_000;
 
+// 127.0.0.1 default is safe-by-default — a deploy that comes up
+// without an explicit HOSTNAME override is reachable only through
+// the local reverse proxy, never the LAN/WAN. Production exposes
+// by setting HOSTNAME=0.0.0.0 in its env file.
+const port = parseInt(process.env.PORT ?? "", 10) || 3000;
+const hostname = process.env.HOSTNAME ?? "127.0.0.1";
+
 const log = (msg: string): void => {
   console.error(`[shutdown] ${msg}`);
 };
 
-let httpServer: Server | null = null;
-let listening = false;
+// ============================================================
+// Bootstrap
+// ============================================================
+
+const app = next({ dev: false, hostname, port });
+const handle = app.getRequestHandler();
+await app.prepare();
+
+const httpServer: Server = http.createServer((req, res) => {
+  void handle(req, res);
+});
+
+httpServer.on("error", (err) => {
+  console.error("[server] error:", err);
+  process.exit(1);
+});
+
 let shuttingDown = false;
+
+// ============================================================
+// Shutdown
+// ============================================================
 
 async function shutdown(signal: NodeJS.Signals): Promise<void> {
   if (shuttingDown) {
@@ -54,20 +78,19 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
   shuttingDown = true;
   log(`${signal} received: drain → sqlite → sentry → exit`);
 
-  if (httpServer && listening) {
-    const server = httpServer;
-    server.closeIdleConnections();
+  if (httpServer.listening) {
+    httpServer.closeIdleConnections();
     log("closed idle keep-alive connections");
 
     await new Promise<void>((resolve) => {
       const cap = setTimeout(() => {
         log(`drain hit ${DRAIN_TIMEOUT_MS / 1000}s cap; force-closing in-flight connections`);
-        server.closeAllConnections();
+        httpServer.closeAllConnections();
         resolve();
       }, DRAIN_TIMEOUT_MS);
       cap.unref();
 
-      server.close((err) => {
+      httpServer.close((err) => {
         clearTimeout(cap);
         if (err) log(`server.close error: ${err.message}`);
         else log("in-flight requests drained");
@@ -75,13 +98,14 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
       });
     });
   } else {
-    log("http server not yet listening; skip drain");
+    log("http server not listening; skip drain");
   }
 
   try {
-    // src/lib/db.ts registers the better-sqlite3 singleton on globalThis
-    // (`__sqlite__`). Closing it forces a WAL checkpoint and lets us log
-    // any close failure instead of leaving it to process death.
+    // src/lib/db.ts registers the better-sqlite3 singleton on
+    // globalThis (`__sqlite__`). Closing it forces a WAL checkpoint
+    // and lets us log any close failure instead of leaving it to
+    // process death.
     const g = globalThis as unknown as { __sqlite__?: { close: () => void } };
     const db = g.__sqlite__;
     if (db && typeof db.close === "function") {
@@ -95,6 +119,10 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
   }
 
   try {
+    // Default import — namespace `import * as Sentry` doesn't expose
+    // Sentry.close under the CJS-via-ESM-namespace shape that
+    // @sentry/nextjs ships. Calling close via namespace silently
+    // skips the flush.
     await Sentry.close(SENTRY_FLUSH_TIMEOUT_MS);
     log("sentry flushed");
   } catch (err) {
@@ -106,33 +134,20 @@ async function shutdown(signal: NodeJS.Signals): Promise<void> {
 }
 
 process.on("SIGTERM", () => {
-  shutdown("SIGTERM").catch((err) => console.error("[shutdown] uncaught", err));
+  shutdown("SIGTERM").catch((err) => {
+    console.error("[shutdown] uncaught", err);
+  });
 });
 process.on("SIGINT", () => {
-  shutdown("SIGINT").catch((err) => console.error("[shutdown] uncaught", err));
+  shutdown("SIGINT").catch((err) => {
+    console.error("[shutdown] uncaught", err);
+  });
 });
 
-const dir = path.dirname(fileURLToPath(import.meta.url));
-process.chdir(dir);
-// @types/node 24 narrowed NODE_ENV to readonly. Next's own
-// auto-generated server.js writes it the same way; we mirror.
-(process.env as { NODE_ENV?: string }).NODE_ENV = "production";
+// ============================================================
+// Listen
+// ============================================================
 
-const port = parseInt(process.env.PORT ?? "", 10) || 3000;
-const hostname = process.env.HOSTNAME || "0.0.0.0";
-
-const app = next({ dev: false, dir, hostname, port });
-const handle = app.getRequestHandler();
-await app.prepare();
-
-httpServer = createServer((req, res) => {
-  void handle(req, res);
-});
-httpServer.on("error", (err) => {
-  console.error("[server] listen/runtime error:", err);
-  process.exit(1);
-});
 httpServer.listen(port, hostname, () => {
-  listening = true;
   console.log(`> Ready on http://${hostname}:${port}`);
 });

@@ -1,4 +1,4 @@
-name: Release
+name: CI
 
 env:
   HUSKY: 0
@@ -9,38 +9,51 @@ env:
   NODE_VERSION: "24"
 
 on:
+  push:
+    branches: [main]
+  pull_request:
   workflow_dispatch:
     inputs:
       bump:
-        description: "Version bump (leave empty to auto-detect from commits)"
+        description: "Version bump for release (leave empty to auto-detect from commits)"
         required: false
         type: choice
         options: ["", "major", "minor", "patch"]
         default: ""
 
+# Concurrency: PRs cancel prior runs of the same PR (saves CI time
+# on rapid pushes), main pushes and dispatch runs queue serially
+# (don't cancel — every commit on main matters, every dispatch is a
+# release attempt).
 concurrency:
-  group: release
-  cancel-in-progress: false
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Default to read-only. The release job escalates per-job.
+permissions:
+  contents: read
 
 jobs:
   # =========================================================================
-  # Gate — every quality check that should block a release. Solo-dev +
-  # main-only means there's no separate "CI on push" job; this gate is
-  # the single backstop for "did I forget to lint/typecheck/build before
-  # tagging."
+  # Gate — quality checks + full-build validation. Runs on every PR, every
+  # push to main, and at the start of every release attempt. Under the
+  # build-on-prod contract there's no CI-built artifact to ship; production
+  # rebuilds from the tagged commit. The gate's job is to make sure the
+  # commit builds cleanly before it can ever become a tag. Failing here is
+  # cheap; failing on the prod box during deploy is not.
   # =========================================================================
   gate:
     name: Gate
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v6
       - name: Verify Node major pins agree
         # NODE_VERSION env (this workflow), .nvmrc, and package.json
-        # engines.node must all declare the same Node major. Drift
-        # between the two would ship an artifact whose contract claims
-        # one major and whose runtime built it on another.
+        # engines.node must all declare the same Node major. The
+        # production host pins to the same major. Drift here would
+        # let CI green-light a build that prod can't run.
         run: |
           NVMRC_MAJOR=$(sed -E 's/^[^0-9]*([0-9]+).*/\1/' .nvmrc)
           ENGINES_MAJOR=$(node -p "require('./package.json').engines.node.match(/\d+/)[0]")
@@ -54,13 +67,13 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
       # Cache key derived from package.json's deps fields ONLY, not
-      # the full lockfile. The Release workflow rewrites
+      # the full lockfile. The release path rewrites
       # package-lock.json's root `version` on every run, so a key
       # based on `hashFiles('**/package-lock.json')` (what setup-node's
       # `cache: "npm"` shorthand uses) rotates every release and
       # accumulates one stale cache per run. Hashing only the deps
       # subtree means the key is stable until you actually change a
-      # dep — typical week of releases shares one cache entry.
+      # dep — typical week of activity shares one cache entry.
       - name: Compute npm cache key
         id: cache-key
         run: |
@@ -76,36 +89,38 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format
-      - run: npm run build
+      - run: npm test
+      - name: Validate build
+        # The build-on-prod contract makes the build the production
+        # path: prod re-runs `npm run build` on each deploy. A broken
+        # build at the tagged commit means a broken deploy, so the
+        # gate has to catch it here. Build outputs are discarded —
+        # they're not the artifact, the tagged source is.
+        #
+        # Sentry sourcemap upload secrets (SENTRY_AUTH_TOKEN / _ORG /
+        # _PROJECT) are deliberately NOT set here. Under the
+        # build-on-prod contract, sourcemap upload happens when prod
+        # builds the release for deploy, with prod's credentials.
+        # Setting them here would (a) upload phantom releases on
+        # every PR, (b) duplicate the upload prod will do anyway.
+        run: npm run build
         env:
-          # Sentry build-time secrets. NEXT_PUBLIC_SENTRY_DSN is inlined
-          # into the client bundle (Next inlines NEXT_PUBLIC_* at
-          # build); SENTRY_DSN here is harmless extra exposure to the
-          # build, the actual server-runtime read is from prod's env at
-          # start. SENTRY_ORG / SENTRY_PROJECT / SENTRY_AUTH_TOKEN are
-          # read by withSentryConfig to upload source maps so production
-          # stack traces resolve back to readable TS. Without these the
-          # build still succeeds but stack traces stay minified. All
-          # optional — Sentry init is a no-op when DSNs are unset, and
-          # the gate must work the first time CI runs (before the
-          # secrets are populated).
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
   # =========================================================================
-  # Release — depends on gate. Bumps version, builds the standalone tar,
-  # tags + pushes, creates the GH Release with the artifact attached.
-  # The artifact at this point is what prod will swap to on the
-  # `release.published` webhook.
+  # Release — bumps version, generates changelog, tags, creates the GitHub
+  # Release. Only runs on workflow_dispatch; the gate is the sole entry
+  # point for PR / push validation. The production deploy listens for
+  # `release.published` and pulls the tagged commit; the Release itself
+  # carries no asset under the build-on-prod contract (the source repo
+  # + tag IS the deliverable).
   # =========================================================================
   release:
     name: Release
     needs: gate
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     permissions:
       contents: write
 
@@ -119,22 +134,6 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      # See the Gate job for the rationale on hashing deps-only.
-      - name: Compute npm cache key
-        id: cache-key
-        run: |
-          HASH=$(jq -S '{dependencies,devDependencies,optionalDependencies,peerDependencies}' package.json | sha256sum | cut -c1-16)
-          echo "key=npm-${{ runner.os }}-node${{ env.NODE_VERSION }}-${HASH}" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ steps.cache-key.outputs.key }}
-          restore-keys: |
-            npm-${{ runner.os }}-node${{ env.NODE_VERSION }}-
-
-      - name: Install dependencies
-        run: npm ci --prefer-offline
 
       - name: Install git-cliff
         uses: taiki-e/install-action@v2
@@ -166,8 +165,8 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Next version: $TAG (current: $CURRENT)"
 
-          # Defend against the "previous run failed mid-flight, tag was
-          # pushed but workflow never finished" case. package.json's
+          # Defend against the "previous run failed mid-flight, tag
+          # was pushed but workflow never finished" case. package.json's
           # CURRENT may not reflect what's actually tagged in git.
           if git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
             echo "::error::Tag $TAG already exists in git. A previous release run probably partially completed. Manually delete the tag (git push --delete origin $TAG) or bump past it before retrying."
@@ -177,118 +176,6 @@ jobs:
       - name: Bump package.json
         if: steps.version.outputs.skip != 'true'
         run: npm version ${{ steps.version.outputs.version }} --no-git-tag-version
-
-      - name: Build server entrypoint
-        if: steps.version.outputs.skip != 'true'
-        # Emits bin/server.mjs (esbuild bundle of server.ts) and
-        # bin/server.trace.json (its nft-traced runtime deps). The
-        # trace is read by next.config.ts and folded into
-        # outputFileTracingIncludes so the standalone tar carries
-        # server.mjs's full runtime contract — without this, prod
-        # ships a partial @sentry/nextjs (build/ but no package.json)
-        # and dies with ERR_MODULE_NOT_FOUND on swap (v1.2.0). Build
-        # script runs its own --check smoke test internally.
-        # `npm run build` triggers prebuild which also runs this, so
-        # this step is largely for log-section visibility — and to
-        # surface a build-server-specific failure before the long
-        # `next build` step.
-        run: npm run build:server
-
-      - name: Build
-        if: steps.version.outputs.skip != 'true'
-        run: npm run build
-        env:
-          # See the Gate job for the rationale. SQLITE_PATH is
-          # runtime-only — the bundle reads it from /opt/website/.env
-          # at server start, never from the build env.
-          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-
-      - name: Package standalone
-        if: steps.version.outputs.skip != 'true'
-        run: |
-          # Standalone bundle is self-contained. cp -rT (treat dest as
-          # a file, not a dir to nest into) so this works whether the
-          # target already exists or not.
-          # server.mjs is already in .next/standalone/ — copied there
-          # by the `postbuild` script in package.json so local
-          # `npm run build` also produces a fully-working bundle.
-          cp -rT public .next/standalone/public
-          cp -rT .next/static .next/standalone/.next/static
-
-          # .env.example documents the runtime contract (SQLITE_PATH +
-          # SMTP_* + SENTRY_*); ships in the tar so first-time deploys
-          # can copy it.
-          cp .env.example .next/standalone/.env.example
-
-          # BUILD_INFO so prod can verify Node + glibc + arch match
-          # before swap. Provenance only — no secrets land here.
-          jq -n \
-            --arg tag "${{ steps.version.outputs.tag }}" \
-            --arg commit "$(git rev-parse HEAD)" \
-            --arg buildTime "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --arg nodeVersion "$(node --version)" \
-            --arg os "$(. /etc/os-release && echo "$ID-$VERSION_ID")" \
-            --arg arch "$(uname -m)" \
-            --arg glibcVersion "$(ldd --version | head -1 | awk '{print $NF}')" \
-            --arg assetName "vigario-technology-solutions-${{ steps.version.outputs.tag }}.tar.gz" \
-            '{tag: $tag, commit: $commit, buildTime: $buildTime, nodeVersion: $nodeVersion, os: $os, arch: $arch, glibcVersion: $glibcVersion, assetName: $assetName}' \
-            > .next/standalone/BUILD_INFO
-
-          # MANIFEST schemaVersion 2 contract (canonical shape from
-          # vis-daily-tracker — see docs/deployment.md). Specifics:
-          #   - cli omitted: no CLI binary shipped
-          #   - preStartCommands []: SQLite init is on-demand on first
-          #     request; no migration step (deploy short-circuits on
-          #     length 0)
-          #   - requiredTools {}: just Node — explicit empty object
-          #     signals "considered, none" rather than "forgot"
-          #   - requiredEnv: read from src/lib/required-env.json — same
-          #     file src/lib/runtime-config.ts validates at startup, so
-          #     what prod's MANIFEST advertises and what the app
-          #     enforces stay in lockstep
-          #   - optionalEnv: SMTP_* (when both USER+PASS set, route
-          #     handlers send notification emails) + SENTRY_DSN (server-
-          #     side Sentry init); both degrade gracefully when unset
-          #   - startCommand: node server.mjs — the custom entrypoint
-          #     in the tar root (graceful shutdown drain + Sentry
-          #     flush). Source can change this without prod editing
-          #     systemd; the contract reads it from MANIFEST.
-          NODE_MAJOR=$(node -p "require('./package.json').engines.node.match(/\d+/)[0]")
-          jq -n \
-            --arg tag "${{ steps.version.outputs.tag }}" \
-            --arg nodeMajor "$NODE_MAJOR" \
-            --slurpfile requiredEnv src/lib/required-env.json \
-            '{
-              schemaVersion: 2,
-              tag: $tag,
-              startCommand: "node server.mjs",
-              preStartCommands: [],
-              port: 3000,
-              healthCheckPath: "/api/health",
-              requiredEnv: $requiredEnv[0],
-              optionalEnv: [
-                "SMTP_HOST",
-                "SMTP_PORT",
-                "SMTP_USER",
-                "SMTP_PASS",
-                "SENTRY_DSN"
-              ],
-              nodeVersion: $nodeMajor,
-              requiredTools: {}
-            }' \
-            > .next/standalone/MANIFEST
-
-          tar -czf vigario-technology-solutions-${{ steps.version.outputs.tag }}.tar.gz -C .next/standalone .
-
-      - name: Compute SHA256SUMS
-        if: steps.version.outputs.skip != 'true'
-        run: |
-          sha256sum vigario-technology-solutions-${{ steps.version.outputs.tag }}.tar.gz > SHA256SUMS
-          cat SHA256SUMS
 
       - name: Generate changelog
         if: steps.version.outputs.skip != 'true'
@@ -305,11 +192,13 @@ jobs:
           git tag ${{ steps.version.outputs.tag }}
           git push origin main --follow-tags
 
-      # Two-step publish: create as draft with all assets attached,
-      # then flip to published. Guarantees the `release.published`
-      # webhook only fires once both files are uploaded — prevents the
-      # race where prod fetches before SHA256SUMS lands.
-      - name: Create GitHub Release (draft)
+      # Single-step publish under build-on-prod — no asset upload, no
+      # SHA256SUMS, no draft → published dance. The Release exists
+      # purely as the trigger surface for production's deploy webhook
+      # (`release.published`), with the changelog as the body. The
+      # tagged commit IS the artifact; production's deploy script
+      # `git fetch && git checkout ${tag}` to pick it up.
+      - name: Create GitHub Release
         if: steps.version.outputs.skip != 'true'
         uses: softprops/action-gh-release@v3
         with:
@@ -317,16 +206,6 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.tag }}
           body_path: RELEASE_NOTES.md
-          draft: true
-          files: |
-            vigario-technology-solutions-${{ steps.version.outputs.tag }}.tar.gz
-            SHA256SUMS
-
-      - name: Publish Release
-        if: steps.version.outputs.skip != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release edit ${{ steps.version.outputs.tag }} --draft=false
 
       - name: Generate job summary
         if: always()

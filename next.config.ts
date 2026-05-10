@@ -1,36 +1,8 @@
 import type { NextConfig } from "next";
-import { existsSync, readFileSync } from "fs";
+import { readFileSync } from "fs";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const { version } = JSON.parse(readFileSync("./package.json", "utf-8")) as { version: string };
-
-/**
- * Read the runtime-deps manifest produced by scripts/build-server.ts
- * (esbuild bundle of server.ts → bin/server.mjs, then @vercel/nft on
- * the bundle → bin/server.trace.json). We fold those paths into
- * outputFileTracingIncludes below so the standalone tar carries the
- * runtime deps server.mjs needs at startup — most importantly each
- * traced package's package.json, without which ESM resolution from
- * the unpacked tar fails (v1.2.0 shipped @sentry/nextjs sans its
- * package.json and prod died with ERR_MODULE_NOT_FOUND on swap).
- *
- * Missing manifest is non-fatal: a developer running `next build`
- * without first running `build:server` (e.g. for local Next-only
- * validation) gets a warning, not a failure. The package.json
- * prebuild script always runs build:server before next build so
- * production builds have the manifest on disk before this evaluates.
- */
-function readBundleTrace(path: string): string[] {
-  if (!existsSync(path)) {
-    console.warn(
-      `[next.config] ${path} missing — its bundle's runtime deps won't ship in the standalone tar. Run \`npm run build:server\` to generate.`,
-    );
-    return [];
-  }
-  return JSON.parse(readFileSync(path, "utf-8")) as string[];
-}
-
-const bundleTraceIncludes = readBundleTrace("./bin/server.trace.json");
 
 // Sentry release identifier. The `service-name@version` shape is
 // Sentry's recommended convention — keeps releases unique across
@@ -44,30 +16,20 @@ const bundleTraceIncludes = readBundleTrace("./bin/server.trace.json");
 const sentryRelease = `vigario-technology-solutions@${version}`;
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Build-on-prod model: no `output: "standalone"`. Production
+  // clones the tagged commit, runs `npm ci && npm run build`, and
+  // runs the resulting bundle. The standalone tracer is what made
+  // the prior contract fragile (NFT graph gaps, loadConfig dynamic
+  // requires, custom-server interop edges). See docs/deployment.md.
   trailingSlash: false,
   env: { APP_VERSION: version, SENTRY_RELEASE: sentryRelease },
   images: {
     formats: ["image/avif", "image/webp"],
   },
   // better-sqlite3 is a native module and can't be webpacked.
-  // Declaring it external keeps Next from trying to bundle it; the
-  // standalone tracer then includes it in node_modules/ via the app's
-  // import graph.
+  // Marking it external lets Next leave it alone at build time; it
+  // resolves at runtime against the artifact's full node_modules/.
   serverExternalPackages: ["better-sqlite3"],
-
-  // Fold server.mjs's nft trace into Next's standalone copy step.
-  // server.ts → bin/server.mjs is built outside Next's tracer view,
-  // so its externals (@sentry/nextjs, next, etc.) aren't in Next's
-  // server import graph and don't get fully copied into the
-  // standalone tar by default. v1.2.0 hit this exact gap. The "*"
-  // page key applies the include to every entry — we want the
-  // server's deps shipped regardless of which route's trace is
-  // being computed. See scripts/build-server.ts for how the manifest
-  // is produced.
-  outputFileTracingIncludes: {
-    "*": bundleTraceIncludes,
-  },
   headers: () =>
     Promise.resolve([
       {
@@ -128,18 +90,11 @@ export default withSentryConfig(nextConfig, {
   //      so the policy doesn't need to broaden.
   tunnelRoute: "/monitoring",
 
-  // Release tracking. The plugin will:
-  //   1. Create the release in Sentry (`name`)
-  //   2. Associate this build's commits via auto-detection (git log
-  //      walks back from HEAD to the previous release tag).
-  //      `ignoreMissing` keeps a build green when Sentry's GitHub
-  //      integration isn't configured yet.
-  //   3. Mark the release as deployed to "production" in CI.
-  //   4. Finalize (default `true`) — caps off the release window.
-  // SDK init in instrumentation-client.ts + sentry.server.config.ts
-  // tags events with the SAME `name` via process.env.SENTRY_RELEASE
-  // so events tie back to the release the plugin registered, which
-  // is what makes source-map resolution work.
+  // Release tracking. SDK init in instrumentation-client.ts +
+  // sentry.server.config.ts tags events with the SAME `name` via
+  // process.env.SENTRY_RELEASE so events tie back to the release
+  // the plugin registered, which is what makes source-map
+  // resolution work.
   release: {
     name: sentryRelease,
     setCommits: { auto: true, ignoreMissing: true },

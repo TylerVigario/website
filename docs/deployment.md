@@ -1,366 +1,325 @@
 # Deployment
 
-How a tagged release on `main` becomes a running version on the prod
-host. The contract is **artifact-based**: CI builds a self-contained
-tarball, prod downloads it, verifies it, and swaps to it without ever
-running `npm install`.
+This doc is the source-side deploy contract. It describes what
+the repository provides at a tagged commit, what the runtime
+environment needs to host it, and the invariants the production
+environment can rely on. How those pieces are assembled into a
+running service is a production-side concern and is deliberately
+out of scope here.
 
-This is the source-side of the deploy contract. The prod-side script
-that consumes it lives in the prod repo (`/usr/local/sbin/website-deploy`
-on the Fedora host) and is owned by prod-Claude; this doc is what
-informs that script.
+This contract mirrors `vis-daily-tracker/docs/deployment.md`. The
+two source apps and the prod-side deploy script (`server-admin`)
+are standardized on the same shape — diverging here means
+diverging the deploy script, which isn't allowed.
 
-The contract here is the same `schemaVersion: 2` shape that
-[vis-daily-tracker](https://github.com/TylerVigario/vis-daily-tracker)
-uses. Two apps that ship under the same prod deploy script means one
-script, one rollback model, one mental model — the differences below
-are minor field values (no Prisma, no CLI binary, no preStart), not a
-different contract.
+## Model
 
-## What CI publishes
+**Build-on-prod.** The production environment clones a tagged
+commit, runs `npm ci && npm run build`, and runs the resulting
+bundle.
 
-For every `v*` tag, the [release workflow](../.github/workflows/release.yml)
-publishes a single GitHub Release with these assets:
+The prior contract (CI-built tarballs with `output: "standalone"`)
+relied on Next's static-trace machinery to ship a minimized
+`node_modules/`. Apps with custom server entrypoints, dynamic
+requires, or CJS/ESM interop edges keep violating its
+preconditions — that pattern produced four consecutive bad
+releases in vis-daily-tracker (v2.80.0–v2.83.0). Build-on-prod
+removes the translation step: the production host IS the
+canonical environment, so npm picks optimal package variants for
+the actual runtime, postinstall runs against the real environment,
+and no compat preflight is needed.
 
-| File | Purpose |
-| --- | --- |
-| `vigario-technology-solutions-v<X.Y.Z>.tar.gz` | Self-contained Next.js standalone bundle. |
-| `SHA256SUMS` | Standard `sha256sum` output. Verify before extract. |
+## Required runtime
 
-The tarball is built on `ubuntu-latest` (24.04, x64, glibc ~2.39) using
-Node 24.x. Extracted contents drop directly into a versioned dir — no
-`npm install`, no rebuild on the host.
+The host must have the following installed before any deploy can
+succeed:
 
-The CI release flow creates the GitHub Release as a **draft**, attaches
-both assets, then flips it to **published** in a second step. The
-`release.published` webhook therefore only ever fires when both the
-tarball and `SHA256SUMS` are uploaded — no fetch race.
+| Requirement | Source of truth |
+|---|---|
+| Node major | `package.json#engines.node` (currently `24.x`) |
+| npm | bundled with Node |
+| git | for `git clone` |
 
-### SHA256SUMS format
+**Native-module policy.** Every package npm installs for the host
+platform must ship a usable prebuilt binary — local compilation
+cannot be a fallback. The host therefore doesn't need `make`,
+`g++`, `python`, or `node-gyp` available. Currently the only
+native dep is `better-sqlite3`, which ships prebuilt binaries for
+Linux x64 + Node majors we target. Adding a dependency that
+requires source compilation is a contract change and needs to be
+coordinated with production before merge.
 
-Standard `sha256sum` output:
+**Source repo access.** The deploy host needs read-only access to
+clone tagged commits — an SSH deploy key registered on the GitHub
+repo (preferred — narrowest scope, can be revoked without
+affecting other access) or a fine-grained personal access token
+scoped to this repo with `Contents: Read`. Credential
+provisioning is a production-side concern. This contract
+guarantees the clone URL stays at
+`github.com/TylerVigario/website`; any change to it gets
+reflected here.
 
-```text
-<64-char lowercase hex>  <filename>
-```
+**External-dependency uptime.** Build-on-prod puts GitHub and the
+npm registry in the deploy critical path. If either is unreachable
+at deploy time, `git clone` or `npm ci` fails and the deploy
+aborts before any artifact swap — the same blast radius as a
+`next build` failure: live service untouched, deploy retries when
+the upstream recovers. Whether to mitigate via a local npm cache,
+registry mirror, or git mirror is a production-side decision;
+this contract acknowledges the dependencies and stops there.
 
-Two spaces between hash and filename. Filename matches the tarball
-asset name verbatim (and matches `BUILD_INFO.assetName`). Compatible
-with `sha256sum --check SHA256SUMS` from the directory holding the
-tarball.
+**Supply-chain trust.** Build-on-prod runs every transitive
+dependency's `preinstall`/`postinstall` script on the host as
+part of `npm ci` — native-module setup, etc. Under the prior
+CI-tarball contract, those scripts ran on the CI runner; under
+build-on-prod, they run with whatever privileges the deploy user
+has on the prod host. `npm ci --ignore-scripts` would defang this
+but breaks `better-sqlite3` postinstall, so the mitigation lives
+in how the deploy is invoked rather than in `npm` flags:
+least-privilege deploy user, periodic `npm audit` discipline, and
+the `package-lock.json` pinning already in place.
 
-## Tarball layout
+## What the repository provides
 
-```text
-./
-├── server.mjs                   # Custom entrypoint — graceful SIGTERM/SIGINT, drains in-flight, flushes Sentry, closes SQLite
-├── server.js                    # Auto-generated Next.js standalone bootstrap (regenerated every build, not the entrypoint)
-├── package.json                 # Traceability: deps + version that built this
-├── MANIFEST                     # Deploy contract (JSON, see below)
-├── BUILD_INFO                   # Build provenance (JSON, see below)
-├── .env.example                 # Documents the runtime env contract (SQLITE_PATH + SMTP_* + SENTRY_*)
-├── .next/
-│   ├── server/                  # Standalone server bundle
-│   └── static/                  # Static assets (already merged in)
-├── public/                      # Public files (already merged in)
-└── node_modules/
-    └── better-sqlite3/          # Native sqlite binding (glibc-linked, NODE_MODULE_VERSION-pinned)
-```
+A tagged commit on `main` whose tree, after `npm ci && npm run build`,
+contains:
 
-`better-sqlite3` (the only native dep the app uses at request time) is
-picked up by Next's standalone tracer (declared as
-`serverExternalPackages` in [next.config.ts](../next.config.ts) so it's
-resolved at runtime rather than bundled into chunks). It's built against
-Ubuntu 24.04 x64 glibc ~2.39 and is forward-compatible with newer glibc
-on the same arch (Fedora 43/44).
+| Path | Purpose |
+|---|---|
+| `package.json` | `engines.node`, `scripts.start`, `scripts.build`, `dependencies` / `devDependencies` |
+| `package-lock.json` | Lockfile for deterministic `npm ci` |
+| `src/lib/required-env.json` | The required-env contract. Imported by `src/lib/runtime-config.ts` for app-startup validation, so deploy-time and runtime checks stay in lockstep. |
+| `server.mjs` (after build) | Custom entrypoint. Graceful SIGTERM/SIGINT handling — in-flight drain, SQLite close, Sentry flush, exit 0. |
+| `.next/` (after build) | Next.js build output. |
 
-There is **no Prisma**, **no CLI binary**, and **no preStart command**
-in this artifact. The release workflow's analogues from vis-daily-tracker
-(seed bundle, CLI manifest, prisma config) are deliberately absent
-because nothing in this app needs them — schema lives entirely inside
-[`src/lib/db.ts`](../src/lib/db.ts)'s `CREATE TABLE IF NOT EXISTS` and
-runs lazily on first request.
+## Build
 
-## MANIFEST schema
+`npm run build` runs the prebuild chain (`check:public-env`,
+`build:server`), then `next build`, then a postbuild step that
+real-boot smokes the just-built bundle.
 
-```json
-{
-  "schemaVersion": 2,
-  "tag": "v<X.Y.Z>",
-  "startCommand": "node server.mjs",
-  "preStartCommands": [],
-  "port": 3000,
-  "healthCheckPath": "/api/health",
-  "requiredEnv": ["SQLITE_PATH"],
-  "optionalEnv": [
-    "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS",
-    "SENTRY_DSN"
-  ],
-  "nodeVersion": "24",
-  "requiredTools": {}
-}
-```
+**`check:public-env` is strict.** It scans `src/` for
+`process.env.NEXT_PUBLIC_*` references and fails the build with a
+non-zero exit if any required `NEXT_PUBLIC_*` variable is missing
+or empty in the build-time environment. This converts the
+"silently-baked-`undefined`-into-the-client-bundle" failure mode
+into a loud build failure — by the time `next build` runs, every
+required `NEXT_PUBLIC_*` is guaranteed present. Variables that are
+intentionally optional (currently `NEXT_PUBLIC_SENTRY_DSN`) live
+in an allowlist inside the script and only emit a warning. See
+[`scripts/check-public-env.ts`](../scripts/check-public-env.ts).
 
-**Contract rules:**
+Scope is `src/` only. `NEXT_PUBLIC_*` references in repo-root
+files (`next.config.ts`, `server.ts`, build scripts) are out of
+scope and rely on convention — the `NEXT_PUBLIC_*` pattern is
+intended for client code that ends up in the bundle, not for
+config-time reads.
 
-- `schemaVersion` — refuse to deploy if it's a value prod doesn't
-  understand. Bumping this is a breaking change for the prod-side
-  script.
-- `startCommand` — **authoritative**. Prod must read this value and
-  `exec` it verbatim from the extracted bundle's root. It must not be
-  hardcoded in prod's systemd unit — parameterize via a drop-in,
-  wrapper script, or similar so source can change the entry point
-  without editing prod. Within `schemaVersion: 2` the value is
-  currently `node server.mjs`; that's a value, not a lock.
-- `preStartCommands` — empty. Prod's deploy script must short-circuit
-  on `length === 0` rather than spawning a no-op shell. Future migrations
-  (e.g. moving to a non-IF-NOT-EXISTS schema model) would land here.
-- `port` — **default** binding, not authoritative. Next.js standalone
-  honors the `PORT` env var; if prod's env sets `PORT`, the app binds
-  there instead. Health-checks and reverse-proxy routing should target
-  `PORT` if set, falling back to `MANIFEST.port`.
-- `healthCheckPath` — endpoint for post-swap liveness check. Optional;
-  prod should default to `/` if the field is absent (older
-  artifacts that predate the field). Currently `/api/health` —
-  served by [`src/app/api/health/route.ts`](../src/app/api/health/route.ts),
-  returns `200 {status: "ok"}` when the SQLite file is readable and
-  `sqlite_schema` parses, `503` when not. Source can move this endpoint
-  without an out-of-band prod change because prod reads the path from
-  MANIFEST.
-- `requiredEnv` — every name must be set with a non-empty value. App
-  fails fast at startup via [`src/instrumentation.ts`](../src/instrumentation.ts)
-  → [`src/lib/runtime-config.ts`](../src/lib/runtime-config.ts), which
-  validates **all** required vars together (presence + format checks)
-  and surfaces every misconfiguration in a single error. Server refuses
-  to serve traffic if any check fails. The MANIFEST list is sourced
-  from [`src/lib/required-env.json`](../src/lib/required-env.json) — the
-  same file `runtime-config.ts` imports — so the deploy contract and
-  the startup validator can never drift.
-- `optionalEnv` — app silently degrades if missing:
-  - `SMTP_*` — when both `SMTP_USER` and `SMTP_PASS` are set, quote /
-    POTS-audit submissions trigger a notification email. Otherwise the
-    submission lands in SQLite and the route handler logs `Failed to
-    send email notification` (visible in the journal but does not fail
-    the request).
-  - `SENTRY_DSN` — when set, server-side errors and traces ship to
-    Sentry. Otherwise [`src/sentry.server.config.ts`](../src/sentry.server.config.ts)
-    skips init entirely. Build-time `NEXT_PUBLIC_SENTRY_DSN` (inlined
-    into the client bundle) is intentionally not in `optionalEnv` because
-    it's resolved at *build* time, not server start.
-- `nodeVersion` — **optional**. The Node major version the artifact was
-  built against and expects at runtime, as a bare string (`"24"`).
-  Source emits the value from `package.json` `engines.node` so source,
-  CI, and prod runtime all pin to the same major. **Format is strict** —
-  only the bare major digit is accepted. `"24.x"`, `"v24"`, `"24.14.1"`,
-  etc. are rejected; prod's matcher is a string-equality check on the
-  major digit, not a semver parser. **Resolution on prod:** try
-  `/usr/bin/node-<N>` first (Fedora's `nodejs<N>` parallel-install
-  layout); fall back to the system default `node` if that versioned
-  path doesn't exist. Either way, the resolved binary's `--version`
-  major must equal this value — mismatch is a hard pre-swap failure.
-  **Absent** → prod uses system default `node`; preflight matches
-  against `BUILD_INFO.nodeVersion` major instead.
-- `requiredTools` — empty object. Signals "considered, none" rather
-  than "forgot the field." Prod's deploy script must treat `{}` the
-  same as absent: no tools to verify, skip the preflight loop. (Older
-  artifacts that predate the field also have no tools to verify.)
+**`build:server`** compiles `server.ts` → `server.mjs` at the
+repo root via esbuild. `next`, `@sentry/*`, and `better-sqlite3`
+stay external — the artifact's `node_modules/` ships them at
+runtime. A `--check` smoke runs after the compile to catch
+ERR_MODULE_NOT_FOUND at build time; the heavier real-boot smoke
+runs in postbuild.
 
-**Notes for the deploy script:**
+**The postbuild smoke** spawns `node server.mjs` on a random
+loopback port with a hermetic stub environment, waits up to 30
+seconds for the port to bind, sends SIGTERM, and asserts a clean
+exit-0 within a further 10-second budget. The build fails if the
+bundle doesn't bind within the bind window, exits non-zero, or
+doesn't exit within the shutdown window.
 
-- `SQLITE_PATH` must be an **absolute** path on a writable volume. The
-  app throws on startup otherwise — see
-  [`src/lib/runtime-config.ts`](../src/lib/runtime-config.ts). In
-  production the file lives at `/opt/website/data/quotes.db` so it
-  survives the release-dir swap; the deploy script must NOT bundle
-  the data dir into a release.
-- `SMTP_USER` is also the `From:` address on outbound notification
-  email (the route handlers wrap it as `"VTS Website" <user>`). When
-  rotating, update both halves in `/opt/website/.env` together.
+**Hermetic stub environment.** Every required-env value is forced
+regardless of what's inherited from `process.env`. The smoke
+behaves the same locally, in CI, and on the deploy host during a
+production build — there is no "stub when absent, real when
+present" branching. Values are syntactically valid (they pass
+[`src/lib/runtime-config.ts`](../src/lib/runtime-config.ts)
+format and length validation) but never reach a real resource:
 
-## Why no Prisma / CLI / preStart
+- `SQLITE_PATH` → a stub path inside `os.tmpdir()` that never gets opened. `src/lib/db.ts` opens lazily on first request, never at boot, so the smoke never touches it. The lazy-init is the load-bearing property here, not the file name (landmark's `db.smoke.invalid` leans on RFC 6761's reserved-unresolvable TLD because Prisma may init eagerly — different mechanism for a different DB).
+- `SENTRY_DSN` → empty string. Sentry init becomes a no-op. The smoke does **not** exercise the Sentry transport path.
+- `NODE_ENV` → `production`. Forces the production code path (no dev-mode error pages, no dev middleware) so the smoke validates what prod actually runs, not whatever the parent shell happens to inherit.
 
-vis-daily-tracker's v2 contract carries `requiredTools: { prisma: ... }`
-and runs `prisma migrate deploy` + `node bin/seed.js` as preStart
-commands. This app needs none of that:
+This is a deliberate departure from the more permissive "inherit
+real env when present" pattern. The build smoke validates the
+build artifact structurally; real-environment validation (real
+SQLite path writeability, real Sentry transport, real SMTP) is
+the production-side pre-swap smoke's responsibility. Two layers,
+two failure surfaces, no overlap.
 
-- **Schema** — there's one table (`quotes`) and it's created lazily on
-  first request via `CREATE TABLE IF NOT EXISTS` inside
-  [`src/lib/db.ts`](../src/lib/db.ts). No migration framework, no DDL
-  drift.
-- **Seeding** — there's nothing to seed. Reference rows would force
-  the schema model to grow up; until then, `IF NOT EXISTS` is enough.
-- **CLI** — admin operations (export submissions, prune old rows) are
-  done by hand via the `sqlite3` REPL on the prod host. If/when an
-  admin task becomes recurring, ship a CLI bundle following the
-  vis-daily-tracker pattern (`bin/<name>.js` esbuild bundle,
-  populate `MANIFEST.cli`).
+**Clean-exit assertion.** After the port binds, the smoke sends
+SIGTERM and waits up to 10 seconds for the process to exit with
+code 0. A non-zero exit, a signal-driven exit (where the handler
+never called `process.exit(0)`), or no exit at all — any of these
+fails the build. This catches the shutdown-handler-bug class —
+uncaught throw, deadlocked drain, never-resolving promise — that
+would otherwise pass a bind-only smoke and produce
+SIGKILL-on-deploy noise in production
+(`OnFailure=systemd-failure-notify@%n.service` going off every
+deploy because shutdown didn't reach exit 0).
 
-If any of those three change, this section + the corresponding MANIFEST
-fields move in lockstep — no `schemaVersion` bump needed for the *empty
-→ populated* transition (per the v2 evolution rules below).
+**What the build smoke catches:** module resolution failures,
+ESM/CJS interop errors, runtime-config.ts validation, startup
+import-graph errors, `listen()` succeeding, and the shutdown
+handler running cleanly to exit 0.
 
-## BUILD_INFO schema
+**What the build smoke does NOT catch:** real SQLite path
+writeability, real Sentry transport (DSN forced empty), real
+SMTP, the actual filesystem layout, or the real env shape from
+the production secret store. Those belong to the production-side
+pre-swap smoke, which runs the same bundle against the real
+environment and is strictly complementary.
+
+## Start
+
+`npm start` invokes whatever `package.json#scripts.start` resolves
+to (currently `node server.mjs`). The entrypoint binds `PORT`
+(default `3000`) on `HOSTNAME` (default `127.0.0.1`). The
+loopback default is safe-by-default: a deploy that comes up
+without an explicit `HOSTNAME` override is reachable only through
+the local reverse proxy, never the LAN or WAN. Production exposes
+the service by overriding `HOSTNAME=0.0.0.0` (or a specific
+interface) in its env file.
+
+## Environment variables
+
+Build-on-prod merges the previously-distinct CI-build and
+production-runtime phases. Some variables matter at build time
+(baked into the client bundle by Next, or consumed by Next's
+build plugins). Some matter only at runtime. The deploy script
+needs to source the correct set for the correct phase — failing
+to source a build-time var doesn't produce an obvious error at
+deploy time, just silently degraded behavior in the running
+service.
+
+### Runtime required
+
+The single canonical list lives at
+[`src/lib/required-env.json`](../src/lib/required-env.json).
+Currently:
 
 ```json
-{
-  "tag": "v<X.Y.Z>",
-  "commit": "<full git sha>",
-  "buildTime": "<ISO 8601 UTC>",
-  "nodeVersion": "v24.X.Y",
-  "os": "ubuntu-24.04",
-  "arch": "x86_64",
-  "glibcVersion": "2.39",
-  "assetName": "vigario-technology-solutions-v<X.Y.Z>.tar.gz"
-}
+["SQLITE_PATH"]
 ```
 
-`assetName` is the exact filename of the tarball asset on the GitHub
-Release. Prod can use it directly instead of reconstructing the name
-from `tag` — keeps the naming pattern from being a hidden contract.
+The app refuses to start if any are missing or fail format/length
+validation in
+[`src/lib/runtime-config.ts`](../src/lib/runtime-config.ts).
 
-**Major extraction.** When prod derives the Node major from
-`BUILD_INFO.nodeVersion` for the backward-compat fallback (when
-`MANIFEST.nodeVersion` is absent), strip the leading `v` and take the
-integer before the first dot — `"v24.14.1"` → `"24"`.
+Notes for the deploy environment:
 
-**Pre-swap verification (recommended on prod):**
+- `SQLITE_PATH` must be an absolute path on a writable volume. The app throws on startup otherwise. Store the SQLite file outside any release directory so the data survives release swaps (e.g. `/opt/website/data/quotes.db`).
 
-1. **Arch match** — prod `uname -m` must equal `BUILD_INFO.arch`. Hard
-   fail if not.
-2. **glibc forward compat** — prod's `ldd --version` must be ≥
-   `BUILD_INFO.glibcVersion`. Hard fail if older — `better-sqlite3`'s
-   native binding will fail to load.
-3. **Node major match** — prod's resolved `node` (the binary it will
-   `exec` per `MANIFEST.startCommand` + `MANIFEST.nodeVersion`) must
-   report a `--version` major equal to `MANIFEST.nodeVersion` when
-   present, falling back to `BUILD_INFO.nodeVersion` major for older
-   artifacts that predate the field. Hard fail otherwise.
-   `better-sqlite3` is the failure mode here: native modules are
-   compiled per-major and `NODE_MODULE_VERSION` mismatch surfaces on
-   the first request.
+### Runtime optional
 
-## Schema versioning
+The app silently degrades when these are missing (SMTP and
+Sentry transport unavailable):
 
-`MANIFEST.schemaVersion` is the contract handshake. Source and prod
-upgrade in **lockstep** — there is no parallel support for older
-schema versions.
+```text
+SMTP_HOST
+SMTP_PORT
+SMTP_USER
+SMTP_PASS
+SENTRY_DSN
+```
 
-When the schema bumps:
+When `SMTP_USER` and `SMTP_PASS` are both set, the quote and
+POTS-audit routes send notification emails on each submission.
+When unset, submissions are saved to SQLite but no email is sent.
 
-1. Source ships a release with the new `schemaVersion`.
-2. Prod's deploy script is updated to handle the new schema before
-   that release is deployed.
-3. Prod hard-refuses any tarball whose `schemaVersion` it doesn't
-   understand. No "warn and proceed" mode.
+### Build + runtime
 
-This keeps the contract simple at the cost of a coordinated source +
-prod change.
+`NEXT_PUBLIC_*` variables are baked into the client JavaScript
+bundle by `next build` AND remain available to server code at
+runtime. They need to be set when `npm run build` runs; setting
+them only at runtime is too late — the client bundle is already
+shipped without them.
 
-Within a `schemaVersion`, evolution rules:
+```text
+NEXT_PUBLIC_SENTRY_DSN   (optional — Sentry SDK no-ops if absent)
+```
 
-- **Adding optional fields**: allowed. Older prod scripts ignore them.
-- **Adding required fields, removing fields, renaming fields,
-  repurposing fields**: forbidden. That's a `schemaVersion` bump.
-- **Changing the value of an existing field** (e.g. `startCommand`,
-  `port`, `healthCheckPath`, `optionalEnv` list): allowed and expected.
-  Prod is supposed to read these; that's the whole point.
-- **Empty → populated for `preStartCommands`, `requiredTools`, `cli`**:
-  allowed (they're already declared in v2; populating them is just a
-  value change). The deploy script must treat empty as "skip", which
-  it does.
-- **Changing the *capability* an existing field requires from prod**:
-  also a `schemaVersion` bump. Even if the field name and type stay
-  the same, if the value now requires prod to have something it
-  didn't before, prod's deploy script needs new logic.
+The `check:public-env` step in the prebuild chain enforces this:
+required `NEXT_PUBLIC_*` variables that are referenced in `src/`
+but absent from the build-time environment fail the build loudly.
+Optional `NEXT_PUBLIC_*` variables (allowlisted inside the check
+script) emit a warning instead.
 
-### Version history
+### Build-time only (optional)
 
-- **v1**: never shipped from this repo. Listed for cross-app
-  consistency with vis-daily-tracker's history.
-- **v2** (current): introduced from day one. `requiredTools` /
-  `preStartCommands` / `cli` are all empty here but declared so prod's
-  uniform schema-v2 handling matches across apps.
+Sentry source-map upload runs as part of `next build` via
+`@sentry/nextjs`'s plugin. The upload is **optional**: if these
+three are present, source maps upload to Sentry and production
+stack traces resolve back to readable TypeScript; if absent,
+upload is skipped and the build succeeds anyway (stack traces in
+Sentry stay minified):
 
-### Rollback compatibility
+```text
+SENTRY_AUTH_TOKEN
+SENTRY_ORG
+SENTRY_PROJECT
+```
 
-The "hard refuse unknown schemaVersion" rule applies to **new
-deploys** of artifacts whose schema is *higher* than prod knows about.
-**Rollbacks are different**: prod may need to roll back to an earlier
-release on disk that carries an older `schemaVersion`. Refusing those
-because they're "old" would leave prod stuck unable to roll back from
-a bad release.
+These are write-scoped credentials used only during build — they
+must be available when `npm run build` runs but are not read by
+the running service. The deploy script may keep them in the same
+env file as runtime vars; they just don't need to be exported
+into the systemd unit's runtime environment.
 
-**Rollback support window:** prod's deploy script must accept rollback
-to artifacts at `schemaVersion >= currentSchemaMax - 1`. Concretely
-right now: current is v2; no v1 artifacts exist for this app, so the
-window is single-version (v2 only). When v3 ships, prod accepts v3 +
-v2; older becomes a "manual recovery" scenario.
+## Health endpoint
 
-## Recommended deploy flow
+`GET /api/health` returns `200 {"status":"ok"}` when the SQLite
+file is openable and the schema parses, `503` when not. Served by
+[`src/app/api/health/route.ts`](../src/app/api/health/route.ts).
 
-1. Webhook fires on `release.published` so deploy only triggers when
-   the artifact is actually attached, not the bare tag.
-2. Download tarball (use `BUILD_INFO.assetName` or construct from
-   `tag`) + `SHA256SUMS`. Verify with `sha256sum --check SHA256SUMS` —
-   abort on mismatch.
-3. Extract to `releases/<tag>/`.
-4. Read `MANIFEST` and `BUILD_INFO`. Run pre-swap checks above
-   (schemaVersion known, arch match, glibc forward-compat, Node major
-   match). Refuse to proceed on any failure.
-5. **Required-tools preflight** — for every entry in
-   `MANIFEST.requiredTools`, verify the tool is on `$PATH` and its
-   `--version` satisfies the declared semver range. Empty object →
-   skip the loop. Currently no-op for this app.
-6. Run `MANIFEST.preStartCommands` from the extracted dir, with the
-   union of `MANIFEST.requiredEnv` + `MANIFEST.optionalEnv` exported
-   into the environment. Empty array → skip the step. Currently no-op.
-7. Atomic symlink swap: `current → releases/<tag>/`.
-8. Restart the service. The systemd unit must `exec`
-   `MANIFEST.startCommand` with `cwd=current/` — parameterize via
-   drop-in or wrapper, do not hardcode. When `MANIFEST.nodeVersion`
-   is present, prefer the matching `/usr/bin/node-<N>` binary in the
-   `ExecStart`; fall back to the system default `node` if that
-   versioned path doesn't exist (preflight in step 4 hard-fails the
-   deploy if the resolved binary's major doesn't match). Absent → use
-   system default `node`.
-9. Health-check `MANIFEST.healthCheckPath` (default `/`) on
-   `PORT || MANIFEST.port`. Use `curl -fsS` with a short per-attempt
-   timeout and a ~30s total budget. On failure, swap symlink back and
-   restart.
-10. Garbage collect: keep the last 5 releases.
+The path is hardcoded in this contract. Any change to it gets
+reflected here.
+
+## Database
+
+SQLite, initialized lazily on first request by
+[`src/lib/db.ts`](../src/lib/db.ts). No migrations to run at
+deploy time — the schema is created via `CREATE TABLE IF NOT EXISTS`
+inside `getDb()`. Schema changes that aren't backward-compatible
+with existing data are a contract issue that needs to be handled
+with intent (additive columns are safe; renames/drops are not).
+
+**Backup.** The SQLite file at `SQLITE_PATH` is the only stateful
+artifact this service owns. Production should snapshot it before
+each deploy (`sqlite3 quotes.db .backup snapshot.db`); the
+mechanics are production-side.
 
 ## Shutdown contract
 
-The standalone app handles `SIGTERM` and `SIGINT` gracefully. systemd's
-default `KillSignal=SIGTERM` and `TimeoutStopSec=90s` are both correct
-— no overrides needed in the unit file.
+`server.mjs` handles `SIGTERM` and `SIGINT` gracefully. systemd's
+default `KillSignal=SIGTERM` and `TimeoutStopSec=90s` are both
+correct for this contract.
 
 On signal, the app:
 
-1. Stops accepting new connections (`server.close()` on the Next HTTP
-   server). Idle keep-alive connections are closed immediately
-   (`server.closeIdleConnections()`) so they don't hold the drain
-   open — modern browsers keep them open for ages.
-2. Drains in-flight requests, with a **30-second hard cap**. At the
-   cap, `server.closeAllConnections()` force-cuts anything still
-   running.
-3. Closes the SQLite handle (`db.close()` on the
-   [`src/lib/db.ts`](../src/lib/db.ts) singleton, which server.mjs
-   reads off `globalThis.__sqlite__`). Forces the WAL checkpoint and
-   surfaces close failures via the `[shutdown]` log lines instead of
-   relying on process death.
-4. `await Sentry.close(2000)` — flushes queued Sentry envelopes
-   (2-second timeout) so error reports in flight at restart time
-   aren't lost.
+1. Stops accepting new connections via `server.close()`. Idle keep-alive connections are closed immediately (`server.closeIdleConnections()`).
+2. Drains in-flight HTTP requests with a **30-second hard cap**. At the cap, `server.closeAllConnections()` force-cuts anything still running.
+3. Closes the better-sqlite3 handle (`db.close()`) — forces a WAL checkpoint.
+4. `await Sentry.close(2000)`.
 5. `process.exit(0)`.
 
-A clean exit (0) means `systemctl stop` does NOT trigger
-`OnFailure=systemd-failure-notify@%n.service`. With this contract,
-that channel fires only on real failures (unhandled crashes, OOM,
-runtime-config validation errors, etc.) — not once per deploy.
+**Sentry default import is load-bearing.** `server.ts` uses
+`import Sentry from "@sentry/nextjs"`, not the namespace form
+`import * as Sentry from`. The namespace form silently lacks
+`Sentry.close` under the CJS-via-ESM-namespace shape that
+`@sentry/nextjs` ships; a deploy with the wrong form would skip
+the Sentry flush on every shutdown without erroring.
 
-**Journalctl visibility.** The handler logs to stderr on entry and at
-each phase. After a `systemctl stop` the journal should show:
+**The failure-notify channel becomes diagnostic.** A clean exit 0
+means `systemctl stop` does NOT trigger
+`OnFailure=systemd-failure-notify@%n.service`. With this contract,
+that channel fires only on real failures — unhandled crashes,
+OOM, runtime-config validation errors, shutdown handler bugs that
+hit `TimeoutStopSec` and get SIGKILLed (exit 137).
+
+**Journalctl visibility.** The handler logs to stderr at each
+phase:
 
 ```text
 [shutdown] SIGTERM received: drain → sqlite → sentry → exit
@@ -371,66 +330,35 @@ each phase. After a `systemctl stop` the journal should show:
 [shutdown] exit 0
 ```
 
-If the 30-second cap fires (a request was still in flight when the
-window closed), the `in-flight requests drained` line is replaced by
-the cap warning, and the rest of the path proceeds normally:
+If the 30-second drain cap fires, `in-flight requests drained` is
+replaced by a cap-fired warning. The lines are positive proof the
+path ran — the absence of a failure-notify email alone is a weak
+signal.
 
-```text
-[shutdown] SIGTERM received: drain → sqlite → sentry → exit
-[shutdown] closed idle keep-alive connections
-[shutdown] drain hit 30s cap; force-closing in-flight connections
-[shutdown] sqlite closed
-[shutdown] sentry flushed
-[shutdown] exit 0
-```
+These log strings are illustrative, not normative. The contract
+is that journal lines exist for each phase, not their exact text.
 
-These log strings are **illustrative, not normative.** The contract is
-that journal lines exist for each phase, not their exact text.
+**In-flight ceiling.** The 30-second drain cap is the upper bound
+on how long a single in-flight request can hold up shutdown. The
+quote/POTS-audit routes are small JSON POSTs that complete in
+well under a second; the cap exists for the SMTP send path
+(nodemailer can hang on slow SMTP servers). Tunable in
+`server.ts`.
 
-The graceful-shutdown logic lives in [`server.mjs`](../server.mjs) at
-the tarball root; it's the custom entrypoint that replaces direct
-invocation of the auto-generated `server.js`.
+## What's not in this doc
 
-## Failure modes worth handling explicitly
+These belong to the production environment:
 
-- **Tarball already extracted** (deploy retried) — `releases/<tag>/`
-  exists. Re-running is idempotent: overwrite or skip extract, both
-  safe.
-- **Asset 404** — `release.published` fires only once both the tarball
-  and `SHA256SUMS` are uploaded, so a 404 on either asset is a hard
-  failure, not transient.
-- **glibc mismatch** — don't try to `npm rebuild` on prod. The bundle
-  has no `package-lock.json` resolution available. Hard fail and
-  notify.
-- **`SQLITE_PATH` missing or relative** — app throws at startup via
-  `runtime-config.ts`; service won't come up. Pre-swap, validate the
-  parent directory exists and is writable by the service user.
-- **Unknown `schemaVersion`** — hard fail. Do not attempt to deploy
-  with a fallback strategy.
-- **`MANIFEST.nodeVersion` mismatch** — prod's resolved node binary
-  reports a different major than the artifact declares. Hard fail at
-  preflight. Operator must install the matching Node major before
-  re-deploying. `better-sqlite3` is the failure mode: native modules
-  are compiled per-major, loading them under the wrong Node major
-  fails with a `NODE_MODULE_VERSION` mismatch on first request.
+- Deploy trigger (webhook, operator command, etc.)
+- Webhook signature verification, deploy locking, disk pre-checks
+- Release directory layout and retention
+- SQLite snapshot/backup strategy before deploys
+- Pre-swap smoke against the real environment (the build's postbuild smoke is build-time-only with hermetic stub env)
+- Atomic symlink swap mechanics
+- Post-swap health check and rollback
+- Failed-deploy markers
+- systemd unit definition
 
-## Why this shape
-
-Earlier, prod built from source on every tag (`git pull && npm ci &&
-npm run build`). That worked but coupled prod's reliability to npm's
-network reliability and made rollbacks slow (you had to rebuild the
-old commit). The artifact pattern decouples build from deploy: CI
-runs all the build risk once on a clean Ubuntu runner, prod just
-verifies and swaps. Rollback is a symlink change.
-
-The `MANIFEST` exists so prod's deploy script never has to read
-source. Bumping the start command, adding a required env var, or
-adding a pre-start step happens here, not by editing prod's systemd
-unit. `schemaVersion` lets prod refuse a bundle whose contract it
-doesn't understand instead of guessing.
-
-The contract being shared between this app and vis-daily-tracker means
-the prod deploy script is one script, exercised by every release of
-either app — same pre-swap checks, same rollback semantics, same
-shutdown contract. That's the point of the artifact pattern: ship the
-app, not the deploy logic.
+This contract describes what the repository provides and what the
+host needs. The production environment decides how to assemble
+those into a running service.

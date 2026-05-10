@@ -17,4 +17,5 @@ npx lint-staged
 # `xargs` skips when input is empty, so the no-files case is fine.
 [ -n "$STAGED" ] && echo "$STAGED" | xargs git add --
 
-npm run typecheck
+node --run typecheck
+node --run test

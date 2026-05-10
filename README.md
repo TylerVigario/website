@@ -2,16 +2,17 @@
 
 Marketing front for Vigario Technology Solutions, but really this exists
 because I needed somewhere for businesses panicking about POTS sunset to
-land. Same artifact contract as
+land. Same deploy contract as
 [vis-daily-tracker](https://github.com/TylerVigario/vis-daily-tracker) —
-if I figured that out once, I'd rather not figure it out twice. The
-contract itself lives in [docs/deployment.md](docs/deployment.md); read
-that for anything past "how do I run it locally."
+the two source apps and the prod-side deploy script (`server-admin`)
+are standardized on the same shape. The contract itself lives in
+[docs/deployment.md](docs/deployment.md); read that for anything past
+"how do I run it locally."
 
-Stack: Next 16 (App Router, `output: "standalone"`), Tailwind v4,
-better-sqlite3 for quote/audit submissions, nodemailer for the optional
-"someone filled out a form" email, Sentry (`@sentry/nextjs`) for error +
-performance monitoring (no-op when DSNs unset).
+Stack: Next 16 (App Router), Tailwind v4, better-sqlite3 for
+quote/audit submissions, nodemailer for the optional "someone filled
+out a form" email, Sentry (`@sentry/nextjs`) for error + performance
+monitoring (no-op when DSNs unset).
 
 ## Local dev
 
@@ -25,6 +26,12 @@ npm run dev
 `SQLITE_PATH` must be an absolute path — relative paths are rejected at
 startup by [src/lib/runtime-config.ts](src/lib/runtime-config.ts) (they
 break under systemd, and the dev/prod fail-fast surface should match).
+
+`npm run dev:server` runs the custom server (`tsx server.ts`) instead
+of `next dev` — useful for testing shutdown behavior locally. It needs
+a prior `npm run build` because `server.ts` hardcodes `dev: false` and
+`app.prepare()` reads `.next/`. Cold-running it without a build fails
+with a missing-`.next/` error.
 
 Pre-commit hook runs lint-staged (eslint --fix + prettier) then
 `tsc --noEmit`. Commitlint enforces the 6-type set on the message:
@@ -42,40 +49,41 @@ src/app/
 src/lib/
   db.ts                        # better-sqlite3 singleton on globalThis (server.mjs uses it on shutdown)
   runtime-config.ts            # validates required env at startup; fails fast before serving traffic
-  required-env.json            # single source of truth — release.yml MANIFEST + runtime-config both read this
-  api/                         # zod: QuoteRequest, PotsAuditRequest, ApiError
+  required-env.json            # single source of truth for required-env names
+  api/                         # zod: QuoteRequest, PotsAuditRequest, ProblemDetails (RFC 9457)
   services.tsx                 # service catalog (titles, blurbs, icons)
 src/components/                # Nav, Hero, ContactForm, FadeIn, the usual
 src/instrumentation.ts         # Next runtime hook: Sentry init + runtime-config validation at startup
 src/instrumentation-client.ts  # Sentry browser init (replays-on-error, masked PII, extension-frame filter)
 src/sentry.server.config.ts    # Sentry node-runtime init (loaded by instrumentation.ts)
 src/sentry.edge.config.ts      # Sentry edge-runtime init (no edge handlers yet, wired anyway)
-server.mjs                     # custom entrypoint — graceful SIGTERM, drain, sqlite close, Sentry flush
+server.ts                      # source for the custom entrypoint (esbuild → server.mjs at repo root)
+scripts/build-server.ts        # compile server.ts → server.mjs
+scripts/postbuild.ts           # real-boot smoke against the just-built server.mjs (hermetic env)
+scripts/check-public-env.ts    # fails build if a required NEXT_PUBLIC_* is missing from build-time env
 ```
 
-## Release
+## Build & release
 
-CI is `workflow_dispatch`-only — no auto-release on push, that's by
-design. Trigger from the Actions tab. Two jobs in
-[.github/workflows/release.yml](.github/workflows/release.yml):
+**Build-on-prod.** No CI-built artifact. The gate validates that the
+tagged commit builds cleanly; production clones the tag and runs
+`npm ci && npm run build` itself. The standalone-tracer model produced
+four consecutive bad releases in vis-daily-tracker (v2.80.0–v2.83.0)
+before the pivot — see [docs/deployment.md](docs/deployment.md) for the
+full rationale.
 
-- **Gate**: `npm ci` → typecheck → lint → format → build (with Sentry
-  source-map upload when `SENTRY_AUTH_TOKEN` etc. are populated). First
-  step cross-checks `NODE_VERSION` env, `.nvmrc`, and `engines.node` for
-  major-version agreement. They must move together — the artifact
-  declares one node major in MANIFEST, the runner used another to build
-  it, drift is how you ship green and die at startup.
-- **Release**: git-cliff bumps version (`feat→minor`, `fix/refactor→patch`,
-  breaking→major; chore/docs/test/build/ci skip). Builds standalone,
-  tars as `vigario-technology-solutions-vX.Y.Z.tar.gz` with
-  `BUILD_INFO`, `MANIFEST` (schemaVersion 2), `SHA256SUMS`. Two-step
-  publish: draft release with assets attached, then flip to published.
-  Webhook fires on `release.published`, so prod never fetches before
-  the tar lands.
+`.github/workflows/release.yml`:
 
-The MANIFEST contract — what prod reads to deploy — is documented in
-[docs/deployment.md](docs/deployment.md). That doc is the source of
-truth; this README just links to it.
+- **Gate** (runs on PR + push to main + dispatch): `npm ci` →
+  typecheck → lint → format → build (with the real-boot postbuild
+  smoke against the just-built server.mjs). First step cross-checks
+  `NODE_VERSION` env, `.nvmrc`, and `engines.node` for major-version
+  agreement.
+- **Release** (dispatch only): git-cliff bumps version
+  (`feat→minor`, `fix/refactor→patch`, breaking→major;
+  chore/docs/test/build/ci skip), tags, creates the GitHub Release.
+  The Release carries no asset — the tagged commit IS the
+  deliverable.
 
 CHANGELOG is regenerated each release from commit messages — don't
 hand-edit it. If the changelog reads wrong, fix the commit message
@@ -85,18 +93,21 @@ before tagging, or amend cliff.toml's parsers/grouping.
 
 ```text
 /opt/website/
-  releases/<tag>/          # immutable bundle, swappable
+  releases/<tag>/          # checked-out tag, built in place
   current → releases/<tag> # systemd ExecStart follows the symlink
   data/                    # SQLite db lives HERE, outside releases. Never bundle it.
-  .env                     # SQLITE_PATH=/opt/website/data/quotes.db, SMTP_*, SENTRY_DSN, prod-owned
+  .env                     # SQLITE_PATH=/opt/website/data/quotes.db, SMTP_*, SENTRY_*, prod-owned
 ```
 
-Apache reverse-proxies to port 3000. Deploy script at
-`/usr/local/sbin/website-deploy` listens for `release.published`,
-verifies sha256, extracts, runs MANIFEST.preStartCommands (none for
-us), starts service, hits `/api/health`, swaps `current`. Keeps last 5
-releases. Pre-deploy backup is `sqlite3 quotes.db .backup` via
-`admin-common.sh`.
+Deploy: prod listens for `release.published`, clones the tag into
+`releases/<tag>/`, runs `npm ci && npm run build`, smokes against
+`/api/health`, swaps `current`. Keeps last N releases. Pre-deploy
+backup is `sqlite3 quotes.db .backup` via `server-admin`.
+
+Apache reverse-proxies to port 3000. Server binds `127.0.0.1` by
+default — prod overrides `HOSTNAME=0.0.0.0` in `.env` to expose. The
+loopback default is the safe-by-default fallback if `.env` ever loses
+the override.
 
 `systemctl stop` is a clean exit 0 — server.mjs drains in-flight
 requests (30s cap), closes the SQLite handle, flushes Sentry, then
@@ -108,9 +119,9 @@ not deploys.
 - **Node major drift**. Bump `NODE_VERSION` env, `.nvmrc`, and
   `engines.node` in the same commit. The gate enforces it now but I'll
   forget at 11pm and try to bypass it.
-- **better-sqlite3 native binding**. Recompiles against Node major
-  during `npm ci` in CI. Bump Node major = new ABI in the artifact.
-  Prod's `/usr/bin/node-<major>` must match `MANIFEST.nodeVersion`.
+- **better-sqlite3 native binding**. `npm ci` on prod compiles
+  against the host's Node major. Bump Node major = ABI change. Prod
+  needs the matching Node major installed before `npm ci` runs.
 - **SQLITE_PATH must be absolute**. App throws at startup via
   runtime-config if unset or relative. No cwd fallback — that bit me
   when an old deploy wrote `data/quotes.db` inside a release dir that
@@ -119,11 +130,18 @@ not deploys.
   200 just means React ran; `/api/health` actually opens the db.
 - **Type-aware ESLint** (`recommendedTypeChecked`) is on. `req.json()`
   is `any`. Parse through a zod schema in `src/lib/api/`.
+- **Sentry default import in server.ts**. The shutdown handler calls
+  `Sentry.close()` which silently doesn't exist on the namespace form
+  (`import * as Sentry`) under the CJS-via-ESM-namespace shape
+  `@sentry/nextjs` ships. Default import is load-bearing.
 - **Sentry release identifier** is `vigario-technology-solutions@<version>`,
   pinned in next.config.ts. If you ever rename the package slug, that
   string moves with it (search the project — it's also referenced from
   the Sentry config files for traceability).
-- **No tests yet**. If you add them, hook into the gate before lint.
+- **Tests run via vitest** — `npm test` (one-shot) or `npm run test:watch`.
+  Currently just `tests/required-env.test.ts` (contract-required shape
+  check on `src/lib/required-env.json`). The pre-commit hook and the
+  CI gate both run them.
 
 ## Domain
 

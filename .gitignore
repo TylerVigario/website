@@ -54,9 +54,9 @@ next-env.d.ts
 # lint cache
 .eslintcache
 
-# Server-entrypoint bundle output (built by `npm run build:server`;
-# copied into .next/standalone/server.mjs by scripts/postbuild.ts).
-bin/
+# Server-entrypoint bundle output (built by `npm run build:server`
+# from server.ts; what `npm start` invokes).
+/server.mjs
 
 # claude code per-developer overrides (settings.json stays tracked)
 .claude/settings.local.json
