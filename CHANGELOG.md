@@ -1,4 +1,10 @@
 # Changelog
+## [1.4.1](https://github.com/TylerVigario/website/compare/v1.4.0...v1.4.1) (2026-05-11)
+
+### Bug Fixes
+
+* **packaging:** Drop rpm --import on self-hosted runner 
+
 ## [1.4.0](https://github.com/TylerVigario/website/compare/v1.3.6...v1.4.0) (2026-05-11)
 
 ### Features
