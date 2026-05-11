@@ -1,9 +1,10 @@
 /**
  * Custom server entrypoint.
  *
- * Compiled by scripts/build-server.ts via esbuild → server.mjs at
- * the repo root. `npm start` (= `node server.mjs`) is what invokes
- * it.
+ * Compiled by scripts/build-server.ts via esbuild → server.js at the
+ * repo root. `npm start` (= `node server.js`) is what invokes it.
+ * (package.json `type: module` makes plain .js ESM — no .mjs marker
+ * needed.)
  *
  * Reason this exists instead of `next start`: graceful SIGTERM/SIGINT
  * — drains in-flight HTTP requests, closes the SQLite handle, flushes

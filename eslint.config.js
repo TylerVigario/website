@@ -43,13 +43,13 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
-    "server.mjs",
+    "server.js",
     // Generated files
     "next-env.d.ts",
     // Root config files (not in tsconfig)
-    ".commitlintrc.mjs",
-    "eslint.config.mjs",
-    "postcss.config.mjs",
+    ".commitlintrc.js",
+    "eslint.config.js",
+    "postcss.config.js",
     // Build / pipeline scripts (run via tsx, not part of the app
     // type graph)
     "scripts/**",

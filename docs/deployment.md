@@ -89,7 +89,7 @@ contains:
 | `package.json` | `engines.node`, `scripts.start`, `scripts.build`, `dependencies` / `devDependencies` |
 | `package-lock.json` | Lockfile for deterministic `npm ci` |
 | `src/lib/required-env.json` | The required-env contract. Imported by `src/lib/runtime-config.ts` for app-startup validation, so deploy-time and runtime checks stay in lockstep. |
-| `server.mjs` (after build) | Custom entrypoint. Graceful SIGTERM/SIGINT handling — in-flight drain, SQLite close, Sentry flush, exit 0. |
+| `server.js` (after build) | Custom entrypoint. Graceful SIGTERM/SIGINT handling — in-flight drain, SQLite close, Sentry flush, exit 0. |
 | `.next/` (after build) | Next.js build output. |
 
 ## Build
@@ -115,14 +115,14 @@ scope and rely on convention — the `NEXT_PUBLIC_*` pattern is
 intended for client code that ends up in the bundle, not for
 config-time reads.
 
-**`build:server`** compiles `server.ts` → `server.mjs` at the
+**`build:server`** compiles `server.ts` → `server.js` at the
 repo root via esbuild. `next`, `@sentry/*`, and `better-sqlite3`
 stay external — the artifact's `node_modules/` ships them at
 runtime. A `--check` smoke runs after the compile to catch
 ERR_MODULE_NOT_FOUND at build time; the heavier real-boot smoke
 runs in postbuild.
 
-**The postbuild smoke** spawns `node server.mjs` on a random
+**The postbuild smoke** spawns `node server.js` on a random
 loopback port with a hermetic stub environment, waits up to 30
 seconds for the port to bind, sends SIGTERM, and asserts a clean
 exit-0 within a further 10-second budget. The build fails if the
@@ -174,7 +174,7 @@ environment and is strictly complementary.
 ## Start
 
 `npm start` invokes whatever `package.json#scripts.start` resolves
-to (currently `node server.mjs`). The entrypoint binds `PORT`
+to (currently `node server.js`). The entrypoint binds `PORT`
 (default `3000`) on `HOSTNAME` (default `127.0.0.1`). The
 loopback default is safe-by-default: a deploy that comes up
 without an explicit `HOSTNAME` override is reachable only through
@@ -292,7 +292,7 @@ mechanics are production-side.
 
 ## Shutdown contract
 
-`server.mjs` handles `SIGTERM` and `SIGINT` gracefully. systemd's
+`server.js` handles `SIGTERM` and `SIGINT` gracefully. systemd's
 default `KillSignal=SIGTERM` and `TimeoutStopSec=90s` are both
 correct for this contract.
 

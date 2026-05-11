@@ -55,8 +55,9 @@ next-env.d.ts
 .eslintcache
 
 # Server-entrypoint bundle output (built by `npm run build:server`
-# from server.ts; what `npm start` invokes).
-/server.mjs
+# from server.ts; what `npm start` invokes). Plain .js — package.json
+# `type: module` makes it ESM, no .mjs marker needed.
+/server.js
 
 # claude code per-developer overrides (settings.json stays tracked)
 .claude/settings.local.json

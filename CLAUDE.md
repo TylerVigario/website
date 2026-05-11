@@ -80,7 +80,7 @@ src/
 ├── sentry.server.config.ts           # Sentry node-runtime init
 └── sentry.edge.config.ts             # Sentry edge-runtime init (wired but no edge handlers yet)
 
-server.ts                             # custom entrypoint source (esbuild → server.mjs at repo root)
+server.ts                             # custom entrypoint source (esbuild → server.js at repo root)
 scripts/
 ├── build-server.ts                   # esbuild compile of server.ts; --check smoke after
 ├── postbuild.ts                      # real-boot smoke (hermetic env, port bind, SIGTERM, exit-0)
@@ -139,7 +139,7 @@ Build-on-prod. Production clones the tagged commit, runs
 `npm ci && npm run build`, runs the resulting bundle. **No CI-built
 tarball, no MANIFEST, no SHA256SUMS.** [`docs/deployment.md`](docs/deployment.md)
 is the spec. [`server.ts`](server.ts) is the custom entrypoint
-(compiled by `scripts/build-server.ts` to `server.mjs` at repo root).
+(compiled by `scripts/build-server.ts` to `server.js` at repo root).
 The postbuild step real-boot smokes the bundle against a hermetic
 stub env (bind, SIGTERM, assert exit 0).
 
@@ -149,14 +149,14 @@ stub env (bind, SIGTERM, assert exit 0).
 npm run dev                       # Next dev server (no custom server)
 npm run dev:server                # tsx server.ts — exercises the custom entrypoint. NEEDS prior `npm run build` (server.ts hardcodes dev: false; app.prepare() reads .next/).
 npm run build                     # prebuild (check:public-env + build:server) → next build → postbuild real-boot smoke
-npm start                         # node server.mjs (after build)
+npm start                         # node server.js (after build)
 npm run typecheck                 # tsc --noEmit
 npm test                          # vitest run (currently just required-env.test.ts)
 npm run lint                      # eslint (js) + markdownlint (md)
 npm run format                    # prettier --check
 npm run format:fix                # prettier --write
 npm run ci                        # lint + typecheck + format + test (gate umbrella)
-npm run clean                     # rm .next, server.mjs, .eslintcache, node_modules/.cache
+npm run clean                     # rm .next, server.js, .eslintcache, node_modules/.cache
 ```
 
 ## Code style & conventions
@@ -164,8 +164,7 @@ npm run clean                     # rm .next, server.mjs, .eslintcache, node_mod
 - Prettier: 100 col, double quotes, trailing commas, semicolons.
 - ESLint flat config with type-aware rules (`recommendedTypeChecked`). `req.json()` returns `any` — always parse through a zod schema.
 - Path alias: `@/*` → `src/*`.
-- **Conventional Commits** — minimalist 6-type set: `feat` (minor bump), `fix` / `refactor` (patch bump), `chore` / `docs` / `test` (skipped from changelog). Same set vis-daily-tracker uses. `.commitlintrc.mjs` enforces lowercase subject + the 6-type whitelist.
-- **Commit-body gotcha (commitlint 21 + conventional-changelog parser):** never start a mid-body line with `Word:` or `Token: value`. The parser greedy-detects trailer-shaped lines anywhere in the body and treats them as the footer block boundary, which breaks `footer-leading-blank` on the real `Co-Authored-By:` trailer with a confusing "footer must have leading blank line" error. Rephrase section openers into sentences ("The diff lands..." not "What landed:"); the actual trailer block (Co-Authored-By, etc.) stays at the very end with a blank line above it. Mid-line colons are fine — the detector is line-start anchored.
+- **Conventional Commits** — minimalist 6-type set: `feat` (minor bump), `fix` / `refactor` (patch bump), `chore` / `docs` / `test` (skipped from changelog). Same set vis-daily-tracker uses. `.commitlintrc.js` enforces lowercase subject + the 6-type whitelist. `footer-leading-blank` is deliberately off (the conventional-changelog parser greedy-detected mid-body `Word:` line starts as the footer boundary and false-fired on natural prose like "What landed:" / "Why:"; the comment in `.commitlintrc.js` records why).
 - Husky hooks: `pre-commit` runs `lint-staged` (with Windows defensive re-stage) → `typecheck` → `test`; `commit-msg` runs `commitlint`.
 - `CHANGELOG.md` is regenerated from commits by git-cliff at release time — never hand-edit. Fix the commit message, not the changelog.
 

@@ -47,7 +47,7 @@ src/app/
   api/pots-audit               # POST: same flow, scoped to the POTS landing page
   api/health                   # GET: opens db, SELECT 1 FROM sqlite_schema. Deploy script hits this.
 src/lib/
-  db.ts                        # better-sqlite3 singleton on globalThis (server.mjs uses it on shutdown)
+  db.ts                        # better-sqlite3 singleton on globalThis (server.js uses it on shutdown)
   runtime-config.ts            # validates required env at startup; fails fast before serving traffic
   required-env.json            # single source of truth for required-env names
   api/                         # zod: QuoteRequest, PotsAuditRequest, ProblemDetails (RFC 9457)
@@ -57,9 +57,9 @@ src/instrumentation.ts         # Next runtime hook: Sentry init + runtime-config
 src/instrumentation-client.ts  # Sentry browser init (replays-on-error, masked PII, extension-frame filter)
 src/sentry.server.config.ts    # Sentry node-runtime init (loaded by instrumentation.ts)
 src/sentry.edge.config.ts      # Sentry edge-runtime init (no edge handlers yet, wired anyway)
-server.ts                      # source for the custom entrypoint (esbuild → server.mjs at repo root)
-scripts/build-server.ts        # compile server.ts → server.mjs
-scripts/postbuild.ts           # real-boot smoke against the just-built server.mjs (hermetic env)
+server.ts                      # source for the custom entrypoint (esbuild → server.js at repo root)
+scripts/build-server.ts        # compile server.ts → server.js
+scripts/postbuild.ts           # real-boot smoke against the just-built server.js (hermetic env)
 scripts/check-public-env.ts    # fails build if a required NEXT_PUBLIC_* is missing from build-time env
 ```
 
@@ -76,7 +76,7 @@ full rationale.
 
 - **Gate** (runs on PR + push to main + dispatch): `npm ci` →
   typecheck → lint → format → build (with the real-boot postbuild
-  smoke against the just-built server.mjs). First step cross-checks
+  smoke against the just-built server.js). First step cross-checks
   `NODE_VERSION` env, `.nvmrc`, and `engines.node` for major-version
   agreement.
 - **Release** (dispatch only): git-cliff bumps version
@@ -109,7 +109,7 @@ default — prod overrides `HOSTNAME=0.0.0.0` in `.env` to expose. The
 loopback default is the safe-by-default fallback if `.env` ever loses
 the override.
 
-`systemctl stop` is a clean exit 0 — server.mjs drains in-flight
+`systemctl stop` is a clean exit 0 — server.js drains in-flight
 requests (30s cap), closes the SQLite handle, flushes Sentry, then
 exits. `OnFailure=systemd-failure-notify` only fires on real crashes,
 not deploys.

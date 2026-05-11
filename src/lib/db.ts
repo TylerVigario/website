@@ -12,7 +12,7 @@ function getDbPath(): string {
   return p;
 }
 
-// Singleton stored on globalThis so server.mjs's shutdown handler can
+// Singleton stored on globalThis so server.js's shutdown handler can
 // find and close it before exit (forces the WAL checkpoint and
 // surfaces close failures via the [shutdown] log lines, instead of
 // relying on process death). Same pattern vis-daily-tracker uses for

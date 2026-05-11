@@ -28,7 +28,13 @@ export default {
 
     "body-leading-blank": [2, "always"],
     "body-max-line-length": [0],
-    "footer-leading-blank": [2, "always"],
+    // footer-leading-blank dropped — the conventional-changelog parser
+    // greedy-detects any line-start `Word:` in the body as a trailer
+    // boundary, false-firing on natural prose ("What landed:", "Why:"). The
+    // real protection (catching a missing blank before Co-Authored-By) is
+    // ~zero — HEREDOC commit-message templates include the blank, and
+    // git/cliff handle trailers leniently regardless.
+    "footer-leading-blank": [0],
     "footer-max-line-length": [0],
   },
 };
