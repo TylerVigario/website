@@ -1,4 +1,10 @@
 # Changelog
+## [1.3.4](https://github.com/TylerVigario/website/compare/v1.3.3...v1.3.4) (2026-05-11)
+
+### Bug Fixes
+
+* **packaging:** Disable debug_package — no debuginfo for vendored prebuilds 
+
 ## [1.3.3](https://github.com/TylerVigario/website/compare/v1.3.2...v1.3.3) (2026-05-11)
 
 ### Bug Fixes
