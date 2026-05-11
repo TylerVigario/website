@@ -1,4 +1,10 @@
 # Changelog
+## [1.4.0](https://github.com/TylerVigario/website/compare/v1.3.6...v1.4.0) (2026-05-11)
+
+### Features
+
+* **packaging:** Move release job to self-hosted runner on repo host 
+
 ## [1.3.6](https://github.com/TylerVigario/website/compare/v1.3.5...v1.3.6) (2026-05-11)
 
 ### Bug Fixes
