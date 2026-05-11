@@ -8,11 +8,17 @@ is deliberately out of scope here.
 
 ## Model
 
-**RPM-as-artifact.** A tagged commit on `main` is built by CI inside
-a Fedora 43 container into a signed `tylervigario-website-<version>-1.fc43.x86_64.rpm`,
-uploaded to `repo.tylervigario.com`, and attached to the GitHub
-Release. Production installs it with `sudo dnf upgrade
-tylervigario-website`.
+**RPM-as-artifact.** A tagged commit on `main` is built by CI on a
+self-hosted GitHub Actions runner on the repo host itself into a
+signed `tylervigario-website-<version>-1.fc43.x86_64.rpm`, copied
+into `/srv/dnf-repo/`, and attached to the GitHub Release.
+Production installs it with `sudo dnf upgrade tylervigario-website`.
+
+The self-hosted runner sidesteps the inbound-SSH dependency the
+previous (Fedora-container + ssh-publish) shape required — GitHub
+Actions can't reach the home server on port 22 from the internet,
+and exposing it would be a magnet for scanners. The runner connects
+outbound to GitHub for job pickup; publish is a local file move.
 
 The prior contract (build-on-prod: production cloned the tagged
 commit and ran `npm ci && npm run build`) had two structural
@@ -40,10 +46,10 @@ at deploy time.
 | SELinux policy | `policycoreutils-python-utils` for `semanage` |
 | dnf repo trust | `server-admin-base` ships `/etc/pki/rpm-gpg/RPM-GPG-KEY-server-admin` + `/etc/yum.repos.d/server-admin.repo` |
 
-The build-time native module (`better-sqlite3`) is compiled inside the
-Fedora 43 CI container, so the shipped `.node` binding matches the
-production runtime's glibc. Hosts running anything other than Fedora
-43 are out of scope for this artifact.
+The build-time native module (`better-sqlite3`) is compiled on the
+self-hosted runner — which IS the production host — so the shipped
+`.node` binding matches the runtime glibc exactly. Hosts running
+anything other than Fedora 43 are out of scope for this artifact.
 
 ## Required environment (per-host)
 
@@ -80,10 +86,10 @@ required-env drift before the build can become a release.
 
 ## Build
 
-The `packaging/tylervigario-website.spec` file drives the build. CI
-runs `rpmbuild -ba packaging/tylervigario-website.spec` inside a
-Fedora 43 container; the spec's `%build` invokes the repo's own build
-pipeline (`npm ci && npm run build`).
+The `packaging/tylervigario-website.spec` file drives the build. The
+self-hosted runner invokes `rpmbuild -ba packaging/tylervigario-website.spec`
+directly on the prod host; the spec's `%build` runs the repo's own
+build pipeline (`npm ci && npm run build`).
 
 Build outputs preserved in the RPM:
 
@@ -111,15 +117,63 @@ into the build artifact.
 
 ## Signing
 
-The RPM is signed with a long-lived signing subkey of the
-`server-admin@tylervigario.com` master GPG key. The subkey expires
-annually and is rotated through the same workflow that publishes it
-to GitHub Actions secrets. The master key is offline; only the subkey
-private material is reachable from CI.
+The RPM is signed with a dedicated signing subkey (1-year expiration)
+of the `server-admin@tylervigario.com` master GPG key. Master fingerprint:
+`EC7FD18BBAFFA8A05AD0FC2ADE09D5ECD557FA4B`. The master lives in
+`/etc/server-admin/gnupg/` on the repo host; only the subkey private
+material is reachable from CI via `GPG_SIGNING_SUBKEY` (base64-encoded
+ASCII-armored secret material, subkey-only via `gpg
+--export-secret-subkeys <FPR>!`).
 
-Production hosts trust the public key via
-`/etc/pki/rpm-gpg/RPM-GPG-KEY-server-admin`, shipped by
-`server-admin-base`.
+Consumers' rpm keyrings trust the master cert via
+`/etc/pki/rpm-gpg/RPM-GPG-KEY-server-admin` (shipped by
+`server-admin-base`). Signatures from any subkey of the trusted
+master verify against that trust.
+
+### Subkey rotation
+
+When the subkey expires (or is being rotated proactively), three
+locations need to stay in sync:
+
+1. **The master keyring** (mint the new subkey):
+
+   ```bash
+   sudo gpg --homedir /etc/server-admin/gnupg --batch \
+       --pinentry-mode loopback --passphrase '' \
+       --quick-add-key EC7FD18BBAFFA8A05AD0FC2ADE09D5ECD557FA4B \
+       rsa4096 sign 1y
+   ```
+
+2. **GitHub secret** (the new subkey private material):
+
+   ```bash
+   sudo gpg --homedir /etc/server-admin/gnupg --batch \
+       --pinentry-mode loopback --passphrase '' --armor \
+       --export-secret-subkeys "<NEW-SUBKEY-FPR>!" \
+       | base64 -w0 \
+       | gh secret set GPG_SIGNING_SUBKEY --repo TylerVigario/website
+   ```
+
+   The `!` is load-bearing — it forces the export to contain only that
+   specific subkey, not cumulative material.
+
+3. **Each consumer's rpm keyring** (refresh the trust cache):
+
+   ```bash
+   # On the repo host — refresh the served snapshot first
+   sudo gpg --homedir /etc/server-admin/gnupg --export --armor \
+       EC7FD18BBAFFA8A05AD0FC2ADE09D5ECD557FA4B \
+       | sudo tee /srv/dnf-repo/RPM-GPG-KEY-server-admin >/dev/null
+   sudo restorecon -F /srv/dnf-repo/RPM-GPG-KEY-server-admin
+
+   # On every consumer (incl. the repo host itself):
+   sudo rpm --import https://repo.tylervigario.com/RPM-GPG-KEY-server-admin
+   ```
+
+The symptom of skipping step 3 is `rpm -K <signed.rpm>` reporting
+`digests SIGNATURES NOT OK` on RPMs signed by the new subkey — rpm's
+keyring cached the master's subkey list at first-import time and
+doesn't re-fetch when the snapshot file changes.
 
 ## Versioning + tagging
 
@@ -130,8 +184,8 @@ entry point. The workflow:
    the manually-supplied `bump` input).
 2. Updates `package.json`, regenerates `CHANGELOG.md` + `RELEASE_NOTES.md`,
    commits `chore(release): v<version>`, tags, pushes.
-3. Builds + signs the RPM, uploads to `repo.tylervigario.com`,
-   refreshes `createrepo_c` metadata.
+3. Builds + signs the RPM on the self-hosted runner, copies it into
+   `/srv/dnf-repo/`, refreshes `createrepo_c` metadata.
 4. Creates the GitHub Release with the signed RPM attached.
 
 Conventional Commits drives the version bump:
