@@ -68,6 +68,20 @@ const nextConfig: NextConfig = {
             key: "Cross-Origin-Opener-Policy",
             value: "same-origin",
           },
+          // HSTS — enforce HTTPS for 1 year. Subdomain-inclusive so a
+          // future `*.vigario.tech` subdomain inherits it. No preload
+          // flag yet; add only when the site is settled on its final
+          // domain (HSTS preload is hard to roll back).
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=31536000; includeSubDomains",
+          },
+          // Disable browser features the site doesn't use. Tightens
+          // the attack surface against injected third-party scripts.
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+          },
         ],
       },
     ]),
