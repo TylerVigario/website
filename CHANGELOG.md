@@ -1,4 +1,10 @@
 # Changelog
+## [1.4.3](https://github.com/TylerVigario/website/compare/v1.4.2...v1.4.3) (2026-05-11)
+
+### Bug Fixes
+
+* **packaging:** Own env file root:root to avoid group(website) dep 
+
 ## [1.4.2](https://github.com/TylerVigario/website/compare/v1.4.1...v1.4.2) (2026-05-11)
 
 ### Refactoring
