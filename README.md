@@ -82,8 +82,8 @@ full rationale.
 - **Release** (dispatch only): git-cliff bumps version
   (`feat→minor`, `fix/refactor→patch`, breaking→major;
   chore/docs/test/build/ci skip), tags, then builds + signs the RPM
-  inside a Fedora 43 container, uploads to `repo.tylervigario.com`,
-  and attaches the signed RPM to the GitHub Release.
+  on a self-hosted runner on the prod host, copies into
+  `/srv/dnf-repo/`, and attaches the signed RPM to the GitHub Release.
 
 CHANGELOG is regenerated each release from commit messages — don't
 hand-edit it. If the changelog reads wrong, fix the commit message
@@ -117,14 +117,15 @@ all in the systemd unit now (`packaging/tylervigario-website.service`).
 
 ## Things that have bitten me / will bite me again
 
-- **Node major drift**. Bump `NODE_VERSION` env, `.nvmrc`, and
-  `engines.node` in the same commit. The gate enforces it now but I'll
-  forget at 11pm and try to bypass it.
-- **better-sqlite3 native binding**. The `.node` file is compiled
-  inside CI's Fedora 43 container during `npm ci` and shipped pre-built
-  in the RPM. Bump Node major = ABI change → rebuild in CI; prod just
-  upgrades the RPM. The four Node-major pins (workflow env, .nvmrc,
-  engines.node, spec's `Requires:`) all have to move together.
+- **Node major drift**. Bump `NODE_VERSION` env, `.nvmrc`,
+  `engines.node`, the spec's `Requires: nodejs<N>`, and the unit's
+  `ExecStart=/usr/bin/node-<N>` together. The gate enforces the first
+  three; the spec and unit have to move manually in lockstep.
+- **better-sqlite3 native binding**. The `.node` file compiles during
+  `npm ci` on the self-hosted runner (which IS the prod host) and
+  ships pre-built in the RPM. Bump Node major = ABI change → rebuild
+  in CI; prod just `dnf upgrade`s. The five Node-major pins above all
+  have to move together.
 - **SQLITE_PATH must be absolute**. App throws at startup via
   runtime-config if unset or relative. No cwd fallback — that bit me
   when an old deploy wrote `data/quotes.db` inside a release dir that

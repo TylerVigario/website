@@ -6,6 +6,11 @@ env:
   # Pinned to match prod's installed Node major. See package.json
   # `engines.node` and .nvmrc — all three must declare the same
   # major; the gate's "Verify Node major pins agree" step enforces it.
+  # Node major. Five places have to declare it: this env var,
+  # .nvmrc, package.json#engines.node, the spec's Requires: nodejs<N>,
+  # and the unit's ExecStart=/usr/bin/node-<N>. The gate's "Verify
+  # Node major pins agree" step enforces the first three; the spec
+  # and unit have to be edited manually in lockstep when bumping.
   NODE_VERSION: "24"
   PKG_NAME: tylervigario-website
 

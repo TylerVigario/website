@@ -22,8 +22,11 @@ EnvironmentFile=/etc/tylervigario-website/website.env
 Environment=NODE_ENV=production
 Environment=HOME=/var/lib/tylervigario-website
 
-# State + cache live outside /usr (which is read-only under ProtectSystem=strict).
-# /var/lib + /var/cache are created by tmpfiles.d at correct ownership.
+# State + cache live outside /usr (read-only under ProtectSystem=strict).
+# StateDirectory= and CacheDirectory= create /var/lib/<pkg> and
+# /var/cache/<pkg> at unit-start with correct ownership and add both
+# to ReadWritePaths automatically. The tmpfiles.d config is a
+# backstop for boot ordering.
 StateDirectory=tylervigario-website
 CacheDirectory=tylervigario-website
 

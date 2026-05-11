@@ -4,10 +4,11 @@
 # IT consultancy. Built on Next.js 16 with a custom server entrypoint
 # (server.ts compiled to server.js by scripts/build-server.ts).
 #
-# Build model: rpmbuild itself drives the Next build inside %build. CI
-# invokes `rpmbuild -ba` on this spec from a Fedora 43 build container
-# so glibc matches the production runtime (better-sqlite3 native module).
-# No tarball-of-prebuilt-tree — the spec IS the build definition.
+# Build model: rpmbuild itself drives the Next build inside %build.
+# CI invokes `rpmbuild -ba` on a self-hosted runner on the prod host,
+# so the resulting better-sqlite3 native binding matches the prod
+# runtime's glibc exactly. The spec IS the build definition — no
+# pre-built tarball.
 
 %global         webuser   website
 %global         webgroup  website
@@ -51,10 +52,11 @@ Source0:        %{name}-%{version}.tar.gz
 # honest about what it can run on and lets rpmbuild's BRP checks pass.
 BuildArch:      x86_64
 
-# Build deps — Node 24 + npm to run `npm ci && npm run build`. The
-# postbuild step (scripts/postbuild.ts) does a real-boot smoke that binds
-# to a port; rpmbuild's network sandbox allows loopback by default.
+# Build deps — Node 24 (nodejs24-npm pulled transitively) to run
+# `npm ci && npm run build`. systemd-rpm-macros for the
+# %systemd_post/_preun/_postun expansions below.
 BuildRequires:  nodejs24
+BuildRequires:  nodejs24-npm
 BuildRequires:  systemd-rpm-macros
 
 # Runtime — pin the Fedora parallel-install nodejs24 package by exact
@@ -130,8 +132,17 @@ install -d %{buildroot}%{_datadir}/%{name}
 cp -a server.js .next public node_modules package.json package-lock.json \
     %{buildroot}%{_datadir}/%{name}/
 
-# Strip build-time cache. Next regenerates it under /var/cache at runtime.
+# Strip build-time cache and replace with a symlink into /var/cache.
+# Next's incremental cache (ISR, image opt, fetch cache) writes to
+# `.next/cache/` relative to the running app's cwd at runtime. The
+# app tree under /usr/share is read-only at runtime (systemd
+# ProtectSystem=strict). Without this symlink Next would try to
+# write into a RO directory and silently degrade cache behavior.
+# CacheDirectory= in the service unit creates /var/cache/<pkg> at
+# 0750 website:website on activation, so the symlink target exists
+# and is writable for the service user.
 rm -rf %{buildroot}%{_datadir}/%{name}/.next/cache
+ln -s /var/cache/%{name} %{buildroot}%{_datadir}/%{name}/.next/cache
 
 # systemd unit
 install -D -m 0644 packaging/%{name}.service \
@@ -218,7 +229,8 @@ fi
 
 %changelog
 * Mon May 11 2026 Tyler Vigario <admin@tylervigario.com> - 0.0.0-1
-- Initial package. Pilot of the app-RPM-as-artifact deploy model —
-  replaces the prior build-on-prod contract. Build happens in CI inside
-  a Fedora 43 container so the better-sqlite3 native binding matches
-  the production runtime's glibc. Deploy = `sudo dnf upgrade %{name}`.
+- Initial package. Pilot of the app-RPM-as-artifact deploy model,
+  replacing the prior build-on-prod contract. Build runs on a
+  self-hosted GitHub Actions runner on the prod host so the
+  better-sqlite3 native binding matches the production runtime's
+  glibc exactly. Deploy = `sudo dnf upgrade %{name}`.

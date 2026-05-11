@@ -140,8 +140,10 @@ export async function POST(req: NextRequest) {
 ## Deploy contract (one-liner)
 
 RPM-as-artifact. CI builds + signs `tylervigario-website-<version>-1.fc43.x86_64.rpm`
-inside a Fedora 43 container (matches prod glibc for better-sqlite3),
-uploads to `repo.tylervigario.com`, attaches it to the GitHub Release.
+on a self-hosted GitHub Actions runner running on the prod host
+(better-sqlite3's native binding compiles against the actual runtime
+glibc), copies into `/srv/dnf-repo/`, attaches the signed RPM to the
+GitHub Release.
 Production runs `sudo dnf upgrade tylervigario-website`. The spec
 ([`packaging/tylervigario-website.spec`](../packaging/tylervigario-website.spec))
 drives the build: `%build` invokes `npm ci && npm run build`, `%install`
@@ -191,4 +193,4 @@ npm run clean                     # rm .next, server.js, .eslintcache, node_modu
 - **Don't add `output: "standalone"` back.** Next's static-trace machinery keeps tripping over custom server entrypoints + dynamic requires (v2.80.0–v2.83.0 in vis-daily-tracker were four consecutive bad releases). Under the current shape, `next() + app.prepare()` works because the full Next module tree is present in `/usr/share/tylervigario-website/node_modules/`. Shipping a 100MB+ RPM beats a flaky tracer.
 - **Don't bypass `check:public-env`.** Required `NEXT_PUBLIC_*` vars missing from the build-time env get inlined as literal `undefined` in client chunks — silent runtime degradation. The check fails the build loudly. Optional `NEXT_PUBLIC_*` (currently just `NEXT_PUBLIC_SENTRY_DSN`) lives in the allowlist inside the script and only emits a warning.
 - **Bump Node major across all five pins together.** `NODE_VERSION` env in `.github/workflows/release.yml`, `.nvmrc`, `package.json#engines.node`, the RPM spec's `Requires: nodejs<N>`, and the systemd unit's `ExecStart=/usr/bin/node-<N>` must agree. The gate's first step enforces three of the five; the spec and unit have to be bumped manually in lockstep. Why the explicit versioned binary: Fedora's unversioned `nodejs` package on F43 is v22; `/usr/bin/node` would resolve to that. `nodejs24` is a parallel-install package that ships `/usr/bin/node-24` only.
-- **`better-sqlite3` is a native module.** Marked external in [`next.config.ts`](next.config.ts)'s `serverExternalPackages` and [`scripts/build-server.ts`](scripts/build-server.ts)'s esbuild externals. The native `.node` binding is compiled during `npm ci` inside the CI Fedora 43 container and shipped pre-built in the RPM — production never compiles it. Bumping the Node major changes the binding's ABI; the gate-vs-prod Node-major alignment guard catches this.
+- **`better-sqlite3` is a native module.** Marked external in [`next.config.ts`](next.config.ts)'s `serverExternalPackages` and [`scripts/build-server.ts`](scripts/build-server.ts)'s esbuild externals. The native `.node` binding compiles during `npm ci` on the self-hosted runner (which IS the prod host) and ships pre-built in the RPM — production never recompiles it. Bumping the Node major changes the binding's ABI; the gate's Node-major-pin-alignment step is the canary.
