@@ -1,4 +1,10 @@
 # Changelog
+## [1.4.2](https://github.com/TylerVigario/website/compare/v1.4.1...v1.4.2) (2026-05-11)
+
+### Refactoring
+
+* **packaging:** Drop unused SELinux fcontext rules + move env to /etc/sysconfig 
+
 ## [1.4.1](https://github.com/TylerVigario/website/compare/v1.4.0...v1.4.1) (2026-05-11)
 
 ### Bug Fixes
