@@ -207,7 +207,13 @@ systemd-tmpfiles --create %{_tmpfilesdir}/%{name}.conf || :
 %{_unitdir}/%{name}.service
 %{_tmpfilesdir}/%{name}.conf
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}.conf
-%config(noreplace) %attr(0640, root, %{webgroup}) %{_sysconfdir}/sysconfig/%{name}
+# Env file owned root:root, mode 0640. The website user does not need
+# to read it directly — systemd reads EnvironmentFile= as PID 1 before
+# forking and dropping privileges. Using root:root avoids the
+# auto-generated `Requires: group(website)` from %attr(... %{webgroup})
+# which dnf would try to satisfy at transaction-resolution time (before
+# %pre can create the group).
+%config(noreplace) %attr(0640, root, root) %{_sysconfdir}/sysconfig/%{name}
 
 
 %changelog
