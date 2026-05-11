@@ -1,4 +1,10 @@
 # Changelog
+## [1.3.6](https://github.com/TylerVigario/website/compare/v1.3.5...v1.3.6) (2026-05-11)
+
+### Bug Fixes
+
+* **packaging:** Import pubkey into rpm's keyring for sign verification 
+
 ## [1.3.5](https://github.com/TylerVigario/website/compare/v1.3.4...v1.3.5) (2026-05-11)
 
 ### Bug Fixes
