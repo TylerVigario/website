@@ -1,4 +1,10 @@
 # Changelog
+## [1.3.5](https://github.com/TylerVigario/website/compare/v1.3.4...v1.3.5) (2026-05-11)
+
+### Bug Fixes
+
+* **packaging:** Drop bogus %__gpg_sign_cmd override, use extra_args macro 
+
 ## [1.3.4](https://github.com/TylerVigario/website/compare/v1.3.3...v1.3.4) (2026-05-11)
 
 ### Bug Fixes
