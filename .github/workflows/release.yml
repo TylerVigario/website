@@ -223,11 +223,26 @@ jobs:
         id: rpm
         if: steps.version.outputs.skip != 'true'
         run: |
-          RPM=$(find $HOME/rpmbuild/RPMS -name "${PKG_NAME}-*.rpm" -type f | head -1)
-          if [ -z "$RPM" ]; then
-            echo "::error::no RPM produced"
+          # Match by exact version (not just package name). The
+          # self-hosted runner's rpmbuild tree persists across runs,
+          # so leftover RPMs from earlier builds sit alongside the
+          # one we just produced. `find ... | head -1` was returning
+          # whichever the kernel handed back first — frequently the
+          # wrong (old) file — and downstream steps signed/published
+          # that one. Match by ${PKG_NAME}-${VERSION}-* and assert
+          # exactly one hit.
+          VERSION="${{ steps.version.outputs.version }}"
+          mapfile -t MATCHES < <(find "$HOME/rpmbuild/RPMS" -name "${PKG_NAME}-${VERSION}-*.rpm" -type f)
+          if [ "${#MATCHES[@]}" -eq 0 ]; then
+            echo "::error::no RPM produced for version ${VERSION}"
             exit 1
           fi
+          if [ "${#MATCHES[@]}" -gt 1 ]; then
+            echo "::error::multiple RPMs match ${PKG_NAME}-${VERSION}-*.rpm — ambiguous build state"
+            printf '  %s\n' "${MATCHES[@]}"
+            exit 1
+          fi
+          RPM="${MATCHES[0]}"
           echo "Built: $RPM"
           rpm -qpi "$RPM"
           echo "path=$RPM" >> "$GITHUB_OUTPUT"
