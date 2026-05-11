@@ -133,6 +133,7 @@ jobs:
             nodejs24-npm \
             rpm-build \
             rpm-sign \
+            systemd-rpm-macros \
             openssh-clients \
             createrepo_c \
             gnupg2 \
@@ -205,7 +206,12 @@ jobs:
         run: |
           git add package.json package-lock.json CHANGELOG.md
           git commit -m "chore(release): ${{ steps.version.outputs.tag }}"
-          git tag ${{ steps.version.outputs.tag }}
+          # Annotated tag (-a) — required for `git push --follow-tags`
+          # to actually push it. Lightweight tags are silently skipped
+          # by --follow-tags, which leaves the commit on main and the
+          # tag nowhere (and dnf would have nothing to point a rollback
+          # at, since rollbacks index by git tag).
+          git tag -a ${{ steps.version.outputs.tag }} -m "Release ${{ steps.version.outputs.tag }}"
           git push origin main --follow-tags
 
       # ---- RPM build ----
