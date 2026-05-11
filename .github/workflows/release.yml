@@ -245,10 +245,21 @@ jobs:
           GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
           GPG_PASSPHRASE: ${{ secrets.GPG_SIGNING_PASSPHRASE }}
         run: |
+          # Write the passphrase to a tempfile and use --passphrase-file.
+          # Handles both empty (passphrase-less subkey) and set values
+          # without the heredoc-substitution quoting pitfalls that bite
+          # `--passphrase ${VAR}` (empty VAR collapses the flag into the
+          # next one). `printf %s` avoids a trailing newline that gpg
+          # would otherwise count as part of the passphrase.
+          PASSFILE=$(mktemp)
+          chmod 600 "$PASSFILE"
+          trap 'rm -f "$PASSFILE"' EXIT
+          printf '%s' "$GPG_PASSPHRASE" > "$PASSFILE"
+
           cat > $HOME/.rpmmacros <<EOF
           %_signature gpg
           %_gpg_name ${GPG_KEY_ID}
-          %__gpg_sign_cmd %{__gpg} gpg --batch --pinentry-mode loopback --passphrase ${GPG_PASSPHRASE} --no-armor --no-secmem-warning -u "%{_gpg_name}" -sbo %{__signature_filename} --digest-algo sha256 %{__plaintext_filename}
+          %__gpg_sign_cmd %{__gpg} gpg --batch --pinentry-mode loopback --passphrase-file ${PASSFILE} --no-armor --no-secmem-warning -u "%{_gpg_name}" -sbo %{__signature_filename} --digest-algo sha256 %{__plaintext_filename}
           EOF
           rpmsign --addsign "${{ steps.rpm.outputs.path }}"
           rpm -K "${{ steps.rpm.outputs.path }}"
