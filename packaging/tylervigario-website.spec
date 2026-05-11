@@ -82,17 +82,24 @@ lives at /var/lib/tylervigario-website/quotes.db; rebuild cache at
 %build
 # Run the website's own build pipeline.
 #
-# `npm ci` installs everything (incl. devDeps) since `next build`
-# needs them. We don't `npm prune --omit=dev` afterwards because
-# Next 16 without `output: standalone` resolves devDep paths at
-# runtime in some code paths (e.g. swc dynamic require).
+# Do NOT export NODE_ENV=production before `npm ci`. npm treats
+# NODE_ENV=production as implicit --omit=dev, which strips
+# husky/tsx/eslint/typescript/etc. — but the package's `prepare`
+# script unconditionally invokes `husky`, so the install dies with
+# "husky: command not found" before the build ever starts. Next.js
+# sets NODE_ENV=production itself for `next build`; the spec
+# doesn't need to pre-set it.
+#
+# HUSKY=0 is the canonical husky-in-CI pattern (per husky's own
+# README): the husky binary detects the env var, prints a notice,
+# exits 0. The prepare script becomes a no-op without us having to
+# patch package.json.
 #
 # NEXT_PUBLIC_SENTRY_DSN must be present at build time even if
 # empty, otherwise scripts/check-public-env.ts fails the build.
 # It's deliberately empty here — the build artifact ships with no
 # baked-in Sentry DSN; the server-side DSN is set per-host via
 # /etc/tylervigario-website/website.env.
-export NODE_ENV=production
 export CI=true
 export HUSKY=0
 export NEXT_PUBLIC_SENTRY_DSN=
