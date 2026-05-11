@@ -9,7 +9,7 @@ is deliberately out of scope here.
 ## Model
 
 **RPM-as-artifact.** A tagged commit on `main` is built by CI inside
-a Fedora 43 container into a signed `tylervigario-website-<version>-1.fc43.noarch.rpm`,
+a Fedora 43 container into a signed `tylervigario-website-<version>-1.fc43.x86_64.rpm`,
 uploaded to `repo.tylervigario.com`, and attached to the GitHub
 Release. Production installs it with `sudo dnf upgrade
 tylervigario-website`.

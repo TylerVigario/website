@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
 
 ## Deploy contract (one-liner)
 
-RPM-as-artifact. CI builds + signs `tylervigario-website-<version>-1.fc43.noarch.rpm`
+RPM-as-artifact. CI builds + signs `tylervigario-website-<version>-1.fc43.x86_64.rpm`
 inside a Fedora 43 container (matches prod glibc for better-sqlite3),
 uploads to `repo.tylervigario.com`, attaches it to the GitHub Release.
 Production runs `sudo dnf upgrade tylervigario-website`. The spec

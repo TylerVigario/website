@@ -33,7 +33,12 @@ License:        Proprietary
 URL:            https://github.com/TylerVigario/website
 Source0:        %{name}-%{version}.tar.gz
 
-BuildArch:      noarch
+# Arch-dependent: better-sqlite3 ships a native .node binding under
+# node_modules/. The Linux x86_64 build is the only supported runtime
+# (Fedora 43 + Node 24); other arches would need a parallel build
+# pipeline. Declaring x86_64 (rather than noarch) makes the RPM
+# honest about what it can run on and lets rpmbuild's BRP checks pass.
+BuildArch:      x86_64
 
 # Build deps — Node 24 + npm to run `npm ci && npm run build`. The
 # postbuild step (scripts/postbuild.ts) does a real-boot smoke that binds
