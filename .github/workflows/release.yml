@@ -262,12 +262,13 @@ jobs:
           GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
           GPG_PASSPHRASE: ${{ secrets.GPG_SIGNING_PASSPHRASE }}
         run: |
-          # Write the passphrase to a tempfile and use --passphrase-file.
-          # Handles both empty (passphrase-less subkey) and set values
-          # without the heredoc-substitution quoting pitfalls that bite
-          # `--passphrase ${VAR}` (empty VAR collapses the flag into the
-          # next one). `printf %s` avoids a trailing newline that gpg
-          # would otherwise count as part of the passphrase.
+          # Write the passphrase to a tempfile and use --passphrase-file
+          # via %_gpg_sign_cmd_extra_args. Avoids re-defining the whole
+          # %__gpg_sign_cmd macro (the previous attempt copied a stale
+          # form with a duplicated `gpg` argv that confused the parser
+          # into treating every flag as a filename). The default macro
+          # on Fedora already does the right thing; we just need to
+          # inject --batch + --pinentry-mode loopback + --passphrase-file.
           PASSFILE=$(mktemp)
           chmod 600 "$PASSFILE"
           trap 'rm -f "$PASSFILE"' EXIT
@@ -276,7 +277,7 @@ jobs:
           cat > $HOME/.rpmmacros <<EOF
           %_signature gpg
           %_gpg_name ${GPG_KEY_ID}
-          %__gpg_sign_cmd %{__gpg} gpg --batch --pinentry-mode loopback --passphrase-file ${PASSFILE} --no-armor --no-secmem-warning -u "%{_gpg_name}" -sbo %{__signature_filename} --digest-algo sha256 %{__plaintext_filename}
+          %_gpg_sign_cmd_extra_args --batch --pinentry-mode loopback --passphrase-file ${PASSFILE}
           EOF
           rpmsign --addsign "${{ steps.rpm.outputs.path }}"
           rpm -K "${{ steps.rpm.outputs.path }}"
