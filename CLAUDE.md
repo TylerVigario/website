@@ -165,6 +165,7 @@ npm run clean                     # rm .next, server.mjs, .eslintcache, node_mod
 - ESLint flat config with type-aware rules (`recommendedTypeChecked`). `req.json()` returns `any` — always parse through a zod schema.
 - Path alias: `@/*` → `src/*`.
 - **Conventional Commits** — minimalist 6-type set: `feat` (minor bump), `fix` / `refactor` (patch bump), `chore` / `docs` / `test` (skipped from changelog). Same set vis-daily-tracker uses. `.commitlintrc.mjs` enforces lowercase subject + the 6-type whitelist.
+- **Commit-body gotcha (commitlint 21 + conventional-changelog parser):** never start a mid-body line with `Word:` or `Token: value`. The parser greedy-detects trailer-shaped lines anywhere in the body and treats them as the footer block boundary, which breaks `footer-leading-blank` on the real `Co-Authored-By:` trailer with a confusing "footer must have leading blank line" error. Rephrase section openers into sentences ("The diff lands..." not "What landed:"); the actual trailer block (Co-Authored-By, etc.) stays at the very end with a blank line above it. Mid-line colons are fine — the detector is line-start anchored.
 - Husky hooks: `pre-commit` runs `lint-staged` (with Windows defensive re-stage) → `typecheck` → `test`; `commit-msg` runs `commitlint`.
 - `CHANGELOG.md` is regenerated from commits by git-cliff at release time — never hand-edit. Fix the commit message, not the changelog.
 
