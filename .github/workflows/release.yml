@@ -120,6 +120,12 @@ jobs:
         # Container ships nothing — install everything actions/checkout
         # and the rest of the steps need. install_weak_deps=False keeps
         # the install lean; we name exactly what's required.
+        #
+        # Fedora's versioned nodejs<N> packages install /usr/bin/node-<N>
+        # but don't always set the unversioned /usr/bin/node alternative
+        # (depends on what else is installed). Subsequent steps shell
+        # out to bare `node` and `npm`, so wire those symlinks in
+        # /usr/local/bin/ where they shadow anything in /usr/bin/.
         run: |
           dnf install -y --setopt=install_weak_deps=False \
             git-core \
@@ -133,6 +139,10 @@ jobs:
             gzip \
             jq \
             findutils
+          ln -sf /usr/bin/node-24 /usr/local/bin/node
+          ln -sf /usr/bin/npm-24 /usr/local/bin/npm
+          node --version
+          npm --version
 
       - uses: actions/checkout@v6
         with:

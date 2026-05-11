@@ -11,7 +11,10 @@ Type=simple
 User=website
 Group=website
 WorkingDirectory=/usr/share/tylervigario-website
-ExecStart=/usr/bin/node server.js
+# Versioned binary on purpose. `/usr/bin/node` is whatever Fedora's
+# unversioned `nodejs` package decided is the system default — on F43
+# that's v22. The package's Requires: nodejs24 ensures node-24 exists.
+ExecStart=/usr/bin/node-24 server.js
 Restart=always
 RestartSec=5
 

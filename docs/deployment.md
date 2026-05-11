@@ -34,7 +34,7 @@ at deploy time.
 
 | Requirement | Source of truth |
 |---|---|
-| Node major | RPM `Requires: (nodejs >= 24 with nodejs < 25)` |
+| Node major | RPM `Requires: nodejs24` — Fedora's parallel-install package; service unit's ExecStart hardcodes `/usr/bin/node-24` |
 | systemd | RPM `Requires: systemd` (transitively via service unit) |
 | Apache + mod_ssl | RPM `Requires: httpd mod_ssl` |
 | SELinux policy | `policycoreutils-python-utils` for `semanage` |

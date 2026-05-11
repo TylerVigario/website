@@ -41,8 +41,11 @@ BuildArch:      noarch
 BuildRequires:  nodejs24
 BuildRequires:  systemd-rpm-macros
 
-# Runtime — Node 24 family. nodejs-libs covers the libuv/v8 shared bits.
-Requires:       (nodejs >= 24 with nodejs < 25)
+# Runtime — pin the Fedora parallel-install nodejs24 package by exact
+# name. The unversioned `nodejs` package on F43 is v22; a soft
+# `nodejs >= 24` Requires would resolve in surprising ways. The
+# service unit's ExecStart hardcodes /usr/bin/node-24 to match.
+Requires:       nodejs24
 Requires:       httpd
 Requires:       mod_ssl
 Requires(pre):  shadow-utils
