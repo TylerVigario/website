@@ -27,8 +27,15 @@ Declared by `packaging/tylervigario-website.spec`'s `Requires:`:
 | `nodejs24` | Runtime. Service unit's `ExecStart` is `/usr/bin/node-24` — the parallel-install package's versioned binary, not the unversioned `node`. |
 | `httpd`, `mod_ssl` | Apache reverse-proxies `:443` → `:3000`. |
 | `systemd` | Service unit + `%systemd_post/_preun/_postun` macros (pulled transitively). |
-| `policycoreutils-python-utils` | `%post`/`%postun` use `semanage` to manage SELinux fcontext rules. |
 | `shadow-utils` | `%pre` creates the `website` system user. |
+
+No SELinux fcontext rules ship with the package. Apache reverse-proxies
+to `:3000` over TCP, so the default labels on the RPM-owned paths
+(`usr_t`, `var_lib_t`, `var_cache_t`, `etc_t`) are sufficient — there's
+nothing for the web user to read off-tree that would need its own
+label. Earlier iterations carried `policycoreutils-python-utils` +
+`semanage` rules in `%post`/`%postun`; the rules were dead weight and
+got ripped out (commit `cf3afd5`).
 
 ## Infrastructure prerequisite
 
