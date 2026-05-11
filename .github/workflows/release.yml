@@ -234,20 +234,20 @@ jobs:
         env:
           GPG_SIGNING_SUBKEY: ${{ secrets.GPG_SIGNING_SUBKEY }}
         run: |
-          # Import into gpg's keyring (for rpmsign --addsign to use)
-          # AND into rpm's separate keyring (for rpm -K verification).
-          # rpm doesn't share gpg's keyring; it maintains its own under
-          # /var/lib/rpm/Packages. Without an explicit `rpm --import`,
-          # rpm -K would report "SIGNATURES NOT OK" even on a perfectly
-          # valid signature because rpm has no public key to verify
-          # against. Export the master pubkey from gpg's keyring (which
-          # got imported alongside the subkey private material as the
-          # cross-signing parent) and feed it to rpm.
+          # Subkey goes into the runner user's own gpg keyring (under
+          # $HOME/.gnupg) — used by rpmsign --addsign in the next step.
+          #
+          # NOTE: previous workflow also did `rpm --import` here so the
+          # system rpm keyring would trust the pubkey for `rpm -K`. That
+          # step needs root (rpm writes to /usr/lib/sysimage/rpm). On
+          # this self-hosted runner the host's rpm keyring ALREADY
+          # trusts the master pubkey — it was imported when the existing
+          # server-admin-* RPMs got signed and shipped from the same
+          # /etc/server-admin/gnupg keyring. Verified via `rpm -K` on
+          # an in-repo server-admin-base RPM returning "digests
+          # signatures OK". No further import needed.
           echo "$GPG_SIGNING_SUBKEY" | base64 -d | gpg --batch --import
           gpg --list-secret-keys
-          gpg --export --armor > /tmp/server-admin-pubkey.asc
-          rpm --import /tmp/server-admin-pubkey.asc
-          rm -f /tmp/server-admin-pubkey.asc
 
       - name: Sign RPM
         if: steps.version.outputs.skip != 'true'
