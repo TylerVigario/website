@@ -7,6 +7,7 @@ env:
   # `engines.node` and .nvmrc — all three must declare the same
   # major; the gate's "Verify Node major pins agree" step enforces it.
   NODE_VERSION: "24"
+  PKG_NAME: tylervigario-website
 
 on:
   push:
@@ -36,11 +37,8 @@ permissions:
 jobs:
   # =========================================================================
   # Gate — quality checks + full-build validation. Runs on every PR, every
-  # push to main, and at the start of every release attempt. Under the
-  # build-on-prod contract there's no CI-built artifact to ship; production
-  # rebuilds from the tagged commit. The gate's job is to make sure the
-  # commit builds cleanly before it can ever become a tag. Failing here is
-  # cheap; failing on the prod box during deploy is not.
+  # push to main, and at the start of every release attempt. Failure here
+  # blocks a release attempt from ever invoking the rpmbuild path.
   # =========================================================================
   gate:
     name: Gate
@@ -52,8 +50,8 @@ jobs:
       - name: Verify Node major pins agree
         # NODE_VERSION env (this workflow), .nvmrc, and package.json
         # engines.node must all declare the same Node major. The
-        # production host pins to the same major. Drift here would
-        # let CI green-light a build that prod can't run.
+        # production RPM's Requires also pins this major — drift here
+        # would let CI green-light a build prod won't accept.
         run: |
           NVMRC_MAJOR=$(sed -E 's/^[^0-9]*([0-9]+).*/\1/' .nvmrc)
           ENGINES_MAJOR=$(node -p "require('./package.json').engines.node.match(/\d+/)[0]")
@@ -69,11 +67,8 @@ jobs:
       # Cache key derived from package.json's deps fields ONLY, not
       # the full lockfile. The release path rewrites
       # package-lock.json's root `version` on every run, so a key
-      # based on `hashFiles('**/package-lock.json')` (what setup-node's
-      # `cache: "npm"` shorthand uses) rotates every release and
-      # accumulates one stale cache per run. Hashing only the deps
-      # subtree means the key is stable until you actually change a
-      # dep — typical week of activity shares one cache entry.
+      # based on `hashFiles('**/package-lock.json')` would rotate
+      # every release and accumulate one stale cache per run.
       - name: Compute npm cache key
         id: cache-key
         run: |
@@ -91,59 +86,72 @@ jobs:
       - run: npm run format
       - run: npm test
       - name: Validate build
-        # The build-on-prod contract makes the build the production
-        # path: prod re-runs `npm run build` on each deploy. A broken
-        # build at the tagged commit means a broken deploy, so the
-        # gate has to catch it here. Build outputs are discarded —
-        # they're not the artifact, the tagged source is.
-        #
-        # Sentry sourcemap upload secrets (SENTRY_AUTH_TOKEN / _ORG /
-        # _PROJECT) are deliberately NOT set here. Under the
-        # build-on-prod contract, sourcemap upload happens when prod
-        # builds the release for deploy, with prod's credentials.
-        # Setting them here would (a) upload phantom releases on
-        # every PR, (b) duplicate the upload prod will do anyway.
+        # Under the RPM-as-artifact model, the gate's build is a sanity
+        # check on ubuntu-latest — the load-bearing build happens later
+        # inside a Fedora 43 container during release. If the gate's
+        # ubuntu build fails, the Fedora rpmbuild won't pass either.
+        # Cheaper to fail here.
         run: npm run build
         env:
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
 
   # =========================================================================
-  # Release — bumps version, generates changelog, tags, creates the GitHub
-  # Release. Only runs on workflow_dispatch; the gate is the sole entry
-  # point for PR / push validation. The production deploy listens for
-  # `release.published` and pulls the tagged commit; the Release itself
-  # carries no asset under the build-on-prod contract (the source repo
-  # + tag IS the deliverable).
+  # Release — bumps version, generates changelog, tags, builds + signs the
+  # RPM inside a Fedora 43 container (matches prod's glibc for
+  # better-sqlite3), uploads to repo.tylervigario.com, attaches the signed
+  # RPM to the GitHub Release.
+  #
+  # Runs on workflow_dispatch only. Production picks up the new RPM via
+  # `sudo dnf upgrade tylervigario-website`, manually, when Tyler chooses.
   # =========================================================================
   release:
     name: Release
     needs: gate
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    container:
+      image: fedora:43
+    timeout-minutes: 30
     permissions:
       contents: write
 
     steps:
+      - name: Install build prerequisites
+        # Container ships nothing — install everything actions/checkout
+        # and the rest of the steps need. install_weak_deps=False keeps
+        # the install lean; we name exactly what's required.
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            git-core \
+            nodejs24 \
+            rpm-build \
+            rpm-sign \
+            openssh-clients \
+            createrepo_c \
+            gnupg2 \
+            tar \
+            gzip \
+            jq \
+            findutils
+
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
       - name: Install git-cliff
-        uses: taiki-e/install-action@v2
-        with:
-          tool: git-cliff
+        run: |
+          curl -sSL -o /tmp/git-cliff.tar.gz \
+            https://github.com/orhun/git-cliff/releases/download/v2.6.1/git-cliff-2.6.1-x86_64-unknown-linux-gnu.tar.gz
+          tar xzf /tmp/git-cliff.tar.gz -C /tmp
+          install -m 0755 /tmp/git-cliff-*/git-cliff /usr/local/bin/git-cliff
+          git-cliff --version
 
       - name: Configure git
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Determine next version
         id: version
@@ -165,9 +173,6 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Next version: $TAG (current: $CURRENT)"
 
-          # Defend against the "previous run failed mid-flight, tag
-          # was pushed but workflow never finished" case. package.json's
-          # CURRENT may not reflect what's actually tagged in git.
           if git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
             echo "::error::Tag $TAG already exists in git. A previous release run probably partially completed. Manually delete the tag (git push --delete origin $TAG) or bump past it before retrying."
             exit 1
@@ -192,20 +197,100 @@ jobs:
           git tag ${{ steps.version.outputs.tag }}
           git push origin main --follow-tags
 
-      # Single-step publish under build-on-prod — no asset upload, no
-      # SHA256SUMS, no draft → published dance. The Release exists
-      # purely as the trigger surface for production's deploy webhook
-      # (`release.published`), with the changelog as the body. The
-      # tagged commit IS the artifact; production's deploy script
-      # `git fetch && git checkout ${tag}` to pick it up.
-      - name: Create GitHub Release
+      # ---- RPM build ----
+      - name: Prepare rpmbuild tree
         if: steps.version.outputs.skip != 'true'
-        uses: softprops/action-gh-release@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: ${{ steps.version.outputs.tag }}
-          body_path: RELEASE_NOTES.md
+        run: |
+          mkdir -p $HOME/rpmbuild/{SOURCES,SPECS,BUILD,RPMS,SRPMS}
+          VERSION="${{ steps.version.outputs.version }}"
+          git archive --prefix="${PKG_NAME}-${VERSION}/" --format=tar.gz \
+              -o $HOME/rpmbuild/SOURCES/${PKG_NAME}-${VERSION}.tar.gz HEAD
+
+      - name: rpmbuild -ba
+        if: steps.version.outputs.skip != 'true'
+        env:
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+        run: |
+          rpmbuild -ba \
+            --define "_version ${{ steps.version.outputs.version }}" \
+            --define "_topdir $HOME/rpmbuild" \
+            packaging/${PKG_NAME}.spec
+
+      - name: Locate built RPM
+        id: rpm
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          RPM=$(find $HOME/rpmbuild/RPMS -name "${PKG_NAME}-*.rpm" -type f | head -1)
+          if [ -z "$RPM" ]; then
+            echo "::error::no RPM produced"
+            exit 1
+          fi
+          echo "Built: $RPM"
+          rpm -qpi "$RPM"
+          echo "path=$RPM" >> "$GITHUB_OUTPUT"
+          echo "name=$(basename "$RPM")" >> "$GITHUB_OUTPUT"
+
+      # ---- Sign ----
+      - name: Import GPG signing subkey
+        if: steps.version.outputs.skip != 'true'
+        env:
+          GPG_SIGNING_SUBKEY: ${{ secrets.GPG_SIGNING_SUBKEY }}
+        run: |
+          echo "$GPG_SIGNING_SUBKEY" | base64 -d | gpg --batch --import
+          gpg --list-secret-keys
+
+      - name: Sign RPM
+        if: steps.version.outputs.skip != 'true'
+        env:
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_SIGNING_PASSPHRASE }}
+        run: |
+          cat > $HOME/.rpmmacros <<EOF
+          %_signature gpg
+          %_gpg_name ${GPG_KEY_ID}
+          %__gpg_sign_cmd %{__gpg} gpg --batch --pinentry-mode loopback --passphrase ${GPG_PASSPHRASE} --no-armor --no-secmem-warning -u "%{_gpg_name}" -sbo %{__signature_filename} --digest-algo sha256 %{__plaintext_filename}
+          EOF
+          rpmsign --addsign "${{ steps.rpm.outputs.path }}"
+          rpm -K "${{ steps.rpm.outputs.path }}"
+
+      # ---- Upload to repo.tylervigario.com ----
+      - name: Configure SSH for repo host
+        if: steps.version.outputs.skip != 'true'
+        env:
+          REPO_HOST_SSH_KEY: ${{ secrets.REPO_HOST_SSH_KEY }}
+          REPO_HOST_KNOWN_HOSTS: ${{ secrets.REPO_HOST_KNOWN_HOSTS }}
+        run: |
+          mkdir -p $HOME/.ssh
+          echo "$REPO_HOST_SSH_KEY" > $HOME/.ssh/id_ed25519
+          chmod 600 $HOME/.ssh/id_ed25519
+          echo "$REPO_HOST_KNOWN_HOSTS" > $HOME/.ssh/known_hosts
+          chmod 644 $HOME/.ssh/known_hosts
+
+      - name: Publish RPM to repo
+        if: steps.version.outputs.skip != 'true'
+        env:
+          REPO_USER: ${{ secrets.REPO_USER }}
+          REPO_HOST: ${{ secrets.REPO_HOST }}
+        run: |
+          # Stream the RPM into the publisher's stdin. The server-side
+          # wrapper (forced via authorized_keys command=) reads stdin,
+          # writes to /srv/dnf-repo/incoming/, verifies the signature,
+          # moves into /srv/dnf-repo/, and runs createrepo_c --update.
+          ssh -i $HOME/.ssh/id_ed25519 \
+              "${REPO_USER}@${REPO_HOST}" \
+              "publish ${{ steps.rpm.outputs.name }}" \
+              < "${{ steps.rpm.outputs.path }}"
+
+      # ---- GitHub Release ----
+      - name: Create GitHub Release with RPM asset
+        if: steps.version.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            "${{ steps.rpm.outputs.path }}" \
+            --title "${{ steps.version.outputs.tag }}" \
+            --notes-file RELEASE_NOTES.md
 
       - name: Generate job summary
         if: always()
@@ -213,14 +298,18 @@ jobs:
           VERSION=${{ steps.version.outputs.version }}
           TAG=${{ steps.version.outputs.tag }}
           SKIP=${{ steps.version.outputs.skip }}
-          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "$SKIP" = "true" ]; then
-            echo "> **Skipped** — no version change detected (already at v${VERSION})" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
-            echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
-            echo "| **Version** | v${VERSION} |" >> $GITHUB_STEP_SUMMARY
-            echo "| **Tag** | \`${TAG}\` |" >> $GITHUB_STEP_SUMMARY
-            echo "| **Bump** | ${{ inputs.bump || 'auto-detected' }} |" >> $GITHUB_STEP_SUMMARY
-          fi
+          RPM=${{ steps.rpm.outputs.name }}
+          {
+            echo "## Release Summary"
+            echo
+            if [ "$SKIP" = "true" ]; then
+              echo "> **Skipped** — no version change (already at v${VERSION})"
+            else
+              echo "| Item | Value |"
+              echo "|------|-------|"
+              echo "| **Version** | v${VERSION} |"
+              echo "| **Tag** | \`${TAG}\` |"
+              echo "| **Bump** | ${{ inputs.bump || 'auto-detected' }} |"
+              echo "| **RPM** | \`${RPM}\` |"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,63 @@
+[Unit]
+Description=tylervigario.com — Vigario Technology Solutions marketing site
+Documentation=https://github.com/TylerVigario/website
+After=network.target
+OnFailure=systemd-failure-notify@%n.service
+StartLimitBurst=5
+StartLimitIntervalSec=300
+
+[Service]
+Type=simple
+User=website
+Group=website
+WorkingDirectory=/usr/share/tylervigario-website
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=5
+
+EnvironmentFile=/etc/tylervigario-website/website.env
+Environment=NODE_ENV=production
+Environment=HOME=/var/lib/tylervigario-website
+
+# State + cache live outside /usr (which is read-only under ProtectSystem=strict).
+# /var/lib + /var/cache are created by tmpfiles.d at correct ownership.
+StateDirectory=tylervigario-website
+CacheDirectory=tylervigario-website
+
+# Filesystem hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+RemoveIPC=true
+
+# Kernel hardening
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+
+# Process hardening
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+
+# Syscall filtering — @chown allowed because libuv's copyfile uses fchown.
+SystemCallArchitectures=native
+SystemCallFilter=@system-service @network-io
+SystemCallFilter=~@privileged
+SystemCallFilter=@chown
+
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+MemoryMax=1G
+TasksMax=100
+
+[Install]
+WantedBy=multi-user.target

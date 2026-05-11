@@ -2,12 +2,12 @@
 
 Marketing front for Vigario Technology Solutions, but really this exists
 because I needed somewhere for businesses panicking about POTS sunset to
-land. Same deploy contract as
-[vis-daily-tracker](https://github.com/TylerVigario/vis-daily-tracker) —
-the two source apps and the prod-side deploy script (`server-admin`)
-are standardized on the same shape. The contract itself lives in
-[docs/deployment.md](docs/deployment.md); read that for anything past
-"how do I run it locally."
+land. Deploys as a signed RPM (`tylervigario-website`) to
+`repo.tylervigario.com`; prod installs with `sudo dnf upgrade
+tylervigario-website`. The full contract lives in
+[docs/deployment.md](docs/deployment.md); the spec is at
+[packaging/tylervigario-website.spec](packaging/tylervigario-website.spec).
+Read those for anything past "how do I run it locally."
 
 Stack: Next 16 (App Router), Tailwind v4, better-sqlite3 for
 quote/audit submissions, nodemailer for the optional "someone filled
@@ -81,9 +81,9 @@ full rationale.
   agreement.
 - **Release** (dispatch only): git-cliff bumps version
   (`feat→minor`, `fix/refactor→patch`, breaking→major;
-  chore/docs/test/build/ci skip), tags, creates the GitHub Release.
-  The Release carries no asset — the tagged commit IS the
-  deliverable.
+  chore/docs/test/build/ci skip), tags, then builds + signs the RPM
+  inside a Fedora 43 container, uploads to `repo.tylervigario.com`,
+  and attaches the signed RPM to the GitHub Release.
 
 CHANGELOG is regenerated each release from commit messages — don't
 hand-edit it. If the changelog reads wrong, fix the commit message
@@ -92,36 +92,39 @@ before tagging, or amend cliff.toml's parsers/grouping.
 ## Prod side (the Fedora box)
 
 ```text
-/opt/website/
-  releases/<tag>/          # checked-out tag, built in place
-  current → releases/<tag> # systemd ExecStart follows the symlink
-  data/                    # SQLite db lives HERE, outside releases. Never bundle it.
-  .env                     # SQLITE_PATH=/opt/website/data/quotes.db, SMTP_*, SENTRY_*, prod-owned
+/usr/share/tylervigario-website/      # app tree (owned by RPM, read-only)
+  server.js                            # compiled custom entrypoint
+  .next/                               # Next build output
+  node_modules/                        # full prod dep tree, incl. better-sqlite3 native binding
+  public/
+  package.json
+/usr/lib/systemd/system/tylervigario-website.service   # systemd unit
+/etc/httpd/conf.d/tylervigario-website.conf            # Apache vhost (proxy → :3000)
+/etc/tylervigario-website/website.env                  # env (%config noreplace, hand-edited)
+/var/lib/tylervigario-website/quotes.db                # SQLite, StateDirectory, website:website
+/var/cache/tylervigario-website/                       # Next runtime cache
 ```
 
-Deploy: prod listens for `release.published`, clones the tag into
-`releases/<tag>/`, runs `npm ci && npm run build`, smokes against
-`/api/health`, swaps `current`. Keeps last N releases. Pre-deploy
-backup is `sqlite3 quotes.db .backup` via `server-admin`.
+Deploy: `sudo dnf upgrade tylervigario-website`. Rollback: `sudo dnf
+downgrade tylervigario-website-<previous>` or `dnf history undo <id>`.
+No webhook, no path units, no build-on-host — the RPM ships
+pre-built, validated, signed.
 
 Apache reverse-proxies to port 3000. Server binds `127.0.0.1` by
-default — prod overrides `HOSTNAME=0.0.0.0` in `.env` to expose. The
-loopback default is the safe-by-default fallback if `.env` ever loses
-the override.
-
-`systemctl stop` is a clean exit 0 — server.js drains in-flight
-requests (30s cap), closes the SQLite handle, flushes Sentry, then
-exits. `OnFailure=systemd-failure-notify` only fires on real crashes,
-not deploys.
+default — Apache fronts on :443. SQLite handle, in-flight drain,
+Sentry flush, `systemd-failure-notify@%n` on crash — same as before,
+all in the systemd unit now (`packaging/tylervigario-website.service`).
 
 ## Things that have bitten me / will bite me again
 
 - **Node major drift**. Bump `NODE_VERSION` env, `.nvmrc`, and
   `engines.node` in the same commit. The gate enforces it now but I'll
   forget at 11pm and try to bypass it.
-- **better-sqlite3 native binding**. `npm ci` on prod compiles
-  against the host's Node major. Bump Node major = ABI change. Prod
-  needs the matching Node major installed before `npm ci` runs.
+- **better-sqlite3 native binding**. The `.node` file is compiled
+  inside CI's Fedora 43 container during `npm ci` and shipped pre-built
+  in the RPM. Bump Node major = ABI change → rebuild in CI; prod just
+  upgrades the RPM. The four Node-major pins (workflow env, .nvmrc,
+  engines.node, spec's `Requires:`) all have to move together.
 - **SQLITE_PATH must be absolute**. App throws at startup via
   runtime-config if unset or relative. No cwd fallback — that bit me
   when an old deploy wrote `data/quotes.db` inside a release dir that

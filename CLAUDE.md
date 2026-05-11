@@ -22,22 +22,19 @@ monitoring (no-op when DSNs unset), react-hook-form + zodResolver
 for form validation. No auth, no API consumers other than the site's
 own forms.
 
-## Standardization rule (load-bearing)
+## Deploy contract
 
-This repo is one of three Tyler maintains in lockstep:
+This repo owns its own deploy contract — see
+[`docs/deployment.md`](docs/deployment.md). The model is
+**RPM-as-artifact**: CI builds a signed RPM inside a Fedora 43
+container, uploads to `repo.tylervigario.com`, attaches it to the
+GitHub Release. Production installs via `sudo dnf upgrade
+tylervigario-website` (manual). The spec is at
+[`packaging/tylervigario-website.spec`](../packaging/tylervigario-website.spec).
 
-- **`tylervigario`** (this) — marketing site
-- **`vis-daily-tracker`** — internal ops platform
-- **`server-admin`** — prod-side deploy script
-
-`vis-daily-tracker/docs/deployment.md` is the **canonical deploy
-contract**. Don't deviate. Project-specific bits (SQLite vs Prisma,
-no WS, no CLI) fill in around it; structural shape mirrors exactly.
-The memory file at
-`~/.claude/projects/c--Users-tyler-Projects-tylervigario/memory/feedback_deploy_contract.md`
-documents this; the contract itself lives in
-[`docs/deployment.md`](docs/deployment.md) (which explicitly cites
-the mirroring relationship).
+The prior contract (build-on-prod, shared with `vis-daily-tracker`
+and `server-admin`) is retired here. `vis-daily-tracker` still ships
+build-on-prod until it follows the same migration.
 
 ## Core vocabulary
 
@@ -90,7 +87,14 @@ tests/
 └── required-env.test.ts              # contract shape check on src/lib/required-env.json
 
 docs/
-└── deployment.md                     # source-side deploy contract — mirrors vis-daily-tracker's
+└── deployment.md                     # source-side deploy contract — RPM-as-artifact
+
+packaging/
+├── tylervigario-website.spec         # RPM spec; %build invokes `npm ci && npm run build`
+├── tylervigario-website.service      # systemd service unit (installed under /usr/lib/systemd/system/)
+├── tylervigario-website.tmpfiles.conf # /var/lib + /var/cache state-dir ownership
+├── tylervigario-website-httpd.conf   # Apache vhost (drops into /etc/httpd/conf.d/)
+└── website.env.example               # env template (installed at /etc/tylervigario-website/website.env)
 ```
 
 ## Form patterns (RHF + zod + Problem Details)
@@ -135,13 +139,17 @@ export async function POST(req: NextRequest) {
 
 ## Deploy contract (one-liner)
 
-Build-on-prod. Production clones the tagged commit, runs
-`npm ci && npm run build`, runs the resulting bundle. **No CI-built
-tarball, no MANIFEST, no SHA256SUMS.** [`docs/deployment.md`](docs/deployment.md)
-is the spec. [`server.ts`](server.ts) is the custom entrypoint
-(compiled by `scripts/build-server.ts` to `server.js` at repo root).
-The postbuild step real-boot smokes the bundle against a hermetic
-stub env (bind, SIGTERM, assert exit 0).
+RPM-as-artifact. CI builds + signs `tylervigario-website-<version>-1.fc43.noarch.rpm`
+inside a Fedora 43 container (matches prod glibc for better-sqlite3),
+uploads to `repo.tylervigario.com`, attaches it to the GitHub Release.
+Production runs `sudo dnf upgrade tylervigario-website`. The spec
+([`packaging/tylervigario-website.spec`](../packaging/tylervigario-website.spec))
+drives the build: `%build` invokes `npm ci && npm run build`, `%install`
+lays out the tree under `/usr/share/tylervigario-website/`. [`docs/deployment.md`](docs/deployment.md)
+is the full spec. [`server.ts`](server.ts) is the custom entrypoint
+(compiled by `scripts/build-server.ts` to `server.js`). The postbuild
+step real-boot smokes the bundle against a hermetic stub env (bind,
+SIGTERM, assert exit 0).
 
 ## Commands
 
@@ -171,16 +179,16 @@ npm run clean                     # rm .next, server.js, .eslintcache, node_modu
 ## Environment
 
 - **Dev**: Windows 11 + git-bash. Node via `fnm` — Bash sessions need `eval "$(fnm env --use-on-cd --shell bash)"` once before `npm`/`node` resolve. PowerShell tool also available.
-- **Prod**: Fedora + systemd. Service binds 127.0.0.1 by default ([`server.ts`](server.ts)); prod `.env` overrides `HOSTNAME=0.0.0.0` to expose. Apache reverse-proxies to port 3000. SQLite file lives at `/opt/website/data/quotes.db` (outside release dirs so it survives swaps).
-- **Tools required on prod**: Node 24 + npm + git. No `make`/`g++`/`python` — every native dep (just `better-sqlite3`) must have a usable prebuilt binary.
+- **Prod**: Fedora 43 + systemd. Service binds 127.0.0.1 by default ([`server.ts`](server.ts)); Apache reverse-proxies on :443→:3000. App tree at `/usr/share/tylervigario-website/` (owned by RPM, read-only). SQLite at `/var/lib/tylervigario-website/quotes.db` (StateDirectory, owned by `website:website`). Env at `/etc/tylervigario-website/website.env` (%config noreplace).
+- **Tools required on prod**: just `nodejs >= 24, < 25` (pulled in by the RPM's `Requires:`). Build tooling (`make`/`g++`/`python`/`node-gyp`) lives in CI's Fedora container, not on prod — better-sqlite3 ships pre-compiled in the RPM.
 
 ## Guardrails — things that break correctness if ignored
 
 - **`Sentry.close()` requires the default import.** [`server.ts`](server.ts) uses `import Sentry from "@sentry/nextjs"`, not `import * as Sentry from`. The namespace form silently lacks `Sentry.close` under the CJS-via-ESM-namespace shape `@sentry/nextjs` ships — a deploy with the wrong form skips the Sentry flush on every shutdown without erroring. Everywhere else (instrumentation, error boundaries, sentry.{server,edge}.config.ts) keeps namespace — those only call `init` / `captureException` / `captureRequestError`, which exist on both shapes.
 - **`SQLITE_PATH` must be absolute.** [`src/lib/runtime-config.ts`](src/lib/runtime-config.ts) rejects relative paths at startup. Don't default it; don't make it optional; don't fall back to cwd.
 - **Don't wrap route handlers in top-level try/catch.** Errors must propagate to Next so `onRequestError` (in [`src/instrumentation.ts`](src/instrumentation.ts)) forwards them to Sentry. The email-send `try/catch` inside the route is the only legitimate catch — the row is already saved by that point, the email is best-effort.
-- **Don't drift the deploy contract.** vis-daily-tracker's `docs/deployment.md` is canonical. If a tylervigario-specific need can't fit, surface it as a contract-extension proposal — never deviate unilaterally. The standardization rule applies across this repo, vis-daily-tracker, and server-admin.
-- **Don't add `output: "standalone"` back.** The build-on-prod pivot was deliberate (v2.80.0–v2.83.0 in vis-daily-tracker were four consecutive bad releases against the standalone tracer's preconditions). The wrap-server.js pattern that briefly existed here is also gone — under build-on-prod, `next() + app.prepare()` works because the full Next module tree is present.
+- **Don't drift the spec's runtime contract from the unit + vhost + env template.** [`packaging/tylervigario-website.spec`](../packaging/tylervigario-website.spec) declares paths under `/usr/share/<pkg>/`, `/var/lib/<pkg>/`, `/etc/<pkg>/`. The systemd unit's `WorkingDirectory`, `EnvironmentFile`, `StateDirectory`, and `CacheDirectory` must match. The vhost's `ProxyPass` target must match the env's `PORT`. Misalignment shows up as runtime path errors that are obvious in hindsight and expensive to debug live.
+- **Don't add `output: "standalone"` back.** Next's static-trace machinery keeps tripping over custom server entrypoints + dynamic requires (v2.80.0–v2.83.0 in vis-daily-tracker were four consecutive bad releases). Under the current shape, `next() + app.prepare()` works because the full Next module tree is present in `/usr/share/tylervigario-website/node_modules/`. Shipping a 100MB+ RPM beats a flaky tracer.
 - **Don't bypass `check:public-env`.** Required `NEXT_PUBLIC_*` vars missing from the build-time env get inlined as literal `undefined` in client chunks — silent runtime degradation. The check fails the build loudly. Optional `NEXT_PUBLIC_*` (currently just `NEXT_PUBLIC_SENTRY_DSN`) lives in the allowlist inside the script and only emits a warning.
-- **Bump Node major across all three pins together.** `NODE_VERSION` env in `.github/workflows/release.yml`, `.nvmrc`, and `package.json#engines.node` must agree — the gate's first step enforces it. Drift would let CI green-light a build prod can't run.
-- **`better-sqlite3` is a native module.** Marked external in both [`next.config.ts`](next.config.ts)'s `serverExternalPackages` and [`scripts/build-server.ts`](scripts/build-server.ts)'s esbuild externals. Bumping the Node major recompiles the binding during `npm ci` on prod — must match between build time and runtime.
+- **Bump Node major across all four pins together.** `NODE_VERSION` env in `.github/workflows/release.yml`, `.nvmrc`, `package.json#engines.node`, and the RPM spec's `Requires: (nodejs >= N with nodejs < N+1)` must agree. The gate's first step enforces three of the four; the fourth is in the spec and has to be bumped manually in lockstep.
+- **`better-sqlite3` is a native module.** Marked external in [`next.config.ts`](next.config.ts)'s `serverExternalPackages` and [`scripts/build-server.ts`](scripts/build-server.ts)'s esbuild externals. The native `.node` binding is compiled during `npm ci` inside the CI Fedora 43 container and shipped pre-built in the RPM — production never compiles it. Bumping the Node major changes the binding's ABI; the gate-vs-prod Node-major alignment guard catches this.
