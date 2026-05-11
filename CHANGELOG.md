@@ -1,4 +1,10 @@
 # Changelog
+## [1.3.1](https://github.com/TylerVigario/website/compare/v1.3.0...v1.3.1) (2026-05-11)
+
+### Bug Fixes
+
+* **packaging:** Systemd-rpm-macros BuildRequires + annotated release tag 
+
 ## [1.3.0](https://github.com/TylerVigario/website/compare/v1.2.1...v1.3.0) (2026-05-11)
 
 ### Features
