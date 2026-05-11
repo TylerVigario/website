@@ -1,4 +1,23 @@
 # Changelog
+## [1.3.0](https://github.com/TylerVigario/website/compare/v1.2.1...v1.3.0) (2026-05-11)
+
+### Features
+
+* **forms:** Adopt rfc 9457 problem details + react-hook-form
+* **packaging:** Introduce tylervigario-website RPM, retire build-on-prod 
+
+### Bug Fixes
+
+* **packaging:** Use --passphrase-file in rpmsign macros 
+* **packaging:** Use versioned Node binary throughout 
+* **packaging:** Install nodejs24-npm alongside nodejs24 
+
+### Refactoring
+
+* **deploy:** Build-on-prod contract + drop output:standalone
+* **security:** Add hsts + permissions-policy headers
+* **emails:** Adopt react-email for quote + pots-audit notifications
+
 ## [1.2.1](https://github.com/TylerVigario/website/compare/v1.2.0...v1.2.1) (2026-05-09)
 
 ### Bug Fixes
