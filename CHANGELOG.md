@@ -1,4 +1,10 @@
 # Changelog
+## [1.3.2](https://github.com/TylerVigario/website/compare/v1.3.1...v1.3.2) (2026-05-11)
+
+### Bug Fixes
+
+* **packaging:** Don't preset NODE_ENV=production before npm ci 
+
 ## [1.3.1](https://github.com/TylerVigario/website/compare/v1.3.0...v1.3.1) (2026-05-11)
 
 ### Bug Fixes
