@@ -18,7 +18,7 @@ ExecStart=/usr/bin/node-24 server.js
 Restart=always
 RestartSec=5
 
-EnvironmentFile=/etc/tylervigario-website/website.env
+EnvironmentFile=/etc/sysconfig/tylervigario-website
 Environment=NODE_ENV=production
 Environment=HOME=/var/lib/tylervigario-website
 

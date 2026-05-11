@@ -52,9 +52,11 @@ Source0:        %{name}-%{version}.tar.gz
 # honest about what it can run on and lets rpmbuild's BRP checks pass.
 BuildArch:      x86_64
 
-# Build deps — Node 24 (nodejs24-npm pulled transitively) to run
-# `npm ci && npm run build`. systemd-rpm-macros for the
-# %systemd_post/_preun/_postun expansions below.
+# Build deps. Node 24 + npm to run npm ci + next build.
+# systemd-rpm-macros provides the systemd_post / preun / postun
+# scriptlet helpers expanded below. (Comments here avoid leading
+# `%` on macro names because rpm's macro engine expands % even
+# inside comments unless escaped with %%.)
 BuildRequires:  nodejs24
 BuildRequires:  nodejs24-npm
 BuildRequires:  systemd-rpm-macros
@@ -68,10 +70,8 @@ Requires:       httpd
 Requires:       mod_ssl
 Requires(pre):  shadow-utils
 Requires(post): systemd
-Requires(post): policycoreutils-python-utils
 Requires(preun): systemd
 Requires(postun): systemd
-Requires(postun): policycoreutils-python-utils
 
 %description
 Public marketing site for Vigario Technology Solutions (VTS), an
@@ -85,8 +85,7 @@ Ships:
   - systemd service unit (tylervigario-website.service)
   - Apache vhost at /etc/httpd/conf.d/ (reverse-proxies to :3000)
   - tmpfiles.d for /var/lib + /var/cache state dirs
-  - SELinux fcontext rules wired in %post
-  - Env template at /etc/tylervigario-website/website.env
+  - Env template at /etc/sysconfig/tylervigario-website
 
 The 'website' system user is created on first install. SQLite state
 lives at /var/lib/tylervigario-website/quotes.db; rebuild cache at
@@ -117,7 +116,7 @@ lives at /var/lib/tylervigario-website/quotes.db; rebuild cache at
 # empty, otherwise scripts/check-public-env.ts fails the build.
 # It's deliberately empty here — the build artifact ships with no
 # baked-in Sentry DSN; the server-side DSN is set per-host via
-# /etc/tylervigario-website/website.env.
+# /etc/sysconfig/tylervigario-website.
 export CI=true
 export HUSKY=0
 export NEXT_PUBLIC_SENTRY_DSN=
@@ -156,10 +155,12 @@ install -D -m 0644 packaging/%{name}.tmpfiles.conf \
 install -D -m 0644 packaging/%{name}-httpd.conf \
     %{buildroot}%{_sysconfdir}/httpd/conf.d/%{name}.conf
 
-# Env file template — %config(noreplace), hand-managed thereafter.
-install -d %{buildroot}%{_sysconfdir}/%{name}
-install -m 0640 packaging/website.env.example \
-    %{buildroot}%{_sysconfdir}/%{name}/website.env
+# Env file — /etc/sysconfig/%{name}, the RH-canonical home for a
+# single-file systemd EnvironmentFile=. %config(noreplace) so the
+# operator's edits survive upgrades.
+install -d %{buildroot}%{_sysconfdir}/sysconfig
+install -m 0640 packaging/tylervigario-website.sysconfig \
+    %{buildroot}%{_sysconfdir}/sysconfig/%{name}
 
 
 %pre
@@ -176,21 +177,12 @@ exit 0
 # Apply tmpfiles.d immediately — don't wait for next boot.
 systemd-tmpfiles --create %{_tmpfilesdir}/%{name}.conf || :
 
-# SELinux fcontext rules. Idempotent on install ($1 == 1) only — on
-# upgrade ($1 == 2) the rules are already there.
-if [ "$1" -eq 1 ]; then
-    semanage fcontext -a -t httpd_sys_content_t    "%{_datadir}/%{name}(/.*)?"  2>/dev/null || :
-    semanage fcontext -a -t httpd_sys_rw_content_t "/var/lib/%{name}(/.*)?"     2>/dev/null || :
-    semanage fcontext -a -t httpd_sys_rw_content_t "/var/cache/%{name}(/.*)?"   2>/dev/null || :
-    semanage fcontext -a -t etc_t                  "%{_sysconfdir}/%{name}(/.*)?" 2>/dev/null || :
-fi
-
-# Always relabel — covers both fresh install and post-upgrade file replacement.
-restorecon -R \
-    %{_datadir}/%{name} \
-    /var/lib/%{name} \
-    /var/cache/%{name} \
-    %{_sysconfdir}/%{name} 2>/dev/null || :
+# No SELinux fcontext rules: Apache reverse-proxies to :3000 over
+# TCP (governed by the httpd_can_network_connect boolean, not file
+# labels), Node accesses the app tree + state in its default service
+# domain, and the default labels (usr_t, var_lib_t, var_cache_t,
+# etc_t) already permit those accesses. Custom httpd_sys_*_t rules
+# would imply Apache reads the file tree directly — it doesn't.
 
 %systemd_post %{name}.service
 
@@ -201,14 +193,6 @@ restorecon -R \
 
 %postun
 %systemd_postun_with_restart %{name}.service
-
-# Full uninstall ($1 == 0) only — preserve rules on upgrade.
-if [ "$1" -eq 0 ]; then
-    semanage fcontext -d "%{_datadir}/%{name}(/.*)?"   2>/dev/null || :
-    semanage fcontext -d "/var/lib/%{name}(/.*)?"      2>/dev/null || :
-    semanage fcontext -d "/var/cache/%{name}(/.*)?"    2>/dev/null || :
-    semanage fcontext -d "%{_sysconfdir}/%{name}(/.*)?" 2>/dev/null || :
-fi
 
 
 %files
@@ -223,8 +207,7 @@ fi
 %{_unitdir}/%{name}.service
 %{_tmpfilesdir}/%{name}.conf
 %config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}.conf
-%dir %{_sysconfdir}/%{name}
-%config(noreplace) %attr(0640, root, %{webgroup}) %{_sysconfdir}/%{name}/website.env
+%config(noreplace) %attr(0640, root, %{webgroup}) %{_sysconfdir}/sysconfig/%{name}
 
 
 %changelog

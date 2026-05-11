@@ -42,7 +42,7 @@ host has already loaded the repo definition.
 
 ## Per-host runtime environment
 
-`/etc/tylervigario-website/website.env` ships as `%config(noreplace)`
+`/etc/sysconfig/tylervigario-website` ships as `%config(noreplace)`
 — first install lays down a template; subsequent upgrades preserve
 your edits. Required keys (validated at startup by
 `src/lib/runtime-config.ts` against `src/lib/required-env.json`):
@@ -73,7 +73,7 @@ release.
 | `/usr/lib/systemd/system/tylervigario-website.service` | 0644 | systemd unit. |
 | `/usr/lib/tmpfiles.d/tylervigario-website.conf` | 0644 | Owns `/var/lib/<pkg>` + `/var/cache/<pkg>` at 0750 website:website. |
 | `/etc/httpd/conf.d/tylervigario-website.conf` | `%config(noreplace)` | Apache vhost (reverse-proxy on :3000, redirect www→apex, HTTP→HTTPS). |
-| `/etc/tylervigario-website/website.env` | `%config(noreplace) 0640 root:website` | Env template (see above). |
+| `/etc/sysconfig/tylervigario-website` | `%config(noreplace) 0640 root:website` | Env template (see above) — RH-canonical home for a single-file systemd EnvironmentFile. |
 
 Created at runtime by the service unit (not in the RPM):
 `/var/lib/tylervigario-website/` (StateDirectory) and
@@ -105,7 +105,7 @@ vars (allowlisted in the script — currently just
 
 The RPM build deliberately leaves `NEXT_PUBLIC_SENTRY_DSN` empty.
 Client-side Sentry DSN is configured per-host at runtime via
-`/etc/tylervigario-website/website.env`, not baked into the build.
+`/etc/sysconfig/tylervigario-website`, not baked into the build.
 
 ## Signing
 

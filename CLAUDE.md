@@ -94,7 +94,7 @@ packaging/
 ├── tylervigario-website.service      # systemd service unit (installed under /usr/lib/systemd/system/)
 ├── tylervigario-website.tmpfiles.conf # /var/lib + /var/cache state-dir ownership
 ├── tylervigario-website-httpd.conf   # Apache vhost (drops into /etc/httpd/conf.d/)
-└── website.env.example               # env template (installed at /etc/tylervigario-website/website.env)
+└── tylervigario-website.sysconfig    # env template (installed at /etc/sysconfig/tylervigario-website)
 ```
 
 ## Form patterns (RHF + zod + Problem Details)
@@ -181,7 +181,7 @@ npm run clean                     # rm .next, server.js, .eslintcache, node_modu
 ## Environment
 
 - **Dev**: Windows 11 + git-bash. Node via `fnm` — Bash sessions need `eval "$(fnm env --use-on-cd --shell bash)"` once before `npm`/`node` resolve. PowerShell tool also available.
-- **Prod**: Fedora 43 + systemd. Service binds 127.0.0.1 by default ([`server.ts`](server.ts)); Apache reverse-proxies on :443→:3000. App tree at `/usr/share/tylervigario-website/` (owned by RPM, read-only). SQLite at `/var/lib/tylervigario-website/quotes.db` (StateDirectory, owned by `website:website`). Env at `/etc/tylervigario-website/website.env` (%config noreplace).
+- **Prod**: Fedora 43 + systemd. Service binds 127.0.0.1 by default ([`server.ts`](server.ts)); Apache reverse-proxies on :443→:3000. App tree at `/usr/share/tylervigario-website/` (owned by RPM, read-only). SQLite at `/var/lib/tylervigario-website/quotes.db` (StateDirectory, owned by `website:website`). Env at `/etc/sysconfig/tylervigario-website` (%config noreplace).
 - **Tools required on prod**: just the `nodejs24` package (pulled in by the RPM's `Requires:`). Build tooling (`make`/`g++`/`python`/`node-gyp`) lives in CI's Fedora container, not on prod — better-sqlite3 ships pre-compiled in the RPM.
 
 ## Guardrails — things that break correctness if ignored

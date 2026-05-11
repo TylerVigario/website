@@ -100,7 +100,7 @@ before tagging, or amend cliff.toml's parsers/grouping.
   package.json
 /usr/lib/systemd/system/tylervigario-website.service   # systemd unit
 /etc/httpd/conf.d/tylervigario-website.conf            # Apache vhost (proxy → :3000)
-/etc/tylervigario-website/website.env                  # env (%config noreplace, hand-edited)
+/etc/sysconfig/tylervigario-website                    # env (%config noreplace, hand-edited)
 /var/lib/tylervigario-website/quotes.db                # SQLite, StateDirectory, website:website
 /var/cache/tylervigario-website/                       # Next runtime cache
 ```

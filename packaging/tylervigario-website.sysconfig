@@ -1,5 +1,6 @@
 # tylervigario-website runtime environment.
-# Installed at /etc/tylervigario-website/website.env (%config noreplace).
+# Installed at /etc/sysconfig/tylervigario-website (%config noreplace).
+# Loaded by the systemd unit's EnvironmentFile=.
 # Edited in place by the operator; not overwritten by package upgrades.
 
 # Bind address (server.ts default is 127.0.0.1; Apache reverse-proxies).
