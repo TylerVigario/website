@@ -24,6 +24,17 @@
 # that we want preserved for crash diagnosis.
 %global         __strip /bin/true
 
+# Disable debuginfo extraction entirely. find-debuginfo iterates over
+# every ELF binary in the buildroot and dies on:
+#   * @sentry/cli-linux-x64/bin/sentry-cli (no GNU build-id note —
+#     it's a stripped Rust binary from upstream),
+#   * better-sqlite3/build/Release/better_sqlite3.node (no DWARF info
+#     in the precompiled prebuild we receive from npm).
+# We don't own those binaries; we're not shipping debug symbols for
+# code we didn't compile. The whole debuginfo subpackage concept
+# doesn't apply to a JS app that vendors third-party prebuilds.
+%global         debug_package %{nil}
+
 Name:           tylervigario-website
 Version:        %{?_version}%{!?_version:0.0.0}
 Release:        1%{?dist}
