@@ -269,3 +269,68 @@ sudo dnf downgrade vigario-website-<previous-version>
 sudo dnf history list vigario-website
 sudo dnf history undo <id>
 ```
+
+## Upgrading from tylervigario-website
+
+This package was previously named `tylervigario-website`. The spec
+carries `Obsoletes: tylervigario-website < 1.5.0` and matching
+`Provides:`, so on a host running the old package, `dnf install
+vigario-website` (or the regular `dnf upgrade`) performs a
+transactional supersede: the old package's `%systemd_preun` stops +
+disables the old service, the old files are removed, and the new
+files install — all in one dnf transaction.
+
+What dnf does **not** swap automatically: state under `/var/lib/`,
+the operator env override file under `/etc/sysconfig/`, and the
+`Include` path inside the operator's Apache vhost. Those need a
+one-time manual handoff.
+
+```bash
+# 1. Trigger the transactional supersede. Old service stops + disables;
+#    new files install; new service stays disabled until you enable it
+#    (Fedora's default preset policy for third-party services).
+sudo dnf --refresh install vigario-website
+
+# 2. Move the SQLite DB plus its WAL companions. Ownership transfers
+#    cleanly — same `website:website` user/group on both packages.
+#    The new state dir was created by the new RPM's tmpfiles in %post.
+sudo mv /var/lib/tylervigario-website/quotes.db* \
+        /var/lib/vigario-website/
+
+# 3. Move the operator env override if you ever created one (some
+#    deployments rely entirely on the canonical default.env).
+[ -f /etc/sysconfig/tylervigario-website ] && \
+    sudo mv /etc/sysconfig/tylervigario-website \
+            /etc/sysconfig/vigario-website
+
+# 4. Update the Include path in your Apache vhost. The exact file
+#    location is operator-owned; the replacement is mechanical.
+sudo sed -i \
+    's|/usr/share/tylervigario-website/|/usr/share/vigario-website/|g' \
+    /etc/httpd/conf.d/<your-vhost>.conf
+sudo systemctl reload httpd
+
+# 5. Bring the new service up and verify.
+sudo systemctl enable --now vigario-website
+curl -sf http://127.0.0.1:3000/api/health   # → {"status":"ok"}
+
+# 6. Clean up orphaned old dirs. They're not RPM-owned so dnf didn't
+#    remove them; the SQLite file moved out in step 2, the Next cache
+#    is regenerable.
+sudo rmdir /var/lib/tylervigario-website
+sudo rm -rf /var/cache/tylervigario-website
+```
+
+**Downtime window.** Step 1 stops the old service via the obsoleted
+package's preun; step 5 starts the new service. Between them, Apache
+returns 502 from the operator's vhost. For tylervigario.com's traffic
+this is acceptable. If a near-zero-downtime cutover matters, steps 2
+and 3 can run **before** step 1 (state files don't change while the
+old service is running because the cutover doesn't touch their inodes
+— `mv` within the same filesystem preserves the inode the old
+service's open file handle points at). Step 4 has to run after the
+new package's files are in place.
+
+This cutover runs once per host. After it lands, `vigario-website` is
+the package name going forward and the section above ("Production
+cycle") covers all subsequent operations.

@@ -87,6 +87,20 @@ Requires(postun): systemd
 # that Apache is the proxy. shadow-utils similarly: the sysusers.d
 # snippet means systemd-sysusers creates the user, no useradd needed.
 
+# Package rename: the previous name was tylervigario-website. Hosts
+# upgrading from any v1.4.x release pick this up as a transactional
+# supersede — dnf stops + disables the old service via the old
+# package's %%systemd_preun, removes the old files, and installs the
+# new ones in a single transaction. Without these two lines dnf would
+# happily leave both packages installed alongside each other, with
+# two systemd units both ready to bind :3000 (first one started wins,
+# second silently fails). The Provides: makes any package that
+# previously depended on tylervigario-website by name continue to
+# resolve cleanly against this one. The < 1.5.0 boundary matches the
+# next-minor bump that ships under the new name.
+Obsoletes:      tylervigario-website < 1.5.0
+Provides:       tylervigario-website = %{version}-%{release}
+
 %description
 Public marketing site for Vigario Technology Solutions (VTS), an
 independent IT consultancy. Built on Next.js 16 (App Router) with a
