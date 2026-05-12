@@ -1,4 +1,14 @@
 # Changelog
+## [1.4.4](https://github.com/TylerVigario/website/compare/v1.4.3...v1.4.4) (2026-05-12)
+
+### Bug Fixes
+
+* **packaging:** Scope rpmbuild to $GITHUB_WORKSPACE, drop the find scan 
+
+### Refactoring
+
+* **packaging:** Private/public dnf split + sudo rpmsign 
+
 ## [1.4.3](https://github.com/TylerVigario/website/compare/v1.4.2...v1.4.3) (2026-05-11)
 
 ### Bug Fixes
