@@ -231,7 +231,18 @@ jobs:
       - name: rpmbuild -ba
         if: steps.version.outputs.skip != 'true'
         env:
-          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          # Sentry source-map upload trio. Read by withSentryConfig in
+          # next.config.ts during `next build` (which the spec's %build
+          # invokes via `npm run build`). Without these, the upload
+          # silently no-ops and prod stack traces stay minified.
+          #
+          # NEXT_PUBLIC_SENTRY_DSN is intentionally NOT passed: the
+          # spec's %build does `export NEXT_PUBLIC_SENTRY_DSN=` so the
+          # client-side DSN ships unset. Server-side DSN is set per-host
+          # at runtime via /etc/sysconfig/vigario-website.
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
         run: |
           rpmbuild -ba \
             --define "_version ${{ steps.version.outputs.version }}" \

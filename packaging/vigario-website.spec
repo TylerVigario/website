@@ -158,6 +158,18 @@ export NEXT_PUBLIC_SENTRY_DSN=
 npm ci --prefer-offline --no-audit --no-fund
 npm run build
 
+# Strip devDependencies after the build completes. The build pipeline
+# consumes tsx / typescript / esbuild / eslint / vitest / tailwindcss /
+# @tailwindcss/postcss / @types/* / prettier / husky / lint-staged /
+# markdownlint-cli2 / react-email / etc.; none are needed at runtime.
+# server.js is esbuild-bundled and self-contained, and `next start`
+# (via server.ts -> http.createServer(handle)) resolves bare specifiers
+# against the runtime dep tree only. Sheds the entire build-only
+# toolchain from /usr/share/vigario-website/node_modules in the
+# resulting RPM. --omit=dev is the canonical flag (npm@8+); --no-audit
+# / --no-fund match the npm ci flags above.
+npm prune --omit=dev --no-audit --no-fund
+
 
 %install
 # App tree — everything the runtime needs lives under /usr/share/<pkg>/.
