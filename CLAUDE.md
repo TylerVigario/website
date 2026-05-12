@@ -105,8 +105,9 @@ packaging/
 ├── tylervigario-website.spec         # RPM spec; %build invokes `npm ci && npm run build`
 ├── tylervigario-website.service      # systemd service unit (installed under /usr/lib/systemd/system/)
 ├── tylervigario-website.tmpfiles.conf # /var/lib + /var/cache state-dir ownership
-├── tylervigario-website-httpd.conf   # Apache vhost (drops into /etc/httpd/conf.d/)
-└── tylervigario-website.sysconfig    # env template (installed at /etc/sysconfig/tylervigario-website)
+├── tylervigario-website.sysusers     # sysusers.d snippet (declarative system user creation)
+├── apache-snippet.conf               # Apache reverse-proxy snippet (operator Includes from their own vhost)
+└── default.env                       # canonical env defaults (installed RO at /usr/lib/<pkg>/default.env)
 ```
 
 ## Form patterns (RHF + zod + Problem Details)
@@ -177,7 +178,7 @@ npm run clean                     # rm .next, server.js, .eslintcache, node_modu
 ## Environment
 
 - **Dev**: Windows 11 + git-bash. Node via `fnm` — Bash sessions need `eval "$(fnm env --use-on-cd --shell bash)"` once before `npm`/`node` resolve. PowerShell tool also available.
-- **Prod**: Fedora 43 + systemd. Service binds 127.0.0.1 by default ([`server.ts`](server.ts)); Apache reverse-proxies on :443→:3000. App tree at `/usr/share/tylervigario-website/` (owned by RPM, read-only). SQLite at `/var/lib/tylervigario-website/quotes.db` (StateDirectory, owned by `website:website`). Env at `/etc/sysconfig/tylervigario-website` (%config noreplace).
+- **Prod**: Fedora 43 + systemd. Service binds 127.0.0.1 by default ([`server.ts`](server.ts)); operator's reverse proxy (Apache) fronts on :443. App tree at `/usr/share/tylervigario-website/` (RPM-owned, read-only). SQLite at `/var/lib/tylervigario-website/quotes.db` (StateDirectory, owned by `website:website`). Env: canonical defaults at `/usr/lib/<pkg>/default.env` (RPM-owned), operator overrides at `/etc/sysconfig/<pkg>` (NOT in RPM).
 - **Tools required on prod for the *runtime*** are just `nodejs24` (pulled in by the RPM's `Requires:`). Build tooling (`make`/`g++`/`python`/`node-gyp`/`rpm-build`/`rpm-sign`/`createrepo_c`) lives on the prod host too because the self-hosted GitHub Actions runner runs there; build + sign + publish all happen locally. better-sqlite3 still compiles to a `.node` file once per release, just on the runner not at install time.
 
 ## Guardrails — things that break correctness if ignored

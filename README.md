@@ -92,17 +92,23 @@ before tagging, or amend cliff.toml's parsers/grouping.
 ## Prod side (the Fedora box)
 
 ```text
-/usr/share/tylervigario-website/      # app tree (owned by RPM, read-only)
+/usr/share/tylervigario-website/      # RPM-owned, read-only
   server.js                            # compiled custom entrypoint
   .next/                               # Next build output
   node_modules/                        # full prod dep tree, incl. better-sqlite3 native binding
   public/
   package.json
+  apache-snippet.conf                  # operator Includes this from their own vhost
+/usr/lib/tylervigario-website/
+  default.env                          # canonical env defaults (read-only)
 /usr/lib/systemd/system/tylervigario-website.service   # systemd unit
-/etc/httpd/conf.d/tylervigario-website.conf            # Apache vhost (proxy → :3000)
-/etc/sysconfig/tylervigario-website                    # env (%config noreplace, hand-edited)
-/var/lib/tylervigario-website/quotes.db                # SQLite, StateDirectory, website:website
-/var/cache/tylervigario-website/                       # Next runtime cache
+/usr/lib/sysusers.d/tylervigario-website.conf          # declarative system user
+
+# Operator-owned (NOT in RPM):
+/etc/httpd/conf.d/<vhost>.conf         # operator's vhost; Include's apache-snippet.conf
+/etc/sysconfig/tylervigario-website    # operator env overrides (SMTP, Sentry, etc.)
+/var/lib/tylervigario-website/quotes.db  # SQLite, created at runtime
+/var/cache/tylervigario-website/       # Next runtime cache
 ```
 
 Deploy: `sudo dnf --refresh upgrade tylervigario-website`. Rollback:
@@ -111,9 +117,11 @@ undo <id>`. No webhook, no path units, no build-on-host — the RPM
 ships pre-built, validated, signed.
 
 Apache reverse-proxies to port 3000. Server binds `127.0.0.1` by
-default — Apache fronts on :443. SQLite handle, in-flight drain,
-Sentry flush, `systemd-failure-notify@%n` on crash — same as before,
-all in the systemd unit now (`packaging/tylervigario-website.service`).
+default — operator's reverse proxy fronts on :443. SQLite handle,
+in-flight drain, Sentry flush all live in the systemd unit at
+`packaging/tylervigario-website.service`. The unit doesn't ship an
+`OnFailure=` hook — operator adds that via a systemd drop-in if
+they want failure-email notification.
 
 ## Things that have bitten me / will bite me again
 

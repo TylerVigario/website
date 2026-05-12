@@ -45,6 +45,11 @@ Summary:        tylervigario.com — Vigario Technology Solutions marketing site
 License:        Proprietary
 URL:            https://github.com/TylerVigario/website
 Source0:        %{name}-%{version}.tar.gz
+# Source1 is the sysusers.d snippet, copied into rpmbuild/SOURCES/ by
+# the workflow alongside the source tarball. The sysusers_create_package
+# macro (called in pre below) reads it at build time and inlines the
+# content into the pre scriptlet.
+Source1:        %{name}.sysusers
 
 # Arch-dependent: better-sqlite3 ships a native .node binding under
 # node_modules/. The Linux x86_64 build is the only supported runtime
@@ -67,12 +72,14 @@ BuildRequires:  systemd-rpm-macros
 # `nodejs >= 24` Requires would resolve in surprising ways. The
 # service unit's ExecStart hardcodes /usr/bin/node-24 to match.
 Requires:       nodejs24
-Requires:       httpd
-Requires:       mod_ssl
-Requires(pre):  shadow-utils
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
+# Apache (or any reverse proxy) and TLS are operator concerns —
+# the package ships an Apache snippet at /usr/share/<pkg>/ that
+# operators can Include from their own vhost, but doesn't dictate
+# that Apache is the proxy. shadow-utils similarly: the sysusers.d
+# snippet means systemd-sysusers creates the user, no useradd needed.
 
 %description
 Public marketing site for Vigario Technology Solutions (VTS), an
@@ -83,14 +90,20 @@ for error + performance monitoring.
 
 Ships:
   - Pre-built Next.js tree at /usr/share/tylervigario-website/
-  - systemd service unit (tylervigario-website.service)
-  - Apache vhost at /etc/httpd/conf.d/ (reverse-proxies to :3000)
-  - tmpfiles.d for /var/lib + /var/cache state dirs
-  - Env template at /etc/sysconfig/tylervigario-website
+  - systemd service unit at /usr/lib/systemd/system/
+  - tmpfiles.d snippet for the /var/lib + /var/cache state dirs
+  - sysusers.d snippet declaring the 'website' system user
+  - Canonical default env at /usr/lib/tylervigario-website/default.env
+  - Apache reverse-proxy snippet at /usr/share/tylervigario-website/
+    apache-snippet.conf (operator Include's it from their own vhost)
 
-The 'website' system user is created on first install. SQLite state
-lives at /var/lib/tylervigario-website/quotes.db; Next.js runtime
-incremental cache at /var/cache/tylervigario-website/.
+Operator-owned, NOT shipped here:
+  - The Apache vhost itself (TLS, ServerName, log paths — all host-
+    specific)
+  - The env override file at /etc/sysconfig/tylervigario-website
+    (optional drop-in over the canonical default)
+  - The SQLite database at /var/lib/<pkg>/quotes.db (created at
+    runtime by the app)
 
 
 %prep
@@ -152,26 +165,31 @@ install -D -m 0644 packaging/%{name}.service \
 install -D -m 0644 packaging/%{name}.tmpfiles.conf \
     %{buildroot}%{_tmpfilesdir}/%{name}.conf
 
-# Apache vhost — RH-canonical drop-in path.
-install -D -m 0644 packaging/%{name}-httpd.conf \
-    %{buildroot}%{_sysconfdir}/httpd/conf.d/%{name}.conf
+# sysusers.d snippet (declarative system-user creation)
+install -D -m 0644 %{SOURCE1} \
+    %{buildroot}%{_sysusersdir}/%{name}.conf
 
-# Env file — /etc/sysconfig/%{name}, the RH-canonical home for a
-# single-file systemd EnvironmentFile=. %config(noreplace) so the
-# operator's edits survive upgrades.
-install -d %{buildroot}%{_sysconfdir}/sysconfig
-install -m 0640 packaging/tylervigario-website.sysconfig \
-    %{buildroot}%{_sysconfdir}/sysconfig/%{name}
+# Apache reverse-proxy snippet — read-only, NOT in /etc/httpd/conf.d/.
+# Operator Include's it from their own vhost (which owns TLS, domain,
+# log paths). Lives in /usr/share/<pkg>/ next to other arch-indep app
+# data the operator may reference.
+install -D -m 0644 packaging/apache-snippet.conf \
+    %{buildroot}%{_datadir}/%{name}/apache-snippet.conf
+
+# Canonical default env — read-only, RPM-owned. The systemd unit
+# loads this first, then optionally /etc/sysconfig/%{name} for
+# operator overrides (which the RPM does not ship).
+install -D -m 0644 packaging/default.env \
+    %{buildroot}%{_prefix}/lib/%{name}/default.env
 
 
 %pre
-getent group %{webgroup} >/dev/null || groupadd --system %{webgroup}
-getent passwd %{webuser} >/dev/null || \
-    useradd --system --gid %{webgroup} \
-        --home-dir /var/lib/%{name} \
-        --shell /sbin/nologin \
-        --comment "%{name} service account" %{webuser}
-exit 0
+# Declarative user creation via systemd-sysusers. The macro reads
+# the sysusers.d snippet at BUILD time and inlines its content into
+# this scriptlet as a heredoc fed to `systemd-sysusers --replace=...`.
+# At install time, no separate file lookup is needed — the spec is
+# self-contained in the RPM's %pre.
+%sysusers_create_package %{name} %{SOURCE1}
 
 
 %post
@@ -205,16 +223,12 @@ systemd-tmpfiles --create %{_tmpfilesdir}/%{name}.conf || :
 %{_datadir}/%{name}/node_modules
 %{_datadir}/%{name}/package.json
 %{_datadir}/%{name}/package-lock.json
+%{_datadir}/%{name}/apache-snippet.conf
 %{_unitdir}/%{name}.service
 %{_tmpfilesdir}/%{name}.conf
-%config(noreplace) %{_sysconfdir}/httpd/conf.d/%{name}.conf
-# Env file owned root:root, mode 0640. The website user does not need
-# to read it directly — systemd reads EnvironmentFile= as PID 1 before
-# forking and dropping privileges. Using root:root avoids the
-# auto-generated `Requires: group(website)` from %attr(... %{webgroup})
-# which dnf would try to satisfy at transaction-resolution time (before
-# %pre can create the group).
-%config(noreplace) %attr(0640, root, root) %{_sysconfdir}/sysconfig/%{name}
+%{_sysusersdir}/%{name}.conf
+%dir %{_prefix}/lib/%{name}
+%{_prefix}/lib/%{name}/default.env
 
 
 %changelog

@@ -30,17 +30,23 @@ Declared by `packaging/tylervigario-website.spec`'s `Requires:`:
 | Package | Why |
 |---|---|
 | `nodejs24` | Runtime. Service unit's `ExecStart` is `/usr/bin/node-24` — the parallel-install package's versioned binary, not the unversioned `node`. |
-| `httpd`, `mod_ssl` | Apache reverse-proxies `:443` → `:3000`. |
-| `systemd` | Service unit + `%systemd_post/_preun/_postun` macros (pulled transitively). |
-| `shadow-utils` | `%pre` creates the `website` system user. |
+| `systemd` | Service unit + `%systemd_post/_preun/_postun` macros (pulled transitively); also provides `systemd-sysusers` for the `%pre` declarative user creation. |
 
-No SELinux fcontext rules ship with the package. Apache reverse-proxies
-to `:3000` over TCP, so the default labels on the RPM-owned paths
-(`usr_t`, `var_lib_t`, `var_cache_t`, `etc_t`) are sufficient — there's
-nothing for the web user to read off-tree that would need its own
-label. (Earlier iterations carried `policycoreutils-python-utils` +
-`semanage` rules in `%post`/`%postun`; they implied Apache reads the
-file tree directly, which it doesn't, and got dropped.)
+Deliberately NOT declared:
+
+- **Apache (`httpd`, `mod_ssl`)** — the package ships an Apache *snippet*
+  at `/usr/share/<pkg>/apache-snippet.conf` that the operator can
+  Include from their own vhost, but doesn't dictate the reverse-proxy
+  choice. Operators using nginx/Caddy/etc. simply ignore the snippet.
+- **`shadow-utils`** — the package declares the `website` system user
+  via a sysusers.d snippet processed by `systemd-sysusers` (which is
+  part of `systemd`). No `useradd` invocation in `%pre`.
+
+No SELinux fcontext rules ship with the package either. Apache (or
+whatever proxy) talks to `:3000` over TCP, so the default labels on
+the RPM-owned paths (`usr_t`, `var_lib_t`, `var_cache_t`) are
+sufficient — there's nothing for the proxy to read off-tree that
+would need its own label.
 
 ## Infrastructure prerequisite
 
@@ -59,18 +65,28 @@ installing a package to discover where to install packages from.
 
 ## Per-host runtime environment
 
-`/etc/sysconfig/tylervigario-website` ships as `%config(noreplace)`
-— first install lays down a template; subsequent upgrades preserve
-your edits. Required keys (validated at startup by
-`src/lib/runtime-config.ts` against `src/lib/required-env.json`):
+Two-layer environment:
 
-| Variable | Notes |
-|---|---|
-| `HOSTNAME` | Default `127.0.0.1`. Apache fronts on `:443`. |
-| `PORT` | Default `3000`. |
-| `SQLITE_PATH` | Must be absolute. Default `/var/lib/tylervigario-website/quotes.db` (state dir owned by `website:website`, 0750). |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | Optional. Empty disables email notifications on form submission. |
-| `SENTRY_DSN` | Optional. Empty disables server-side Sentry. |
+1. **Canonical defaults** at `/usr/lib/tylervigario-website/default.env`
+   — read-only, RPM-owned. Lists every env var the app understands.
+2. **Operator overrides** at `/etc/sysconfig/tylervigario-website`
+   — not RPM-owned, optional. Anything the operator sets here wins
+   over the default.
+
+The systemd unit loads both via two `EnvironmentFile=` directives
+(later overrides earlier — standard systemd semantics). The operator
+override file is loaded with `-` prefix, so its absence is not an
+error — the app starts fine on the defaults alone, which is fine for
+dev / smoke environments. For prod, the operator creates the
+override file with secrets (SMTP creds, Sentry DSN, etc).
+
+| Variable | Default | Notes |
+|---|---|---|
+| `HOSTNAME` | `127.0.0.1` | Bind addr. Reverse-proxy fronts on `:443`. |
+| `PORT` | `3000` | Bind port. |
+| `SQLITE_PATH` | `/var/lib/tylervigario-website/quotes.db` | Must be absolute. State dir owned by `website:website`, 0750. |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | (empty) | Optional. Empty disables email notifications on form submission. |
+| `SENTRY_DSN` | (empty) | Optional. Empty disables server-side Sentry. |
 
 CI's `npm run build` exercises a hermetic smoke against the
 required-env contract — drift between `src/lib/required-env.json`
@@ -79,23 +95,36 @@ release.
 
 ## What the RPM ships
 
-| Path | Mode | Purpose |
-|---|---|---|
-| `/usr/share/tylervigario-website/server.js` | 0644 | Custom Next.js entrypoint (compiled from `server.ts`). |
-| `/usr/share/tylervigario-website/.next/` | 0755 | Next build output. |
-| `/usr/share/tylervigario-website/.next/cache` | symlink | → `/var/cache/tylervigario-website/`. Next's runtime cache writes redirected into a writable, systemd-managed dir. |
-| `/usr/share/tylervigario-website/node_modules/` | 0755 | Full prod dep tree incl. better-sqlite3 native binding. |
-| `/usr/share/tylervigario-website/public/` | 0755 | Static assets. |
-| `/usr/share/tylervigario-website/package.json` | 0644 | Read by Node at startup. |
-| `/usr/lib/systemd/system/tylervigario-website.service` | 0644 | systemd unit. |
-| `/usr/lib/tmpfiles.d/tylervigario-website.conf` | 0644 | Owns `/var/lib/<pkg>` + `/var/cache/<pkg>` at 0750 website:website. |
-| `/etc/httpd/conf.d/tylervigario-website.conf` | `%config(noreplace)` | Apache vhost (reverse-proxy on :3000, redirect www→apex, HTTP→HTTPS). |
-| `/etc/sysconfig/tylervigario-website` | `%config(noreplace) 0640 root:website` | Env template (see above) — RH-canonical home for a single-file systemd EnvironmentFile. |
+All paths read-only, RPM-owned:
 
-Created at runtime by the service unit (not in the RPM):
+| Path | Purpose |
+|---|---|
+| `/usr/share/tylervigario-website/server.js` | Custom Next.js entrypoint (compiled from `server.ts`). |
+| `/usr/share/tylervigario-website/.next/` | Next build output. |
+| `/usr/share/tylervigario-website/.next/cache` | Symlink → `/var/cache/tylervigario-website/`. Next's runtime cache writes redirected into a writable, systemd-managed dir. |
+| `/usr/share/tylervigario-website/node_modules/` | Full prod dep tree incl. better-sqlite3 native binding. |
+| `/usr/share/tylervigario-website/public/` | Static assets. |
+| `/usr/share/tylervigario-website/package.json` | Read by Node at startup. |
+| `/usr/share/tylervigario-website/apache-snippet.conf` | Reverse-proxy snippet — operator Includes from their own vhost. |
+| `/usr/lib/tylervigario-website/default.env` | Canonical env defaults — read-only, RPM-owned. |
+| `/usr/lib/systemd/system/tylervigario-website.service` | systemd unit. |
+| `/usr/lib/tmpfiles.d/tylervigario-website.conf` | tmpfiles backstop for state dirs. |
+| `/usr/lib/sysusers.d/tylervigario-website.conf` | Declarative `website` user/group definition (processed by `systemd-sysusers` from `%pre`). |
+
+NOT shipped, operator-owned:
+
+| Path | Purpose |
+|---|---|
+| `/etc/httpd/conf.d/<vhost>.conf` (or wherever) | Operator's vhost — picks domain, TLS cert paths, log paths. `Include`s `/usr/share/<pkg>/apache-snippet.conf` inside. |
+| `/etc/sysconfig/tylervigario-website` | Operator env overrides — SMTP creds, Sentry DSN, anything host-specific. Optional. |
+| `/etc/systemd/system/tylervigario-website.service.d/*.conf` | Operator drop-ins for resource limits, `OnFailure=` notification, etc. |
+| `/var/lib/tylervigario-website/quotes.db` | SQLite db, created on first write. Backups operator-owned. |
+| `/etc/letsencrypt/live/<domain>/...` | TLS certs, certbot-managed. |
+
+Created at runtime by the service unit:
 `/var/lib/tylervigario-website/` (StateDirectory) and
 `/var/cache/tylervigario-website/` (CacheDirectory). The
-`.next/cache` symlink resolves through here.
+`.next/cache` symlink resolves through the latter.
 
 ## Build
 

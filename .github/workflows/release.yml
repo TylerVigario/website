@@ -215,6 +215,12 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           git archive --prefix="${PKG_NAME}-${VERSION}/" --format=tar.gz \
               -o "$GITHUB_WORKSPACE/rpmbuild/SOURCES/${PKG_NAME}-${VERSION}.tar.gz" HEAD
+          # Source1 (sysusers.d snippet) — referenced by %{SOURCE1} in
+          # the spec for %sysusers_create_package. rpmbuild expects it
+          # at SOURCES/<name>; the spec's Source1: declaration is a
+          # bare filename so rpm resolves it relative to SOURCES/.
+          cp packaging/${PKG_NAME}.sysusers \
+              "$GITHUB_WORKSPACE/rpmbuild/SOURCES/${PKG_NAME}.sysusers"
 
       - name: rpmbuild -ba
         if: steps.version.outputs.skip != 'true'

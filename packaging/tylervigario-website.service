@@ -2,7 +2,6 @@
 Description=tylervigario.com — Vigario Technology Solutions marketing site
 Documentation=https://github.com/TylerVigario/website
 After=network.target
-OnFailure=systemd-failure-notify@%n.service
 StartLimitBurst=5
 StartLimitIntervalSec=300
 
@@ -18,7 +17,14 @@ ExecStart=/usr/bin/node-24 server.js
 Restart=always
 RestartSec=5
 
-EnvironmentFile=/etc/sysconfig/tylervigario-website
+# Canonical defaults shipped by the RPM at /usr/lib/<pkg>/default.env
+# (read-only). Operator overrides at /etc/sysconfig/<pkg> (optional,
+# not RPM-owned) load AFTER and win — standard systemd "later file
+# overrides earlier" semantics. The `-` on the second line makes it
+# optional, so the unit starts cleanly on hosts where the operator
+# hasn't created the override file.
+EnvironmentFile=/usr/lib/tylervigario-website/default.env
+EnvironmentFile=-/etc/sysconfig/tylervigario-website
 Environment=NODE_ENV=production
 Environment=HOME=/var/lib/tylervigario-website
 
