@@ -22,6 +22,15 @@ monitoring (no-op when DSNs unset), react-hook-form + zodResolver
 for form validation. No auth, no API consumers other than the site's
 own forms.
 
+License: **AGPL-3.0-or-later** for source code. Brand assets in
+`public/images/` (VTS logo, photos, marketing graphics) are All
+Rights Reserved — separate from the AGPL grant. The site's footer
+carries a "Source" link to discharge AGPL §13's network-interaction
+obligation; if you ever rename the GitHub repo or change the public
+URL, that link in [Footer.tsx](src/components/Footer.tsx) moves with
+it. The RPM is not distributed (private LAN-only dnf repo); the
+source code is the public artifact.
+
 ## Deploy contract
 
 This repo owns its own deploy contract — see

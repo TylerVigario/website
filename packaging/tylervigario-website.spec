@@ -42,7 +42,7 @@ Version:        %{?_version}%{!?_version:0.0.0}
 Release:        1%{?dist}
 Summary:        tylervigario.com — Vigario Technology Solutions marketing site
 
-License:        Proprietary
+License:        AGPL-3.0-or-later
 URL:            https://github.com/TylerVigario/website
 Source0:        %{name}-%{version}.tar.gz
 # Source1 is the sysusers.d snippet, copied into rpmbuild/SOURCES/ by

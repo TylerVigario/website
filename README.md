@@ -159,3 +159,24 @@ they want failure-email notification.
 
 `vigario.tech` once DNS/SSL is sorted. For now it answers on
 tylervigario.com.
+
+## License
+
+Source code: **AGPL-3.0-or-later** — see [LICENSE](LICENSE) for the
+verbatim license text. If you run a modified version of this code on
+a network-accessible server, AGPL §13 obligates you to offer the
+modified source to users interacting with it (the footer's "Source"
+link is how this site discharges that obligation for its own users).
+
+**Brand assets are excluded from the AGPL grant.** Everything under
+`public/images/` — the VTS logo, any client photos, headshots,
+graphics produced for marketing — is © Vigario Technology Solutions
+and All Rights Reserved. Fork the code freely, but the visual
+identity stays mine. A fork meant for serious use should replace
+those assets.
+
+Marketing copy in the site (case studies, service descriptions, the
+POTS landing prose) is technically code-adjacent (TSX strings) and
+therefore covered by AGPL, but the same spirit applies: it's a
+record of my business and my client's story, not a content template.
+Lift the structure, not the content.

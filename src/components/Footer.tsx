@@ -92,8 +92,28 @@ export default function Footer() {
           </a>
         </div>
 
-        <div className="mt-8 text-center text-xs text-muted">
-          &copy; {new Date().getFullYear()} Vigario Technology Solutions. All rights reserved.
+        <div className="mt-8 flex flex-col items-center gap-1 text-center text-xs text-muted">
+          <p>&copy; {new Date().getFullYear()} Vigario Technology Solutions</p>
+          <p>
+            Code licensed under{" "}
+            <a
+              href="https://www.gnu.org/licenses/agpl-3.0.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline transition-colors hover:text-foreground"
+            >
+              AGPL-3.0-or-later
+            </a>
+            {" · "}
+            <a
+              href="https://github.com/TylerVigario/website"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline transition-colors hover:text-foreground"
+            >
+              Source
+            </a>
+          </p>
         </div>
       </div>
     </footer>
