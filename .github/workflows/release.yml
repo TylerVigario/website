@@ -203,24 +203,30 @@ jobs:
 
       # ---- RPM build ----
       #
-      # Build under $GITHUB_WORKSPACE/rpmbuild, not $HOME/rpmbuild.
-      # actions/checkout's default `clean: true` runs `git clean -ffdx`
-      # on the workspace at the start of every job, which wipes any
-      # leftover rpmbuild tree from prior runs. Hermetic builds; no
-      # state leaks between releases.
+      # Build under $RUNNER_TEMP/rpmbuild, not $GITHUB_WORKSPACE/rpmbuild
+      # or $HOME/rpmbuild. RUNNER_TEMP is GitHub Actions' documented
+      # per-job scratch dir, emptied at the start and end of every job —
+      # hermetic across runs without any cleanup step. Crucially it sits
+      # outside $GITHUB_WORKSPACE, so the actions/checkout copy of the
+      # repo (with its own package-lock.json one directory above the
+      # rpmbuild BUILD/<name>-<ver>/ tree) can't confuse Turbopack's
+      # project-root walker into resolving to the outer tree and
+      # emitting mis-chunked output. Earlier releases used
+      # $GITHUB_WORKSPACE/rpmbuild and the resulting builds shipped
+      # broken instrumentation-hook chunks.
       - name: Prepare rpmbuild tree
         if: steps.version.outputs.skip != 'true'
         run: |
-          mkdir -p "$GITHUB_WORKSPACE"/rpmbuild/{SOURCES,SPECS,BUILD,RPMS,SRPMS}
+          mkdir -p "$RUNNER_TEMP"/rpmbuild/{SOURCES,SPECS,BUILD,RPMS,SRPMS}
           VERSION="${{ steps.version.outputs.version }}"
           git archive --prefix="${PKG_NAME}-${VERSION}/" --format=tar.gz \
-              -o "$GITHUB_WORKSPACE/rpmbuild/SOURCES/${PKG_NAME}-${VERSION}.tar.gz" HEAD
+              -o "$RUNNER_TEMP/rpmbuild/SOURCES/${PKG_NAME}-${VERSION}.tar.gz" HEAD
           # Source1 (sysusers.d snippet) — referenced by %{SOURCE1} in
           # the spec for %sysusers_create_package. rpmbuild expects it
           # at SOURCES/<name>; the spec's Source1: declaration is a
           # bare filename so rpm resolves it relative to SOURCES/.
           cp packaging/${PKG_NAME}.sysusers \
-              "$GITHUB_WORKSPACE/rpmbuild/SOURCES/${PKG_NAME}.sysusers"
+              "$RUNNER_TEMP/rpmbuild/SOURCES/${PKG_NAME}.sysusers"
 
       - name: rpmbuild -ba
         if: steps.version.outputs.skip != 'true'
@@ -229,21 +235,21 @@ jobs:
         run: |
           rpmbuild -ba \
             --define "_version ${{ steps.version.outputs.version }}" \
-            --define "_topdir $GITHUB_WORKSPACE/rpmbuild" \
+            --define "_topdir $RUNNER_TEMP/rpmbuild" \
             packaging/${PKG_NAME}.spec
 
       - name: Locate built RPM
         id: rpm
         if: steps.version.outputs.skip != 'true'
         run: |
-          # Workspace is clean per actions/checkout's git-clean step,
-          # so a glob on ${PKG_NAME}-${VERSION}-*.rpm resolves to
-          # exactly one file. No find, no scan.
+          # RUNNER_TEMP is empty at the start of every job, so a glob
+          # on ${PKG_NAME}-${VERSION}-*.rpm resolves to exactly one
+          # file. No find, no scan.
           VERSION="${{ steps.version.outputs.version }}"
-          RPM=$(echo "$GITHUB_WORKSPACE"/rpmbuild/RPMS/x86_64/${PKG_NAME}-${VERSION}-*.rpm)
+          RPM=$(echo "$RUNNER_TEMP"/rpmbuild/RPMS/x86_64/${PKG_NAME}-${VERSION}-*.rpm)
           if [ ! -f "$RPM" ]; then
             echo "::error::expected RPM not found at $RPM"
-            ls -la "$GITHUB_WORKSPACE/rpmbuild/RPMS/x86_64/" || :
+            ls -la "$RUNNER_TEMP/rpmbuild/RPMS/x86_64/" || :
             exit 1
           fi
           echo "Built: $RPM"
@@ -258,7 +264,7 @@ jobs:
           # Sign via sudo: github-runner has a narrow sudoers rule
           # (/etc/sudoers.d/github-runner-rpmsign) allowing
           # `/usr/bin/rpmsign --addsign` on paths under
-          # /var/lib/github-runner/runner/_work/*/*/rpmbuild/RPMS/x86_64/*.rpm.
+          # /var/lib/github-runner/runner/_work/_temp/rpmbuild/RPMS/x86_64/*.rpm.
           # Actual signing runs as root, which reads /root/.rpmmacros
           # (binds to the private-signer subkey on /etc/server-admin/gnupg).
           # No signing-key material lives in this runner's keyring or in
