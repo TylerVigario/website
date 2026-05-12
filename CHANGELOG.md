@@ -1,4 +1,10 @@
 # Changelog
+## [1.4.5](https://github.com/TylerVigario/website/compare/v1.4.4...v1.4.5) (2026-05-12)
+
+### Refactoring
+
+* **packaging:** Host-portable RPM — operator owns vhost, env overrides, OnFailure 
+
 ## [1.4.4](https://github.com/TylerVigario/website/compare/v1.4.3...v1.4.4) (2026-05-12)
 
 ### Bug Fixes
