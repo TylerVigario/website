@@ -65,26 +65,25 @@ scripts/check-public-env.ts    # fails build if a required NEXT_PUBLIC_* is miss
 
 ## Build & release
 
-**Build-on-prod.** No CI-built artifact. The gate validates that the
-tagged commit builds cleanly; production clones the tag and runs
-`npm ci && npm run build` itself. The standalone-tracer model produced
-four consecutive bad releases in vis-daily-tracker (v2.80.0–v2.83.0)
-before the pivot — see [docs/deployment.md](docs/deployment.md) for the
-full rationale.
+**RPM-as-artifact.** CI builds and signs the RPM on a self-hosted
+GitHub Actions runner running on the prod host itself, lands it in
+the private LAN-only dnf repo, attaches it to the GitHub Release.
+Production installs via `sudo dnf --refresh upgrade tylervigario-website`.
+See [docs/deployment.md](docs/deployment.md) for the full contract.
 
 `.github/workflows/release.yml`:
 
 - **Gate** (runs on PR + push to main + dispatch): `npm ci` →
-  typecheck → lint → format → build (with the real-boot postbuild
-  smoke against the just-built server.js). First step cross-checks
-  `NODE_VERSION` env, `.nvmrc`, and `engines.node` for major-version
-  agreement.
+  typecheck → lint → format → test → build (with the real-boot
+  postbuild smoke against the just-built server.js). First step
+  cross-checks three of the five Node-major pins (`NODE_VERSION`
+  env, `.nvmrc`, `engines.node`).
 - **Release** (dispatch only): git-cliff bumps version
   (`feat→minor`, `fix/refactor→patch`, breaking→major;
-  chore/docs/test/build/ci skip), tags, then builds + signs the RPM
-  on a self-hosted runner on the prod host, copies into
+  chore/docs/test skip), annotated-tags, then builds + `sudo rpmsign`s
+  the RPM on the self-hosted runner, copies into
   `/srv/dnf-repo-private/` (LAN-only, served at `http://repo.lan/`),
-  and attaches the signed RPM to the GitHub Release.
+  attaches the signed RPM to the GitHub Release.
 
 CHANGELOG is regenerated each release from commit messages — don't
 hand-edit it. If the changelog reads wrong, fix the commit message
@@ -106,10 +105,10 @@ before tagging, or amend cliff.toml's parsers/grouping.
 /var/cache/tylervigario-website/                       # Next runtime cache
 ```
 
-Deploy: `sudo dnf upgrade tylervigario-website`. Rollback: `sudo dnf
-downgrade tylervigario-website-<previous>` or `dnf history undo <id>`.
-No webhook, no path units, no build-on-host — the RPM ships
-pre-built, validated, signed.
+Deploy: `sudo dnf --refresh upgrade tylervigario-website`. Rollback:
+`sudo dnf downgrade tylervigario-website-<previous>` or `dnf history
+undo <id>`. No webhook, no path units, no build-on-host — the RPM
+ships pre-built, validated, signed.
 
 Apache reverse-proxies to port 3000. Server binds `127.0.0.1` by
 default — Apache fronts on :443. SQLite handle, in-flight drain,

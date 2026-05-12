@@ -3,14 +3,11 @@ name: CI
 env:
   HUSKY: 0
   CI: true
-  # Pinned to match prod's installed Node major. See package.json
-  # `engines.node` and .nvmrc — all three must declare the same
-  # major; the gate's "Verify Node major pins agree" step enforces it.
-  # Node major. Five places have to declare it: this env var,
-  # .nvmrc, package.json#engines.node, the spec's Requires: nodejs<N>,
-  # and the unit's ExecStart=/usr/bin/node-<N>. The gate's "Verify
+  # Node major. Five places must declare it: this env var, .nvmrc,
+  # package.json#engines.node, the spec's `Requires: nodejs<N>`, and
+  # the unit's `ExecStart=/usr/bin/node-<N>`. The gate's "Verify
   # Node major pins agree" step enforces the first three; the spec
-  # and unit have to be edited manually in lockstep when bumping.
+  # and unit are edited manually in lockstep when bumping.
   NODE_VERSION: "24"
   PKG_NAME: tylervigario-website
 
@@ -91,11 +88,10 @@ jobs:
       - run: npm run format
       - run: npm test
       - name: Validate build
-        # Under the RPM-as-artifact model, the gate's build is a sanity
-        # check on ubuntu-latest — the load-bearing build happens later
-        # inside a Fedora 43 container during release. If the gate's
-        # ubuntu build fails, the Fedora rpmbuild won't pass either.
-        # Cheaper to fail here.
+        # Gate's build runs on ubuntu-latest — sanity check that
+        # `npm run build` works on the tagged commit before any release
+        # attempt invokes the load-bearing rpmbuild on the self-hosted
+        # Fedora runner. Cheaper to fail here than after a version bump.
         run: npm run build
         env:
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
@@ -254,13 +250,14 @@ jobs:
         if: steps.version.outputs.skip != 'true'
         run: |
           # Sign via sudo: github-runner has a narrow sudoers rule
-          # allowing `/usr/bin/rpmsign --addsign` on paths under
-          # /var/lib/github-runner/_work/*/*/rpmbuild/RPMS/x86_64/*.rpm.
-          # The actual signing runs as root, which reads /root/.rpmmacros
+          # (/etc/sudoers.d/github-runner-rpmsign) allowing
+          # `/usr/bin/rpmsign --addsign` on paths under
+          # /var/lib/github-runner/runner/_work/*/*/rpmbuild/RPMS/x86_64/*.rpm.
+          # Actual signing runs as root, which reads /root/.rpmmacros
           # (binds to the private-signer subkey on /etc/server-admin/gnupg).
-          # No signing-key material ever lives in this runner's keyring
-          # or in a GitHub secret — compromise scope of github-runner is
-          # "can sign an RPM at the constrained path," not "can take the
+          # No signing-key material lives in this runner's keyring or in
+          # any GitHub secret — compromise scope of github-runner is "can
+          # sign an RPM at the sudoers-allowed path," not "can take the
           # subkey elsewhere."
           sudo /usr/bin/rpmsign --addsign "${{ steps.rpm.outputs.path }}"
           rpm -K "${{ steps.rpm.outputs.path }}"

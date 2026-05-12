@@ -38,9 +38,9 @@ No SELinux fcontext rules ship with the package. Apache reverse-proxies
 to `:3000` over TCP, so the default labels on the RPM-owned paths
 (`usr_t`, `var_lib_t`, `var_cache_t`, `etc_t`) are sufficient — there's
 nothing for the web user to read off-tree that would need its own
-label. Earlier iterations carried `policycoreutils-python-utils` +
-`semanage` rules in `%post`/`%postun`; the rules were dead weight and
-got ripped out (commit `cf3afd5`).
+label. (Earlier iterations carried `policycoreutils-python-utils` +
+`semanage` rules in `%post`/`%postun`; they implied Apache reads the
+file tree directly, which it doesn't, and got dropped.)
 
 ## Infrastructure prerequisite
 
@@ -141,10 +141,13 @@ Revoking one doesn't affect the other.
 
 `github-runner` (the self-hosted Actions runner's system user) has
 zero key material. The workflow calls `sudo /usr/bin/rpmsign --addsign`
-via a narrow sudoers rule; the actual signing runs as root, which
-reads `/root/.rpmmacros` (bound to private-signer). Compromise scope
-of `github-runner` is "can sign an RPM at the path the sudoers rule
-allows," not "can take the subkey elsewhere."
+via a narrow sudoers rule at `/etc/sudoers.d/github-runner-rpmsign`
+(operator-managed on prod, not shipped by this package). The rule
+scopes to RPMs under `/var/lib/github-runner/runner/_work/*/*/rpmbuild/RPMS/x86_64/*.rpm`.
+Actual signing runs as root, which reads `/root/.rpmmacros` (bound to
+private-signer's fingerprint). Compromise scope of `github-runner`
+is "can sign an RPM at the sudoers-allowed path," not "can take the
+subkey elsewhere."
 
 ### Subkey rotation
 

@@ -25,17 +25,28 @@ own forms.
 ## Deploy contract
 
 This repo owns its own deploy contract — see
-[`docs/deployment.md`](docs/deployment.md). The model is
-**RPM-as-artifact**: a self-hosted GitHub Actions runner on the prod
-host itself builds + signs the RPM, copies it into the LAN-only
-private dnf repo at `/srv/dnf-repo-private/` (served via
-`http://repo.lan/`). Production installs via `sudo dnf --refresh
-upgrade tylervigario-website` (manual). The spec is at
-[`packaging/tylervigario-website.spec`](../packaging/tylervigario-website.spec).
+[`docs/deployment.md`](docs/deployment.md). Single-line summary:
 
-The prior contract (build-on-prod, shared with `vis-daily-tracker`
-and `server-admin`) is retired here. `vis-daily-tracker` still ships
-build-on-prod until it follows the same migration.
+**RPM-as-artifact.** A self-hosted GitHub Actions runner on the prod
+host builds + `sudo rpmsign`s `tylervigario-website-<v>-1.fc43.x86_64.rpm`,
+copies it into the LAN-only private dnf repo at `/srv/dnf-repo-private/`
+(served via `http://repo.lan/`), attaches it to the GitHub Release.
+Production runs `sudo dnf --refresh upgrade tylervigario-website`
+when ready. Spec lives at
+[`packaging/tylervigario-website.spec`](packaging/tylervigario-website.spec);
+`%build` invokes `npm ci && npm run build`; `%install` lays out the
+tree under `/usr/share/tylervigario-website/`.
+
+[`server.ts`](server.ts) is the custom Next.js entrypoint — esbuild
+compiles it to `server.js` at the repo root via
+[`scripts/build-server.ts`](scripts/build-server.ts). The postbuild
+step [`scripts/postbuild.ts`](scripts/postbuild.ts) real-boot smokes
+the bundle against a hermetic stub env (port bind, SIGTERM, assert
+exit 0). All three run in `%build`.
+
+The prior contract (build-on-prod, shared with `vis-daily-tracker`,
+`turf-tracker`, and `server-admin`) is retired here. The other repos
+follow the same migration on their own timeline.
 
 ## Core vocabulary
 
@@ -138,22 +149,6 @@ export async function POST(req: NextRequest) {
 }
 ```
 
-## Deploy contract (one-liner)
-
-RPM-as-artifact. CI builds + signs `tylervigario-website-<version>-1.fc43.x86_64.rpm`
-on a self-hosted GitHub Actions runner running on the prod host
-(better-sqlite3's native binding compiles against the actual runtime
-glibc), copies into `/srv/dnf-repo-private/` (LAN-only, served at
-`http://repo.lan/`), attaches the signed RPM to the GitHub Release.
-Production runs `sudo dnf upgrade tylervigario-website`. The spec
-([`packaging/tylervigario-website.spec`](../packaging/tylervigario-website.spec))
-drives the build: `%build` invokes `npm ci && npm run build`, `%install`
-lays out the tree under `/usr/share/tylervigario-website/`. [`docs/deployment.md`](docs/deployment.md)
-is the full spec. [`server.ts`](server.ts) is the custom entrypoint
-(compiled by `scripts/build-server.ts` to `server.js`). The postbuild
-step real-boot smokes the bundle against a hermetic stub env (bind,
-SIGTERM, assert exit 0).
-
 ## Commands
 
 ```bash
@@ -183,7 +178,7 @@ npm run clean                     # rm .next, server.js, .eslintcache, node_modu
 
 - **Dev**: Windows 11 + git-bash. Node via `fnm` — Bash sessions need `eval "$(fnm env --use-on-cd --shell bash)"` once before `npm`/`node` resolve. PowerShell tool also available.
 - **Prod**: Fedora 43 + systemd. Service binds 127.0.0.1 by default ([`server.ts`](server.ts)); Apache reverse-proxies on :443→:3000. App tree at `/usr/share/tylervigario-website/` (owned by RPM, read-only). SQLite at `/var/lib/tylervigario-website/quotes.db` (StateDirectory, owned by `website:website`). Env at `/etc/sysconfig/tylervigario-website` (%config noreplace).
-- **Tools required on prod**: just the `nodejs24` package (pulled in by the RPM's `Requires:`). Build tooling (`make`/`g++`/`python`/`node-gyp`) lives in CI's Fedora container, not on prod — better-sqlite3 ships pre-compiled in the RPM.
+- **Tools required on prod for the *runtime*** are just `nodejs24` (pulled in by the RPM's `Requires:`). Build tooling (`make`/`g++`/`python`/`node-gyp`/`rpm-build`/`rpm-sign`/`createrepo_c`) lives on the prod host too because the self-hosted GitHub Actions runner runs there; build + sign + publish all happen locally. better-sqlite3 still compiles to a `.node` file once per release, just on the runner not at install time.
 
 ## Guardrails — things that break correctness if ignored
 

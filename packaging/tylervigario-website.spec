@@ -21,20 +21,21 @@
 # helpers (gyp, etc.) that aren't intended for Fedora's pyc-compile pass.
 %global         __brp_python_bytecompile %{nil}
 
-# Skip strip BRP — better-sqlite3's .node binding ships with debug info
-# that we want preserved for crash diagnosis.
-%global         __strip /bin/true
-
-# Disable debuginfo extraction entirely. find-debuginfo iterates over
-# every ELF binary in the buildroot and dies on:
+# Disable debuginfo extraction. find-debuginfo iterates over every
+# ELF in the buildroot and dies on:
 #   * @sentry/cli-linux-x64/bin/sentry-cli (no GNU build-id note —
-#     it's a stripped Rust binary from upstream),
+#     stripped Rust binary from upstream),
 #   * better-sqlite3/build/Release/better_sqlite3.node (no DWARF info
 #     in the precompiled prebuild we receive from npm).
-# We don't own those binaries; we're not shipping debug symbols for
-# code we didn't compile. The whole debuginfo subpackage concept
-# doesn't apply to a JS app that vendors third-party prebuilds.
+# We don't own those binaries; nothing to debug-package. Skipping the
+# whole debuginfo subpackage concept fits a JS app that vendors
+# third-party prebuilds.
 %global         debug_package %{nil}
+
+# Skip the strip BRP for the same reason: we don't build native
+# binaries locally, only vendor prebuilt ones. Stripping is a no-op
+# on stripped-upstream files and would just churn timestamps.
+%global         __strip /bin/true
 
 Name:           tylervigario-website
 Version:        %{?_version}%{!?_version:0.0.0}
@@ -88,8 +89,8 @@ Ships:
   - Env template at /etc/sysconfig/tylervigario-website
 
 The 'website' system user is created on first install. SQLite state
-lives at /var/lib/tylervigario-website/quotes.db; rebuild cache at
-/var/cache/tylervigario-website/.
+lives at /var/lib/tylervigario-website/quotes.db; Next.js runtime
+incremental cache at /var/cache/tylervigario-website/.
 
 
 %prep
