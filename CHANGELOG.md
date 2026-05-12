@@ -1,4 +1,10 @@
 # Changelog
+## [1.5.1](https://github.com/TylerVigario/website/compare/v1.5.0...v1.5.1) (2026-05-12)
+
+### Bug Fixes
+
+* **workflow:** Short-circuit version step on skip + honor bump input for chore-only windows
+
 ## [1.5.0](https://github.com/TylerVigario/website/compare/v1.4.6...v1.5.0) (2026-05-12)
 
 ### Features
