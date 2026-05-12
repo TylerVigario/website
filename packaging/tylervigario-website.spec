@@ -4,7 +4,7 @@
 # IT consultancy. Built on Next.js 16 with a custom server entrypoint
 # (server.ts compiled to server.js by scripts/build-server.ts).
 #
-# Build model: rpmbuild itself drives the Next build inside %build.
+# Build model: rpmbuild itself drives the Next build inside %%build.
 # CI invokes `rpmbuild -ba` on a self-hosted runner on the prod host,
 # so the resulting better-sqlite3 native binding matches the prod
 # runtime's glibc exactly. The spec IS the build definition — no
@@ -177,7 +177,7 @@ install -D -m 0644 packaging/apache-snippet.conf \
     %{buildroot}%{_datadir}/%{name}/apache-snippet.conf
 
 # Canonical default env — read-only, RPM-owned. The systemd unit
-# loads this first, then optionally /etc/sysconfig/%{name} for
+# loads this first, then optionally /etc/sysconfig/%%{name} for
 # operator overrides (which the RPM does not ship).
 install -D -m 0644 packaging/default.env \
     %{buildroot}%{_prefix}/lib/%{name}/default.env
@@ -188,7 +188,7 @@ install -D -m 0644 packaging/default.env \
 # the sysusers.d snippet at BUILD time and inlines its content into
 # this scriptlet as a heredoc fed to `systemd-sysusers --replace=...`.
 # At install time, no separate file lookup is needed — the spec is
-# self-contained in the RPM's %pre.
+# self-contained in the RPM's %%pre.
 %sysusers_create_package %{name} %{SOURCE1}
 
 
