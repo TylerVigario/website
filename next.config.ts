@@ -16,11 +16,14 @@ const { version } = JSON.parse(readFileSync("./package.json", "utf-8")) as { ver
 const sentryRelease = `vigario-technology-solutions@${version}`;
 
 const nextConfig: NextConfig = {
-  // Build-on-prod model: no `output: "standalone"`. Production
-  // clones the tagged commit, runs `npm ci && npm run build`, and
-  // runs the resulting bundle. The standalone tracer is what made
-  // the prior contract fragile (NFT graph gaps, loadConfig dynamic
-  // requires, custom-server interop edges). See docs/deployment.md.
+  // No `output: "standalone"`. The deploy artifact carries the full
+  // node_modules tree, so Next's standalone-tracer minimization
+  // isn't required — and that tracer was a source of bugs (NFT
+  // graph gaps, loadConfig dynamic requires, custom-server interop
+  // edges) that dropping it eliminates wholesale. The artifact-size
+  // cost of bundling the tree is acceptable under any deploy shape
+  // this repo currently uses. See docs/deployment.md for current
+  // shape specifics.
   trailingSlash: false,
   env: { APP_VERSION: version, SENTRY_RELEASE: sentryRelease },
   images: {

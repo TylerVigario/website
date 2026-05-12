@@ -5,14 +5,15 @@
  * Bundles server.ts + everything it imports from `@/lib` and friends
  * into a single ESM file (package.json `type: module` makes a plain
  * .js ESM here — no .mjs marker needed); leaves third-party deps
- * external for runtime resolution against the artifact's full
- * node_modules/ (build-on-prod model).
+ * external for runtime resolution against the deploy artifact's
+ * bundled node_modules/.
  *
- * No NFT trace step — under build-on-prod the artifact ships every
- * dep `npm ci --omit=dev` installs, so there's no minimized tree
- * that needs runtime-deps manifests folded back into Next's
+ * No NFT trace step — the build assumes the deploy artifact carries
+ * every dep `npm ci` installs, wholesale, so there's no minimized
+ * tree that needs runtime-deps manifests folded back into Next's
  * standalone tracer. Earlier contracts (CI-tarball + standalone)
- * needed bin/server.trace.json; build-on-prod doesn't.
+ * needed bin/server.trace.json; deploy shapes that ship the full
+ * tree don't.
  *
  * Build-time --check smoke validates module-level imports here
  * (cheap pre-check). Real-boot smoke runs in scripts/postbuild.ts

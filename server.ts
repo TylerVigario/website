@@ -14,11 +14,13 @@
  *
  * Uses the documented Next custom-server API:
  * `next({...}) + app.prepare() + http.createServer(handle)`. Works
- * because the build-on-prod model ships full production deps —
+ * because the runtime has the full Next module tree available —
  * `loadConfig`'s dynamic require of `next/dist/compiled/webpack/*`
  * resolves cleanly. Under the prior `output: "standalone"` model
  * the standalone tracer stripped the webpack tree, which broke this
- * pattern at boot.
+ * pattern at boot. Any deploy shape that ships an un-minimized
+ * node_modules (CI tarball, build-on-prod, RPM, image layer, …)
+ * satisfies the invariant — server.ts itself is deploy-agnostic.
  */
 
 import next from "next";

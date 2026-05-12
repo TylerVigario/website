@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 
-// Health endpoint consumed by the deploy script before flipping the
-// `current` symlink. A 200 here means: the bundle started, server.js
-// is serving, the SQLite file at SQLITE_PATH is readable, and the
-// schema parses. Anything weaker (e.g. just rendering / over HTTP) lets
-// schema or route-handler regressions ship green.
+// Health endpoint. A 200 here means: the process started, the HTTP
+// listener is serving, the SQLite file at SQLITE_PATH is readable,
+// and the schema parses. Anything weaker (e.g. just rendering / over
+// HTTP) lets schema or route-handler regressions ship green. How
+// operators consume it (post-deploy smoke, reverse-proxy health
+// check, dashboard ping) is their call — the endpoint commits only
+// to the invariants above.
 export const dynamic = "force-dynamic";
 
 export function GET() {

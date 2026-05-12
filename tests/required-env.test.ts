@@ -9,9 +9,10 @@
  *
  * This test asserts the file exists at the contract path and is
  * a non-empty array of strings. A renamed/moved/malformed file
- * would surface as a build-on-prod deploy failure (the deploy
- * script reads it directly); catching it here in CI converts
- * "social protocol guarantees the file" into "test enforces it".
+ * would surface at app startup (runtime-config.ts imports it
+ * directly and validates every name listed); catching it here in
+ * CI converts "social protocol guarantees the file" into "test
+ * enforces it".
  */
 
 import { describe, expect, it } from "vitest";
