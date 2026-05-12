@@ -1,4 +1,18 @@
 # Changelog
+## [1.5.0](https://github.com/TylerVigario/website/compare/v1.4.6...v1.5.0) (2026-05-12)
+
+### Features
+
+* Relicense as AGPL-3.0-or-later for public open-source release
+
+### Bug Fixes
+
+* **packaging:** Obsolete tylervigario-website + document the cutover
+
+### Refactoring
+
+* **packaging:** Rename to vigario-website + repoint urls at new gh org
+
 ## [1.4.6](https://github.com/TylerVigario/website/compare/v1.4.5...v1.4.6) (2026-05-12)
 
 ### Bug Fixes
@@ -87,7 +101,7 @@
 ### Features
 
 * **forms:** Adopt rfc 9457 problem details + react-hook-form
-* **packaging:** Introduce vigario-website RPM, retire build-on-prod 
+* **packaging:** Introduce tylervigario-website RPM, retire build-on-prod 
 
 ### Bug Fixes
 
