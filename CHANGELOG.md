@@ -1,4 +1,11 @@
 # Changelog
+## [1.4.6](https://github.com/TylerVigario/website/compare/v1.4.5...v1.4.6) (2026-05-12)
+
+### Bug Fixes
+
+* **packaging:** Move rpmbuild topdir to RUNNER_TEMP 
+* **build:** Externalize instrumentation chain to dodge turbopack hash-require bug 
+
 ## [1.4.5](https://github.com/TylerVigario/website/compare/v1.4.4...v1.4.5) (2026-05-12)
 
 ### Refactoring
