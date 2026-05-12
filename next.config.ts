@@ -26,10 +26,22 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
   },
-  // better-sqlite3 is a native module and can't be webpacked.
-  // Marking it external lets Next leave it alone at build time; it
-  // resolves at runtime against the artifact's full node_modules/.
-  serverExternalPackages: ["better-sqlite3"],
+  // Packages Turbopack should treat as runtime externals — never
+  // bundle, always resolve from the artifact's node_modules/ at run
+  // time. better-sqlite3 is here because it's a native module that
+  // can't be packed. The three instrumentation packages are here to
+  // sidestep a known Turbopack bug
+  // (https://github.com/vercel/next.js/issues/87737): the bundler
+  // emits `require("<pkg>-<contenthash>")` for these externals, and
+  // the hashed name doesn't resolve at runtime. Excluding them from
+  // bundling means no synthetic name is generated and the OpenTelemetry/
+  // Sentry monkey-patch path stays loadable.
+  serverExternalPackages: [
+    "better-sqlite3",
+    "require-in-the-middle",
+    "import-in-the-middle",
+    "@opentelemetry/instrumentation",
+  ],
   headers: () =>
     Promise.resolve([
       {
