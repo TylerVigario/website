@@ -10,8 +10,13 @@ rollback, fleet management) is out of scope here.
 **RPM-as-artifact.** A tagged commit on `main` is built by CI on a
 self-hosted GitHub Actions runner (running on the prod host) into a
 signed `tylervigario-website-<version>-1.fc43.x86_64.rpm`, copied
-into `/srv/dnf-repo/`, and attached to the GitHub Release.
-Production installs it with `sudo dnf upgrade tylervigario-website`.
+into `/srv/dnf-repo-private/` (served at `http://repo.lan/`, LAN-only),
+and attached to the GitHub Release. Production installs it with
+`sudo dnf --refresh upgrade tylervigario-website`.
+
+`tylervigario-website` is a **private** package — it doesn't go to
+`https://repo.tylervigario.com/` (the public-facing endpoint reserved
+for shareable third-party packaging Tyler eventually weeds out).
 
 The self-hosted runner sidesteps the GitHub→prod inbound network
 problem. The runner connects outbound to GitHub for job pickup;
@@ -39,13 +44,18 @@ got ripped out (commit `cf3afd5`).
 
 ## Infrastructure prerequisite
 
-The host must already be subscribed to the `repo.tylervigario.com`
-dnf repo with the signing key trusted. `server-admin-base` provides
-both: `/etc/yum.repos.d/server-admin.repo` and
-`/etc/pki/rpm-gpg/RPM-GPG-KEY-server-admin`. Not declared as a
-`Requires:` because the relationship is install-order, not
-runtime-functional — by the time dnf can fetch this package, the
-host has already loaded the repo definition.
+The host must already be subscribed to the private dnf repo
+(`http://repo.lan/`) with the signing key trusted. Bootstrap:
+
+```bash
+sudo rpm --import http://repo.lan/RPM-GPG-KEY-server-admin
+sudo curl -fsSLo /etc/yum.repos.d/server-admin-private.repo \
+    http://repo.lan/server-admin-private.repo
+```
+
+Both `.repo` file and pubkey are served as static files from the repo
+itself (not packaged) to avoid the bootstrap chicken-and-egg of
+installing a package to discover where to install packages from.
 
 ## Per-host runtime environment
 
@@ -116,25 +126,31 @@ Client-side Sentry DSN is configured per-host at runtime via
 
 ## Signing
 
-The RPM is signed with a 1-year-expiration signing subkey of the
-`server-admin@tylervigario.com` master key. Master fingerprint:
-`EC7FD18BBAFFA8A05AD0FC2ADE09D5ECD557FA4B`, lives in
-`/etc/server-admin/gnupg/` on the repo host. Only subkey private
-material is reachable from CI (via the `GPG_SIGNING_SUBKEY` secret,
-base64-encoded ASCII-armored, exported subkey-only with
-`gpg --export-secret-subkeys <FPR>!`).
+Two signing subkeys live on the prod host's master keyring at
+`/etc/server-admin/gnupg/` (root-only). Master fingerprint:
+`EC7FD18BBAFFA8A05AD0FC2ADE09D5ECD557FA4B`.
 
-Consumer rpm keyrings trust the master cert via
-`/etc/pki/rpm-gpg/RPM-GPG-KEY-server-admin` (shipped by
-`server-admin-base`). Signatures from any subkey of the trusted
-master verify against that trust — as long as the consumer's rpm
-keyring has seen the current subkey list (see rotation).
+| Subkey | Used by |
+|---|---|
+| **private-signer** | All private packages (this one, dailies, turf-tracker, server-admin-*). Bound via `/root/.rpmmacros`'s `%_gpg_name`. |
+| **public-signer** | Public-facing packages — third-party packaging Tyler weeds out for sharing. Not used by this RPM. |
+
+Both cross-signed by the master, so `RPM-GPG-KEY-server-admin` (the
+pubkey snapshot consumers import) validates signatures from either.
+Revoking one doesn't affect the other.
+
+`github-runner` (the self-hosted Actions runner's system user) has
+zero key material. The workflow calls `sudo /usr/bin/rpmsign --addsign`
+via a narrow sudoers rule; the actual signing runs as root, which
+reads `/root/.rpmmacros` (bound to private-signer). Compromise scope
+of `github-runner` is "can sign an RPM at the path the sudoers rule
+allows," not "can take the subkey elsewhere."
 
 ### Subkey rotation
 
-Three places stay in sync. Skip any one and `rpm -K` will report
-`digests SIGNATURES NOT OK` on new RPMs even though the signature
-is structurally valid.
+When a subkey expires (or rotates proactively), three updates keep
+consumers verifying. Skip any one and `rpm -K` reports
+`digests SIGNATURES NOT OK` on RPMs signed by the new subkey.
 
 1. **Master keyring** — mint the new subkey:
 
@@ -145,30 +161,26 @@ is structurally valid.
        rsa4096 sign 1y
    ```
 
-2. **GitHub secret** — push the new subkey's private material:
+2. **prod's `/root/.rpmmacros`** — bind `%_gpg_name` to the new
+   subkey's fingerprint. (Only if rotating private-signer. For
+   public-signer, the equivalent binding lives in whatever workflow
+   signs public packages.)
+
+3. **Pubkey snapshots + consumer rpm keyrings** — refresh:
 
    ```bash
-   sudo gpg --homedir /etc/server-admin/gnupg --batch \
-       --pinentry-mode loopback --passphrase '' --armor \
-       --export-secret-subkeys "<NEW-SUBKEY-FPR>!" \
-       | base64 -w0 \
-       | gh secret set GPG_SIGNING_SUBKEY --repo TylerVigario/website
-   ```
-
-   The `!` is load-bearing — without it gpg exports cumulative
-   material from prior subkeys too.
-
-3. **Each consumer's rpm keyring** — refresh the trust cache:
-
-   ```bash
-   # Repo host: refresh the served pubkey snapshot first
+   # Repo host: refresh both served pubkey snapshots
    sudo gpg --homedir /etc/server-admin/gnupg --export --armor \
-       EC7FD18BBAFFA8A05AD0FC2ADE09D5ECD557FA4B \
-       | sudo tee /srv/dnf-repo/RPM-GPG-KEY-server-admin >/dev/null
-   sudo restorecon -F /srv/dnf-repo/RPM-GPG-KEY-server-admin
+       EC7FD18BBAFFA8A05AD0FC2ADE09D5ECD557FA4B > /tmp/pubkey.asc
+   sudo install -m 0644 -o apache -g apache /tmp/pubkey.asc \
+       /srv/dnf-repo-public/RPM-GPG-KEY-server-admin
+   sudo install -m 0644 -o apache -g apache /tmp/pubkey.asc \
+       /srv/dnf-repo-private/RPM-GPG-KEY-server-admin
+   sudo restorecon -F /srv/dnf-repo-{public,private}/RPM-GPG-KEY-server-admin
+   sudo shred -u /tmp/pubkey.asc
 
    # Every consumer (incl. the repo host):
-   sudo rpm --import https://repo.tylervigario.com/RPM-GPG-KEY-server-admin
+   sudo rpm --import http://repo.lan/RPM-GPG-KEY-server-admin
    ```
 
 rpm's `gpg-pubkey-<master-fpr>` entry caches the master's subkey
@@ -185,8 +197,9 @@ point. The workflow:
 2. Updates `package.json`, regenerates `CHANGELOG.md` +
    `RELEASE_NOTES.md`, commits `chore(release): v<version>`,
    annotated-tags, pushes.
-3. Builds + signs the RPM on the self-hosted runner, copies it into
-   `/srv/dnf-repo/`, runs `createrepo_c --update`.
+3. Builds + signs the RPM on the self-hosted runner (sign via `sudo
+   rpmsign`; private-signer subkey on prod's keyring), copies it into
+   `/srv/dnf-repo-private/`, runs `createrepo_c --update`.
 4. Creates the GitHub Release with the signed RPM attached.
 
 Conventional Commits drives the bump magnitude:

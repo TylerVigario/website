@@ -2,9 +2,9 @@
 
 Marketing front for Vigario Technology Solutions, but really this exists
 because I needed somewhere for businesses panicking about POTS sunset to
-land. Deploys as a signed RPM (`tylervigario-website`) to
-`repo.tylervigario.com`; prod installs with `sudo dnf upgrade
-tylervigario-website`. The full contract lives in
+land. Deploys as a signed RPM (`tylervigario-website`) to the private
+LAN-only dnf repo at `http://repo.lan/`; prod installs with `sudo dnf
+--refresh upgrade tylervigario-website`. The full contract lives in
 [docs/deployment.md](docs/deployment.md); the spec is at
 [packaging/tylervigario-website.spec](packaging/tylervigario-website.spec).
 Read those for anything past "how do I run it locally."
@@ -83,7 +83,8 @@ full rationale.
   (`feat→minor`, `fix/refactor→patch`, breaking→major;
   chore/docs/test/build/ci skip), tags, then builds + signs the RPM
   on a self-hosted runner on the prod host, copies into
-  `/srv/dnf-repo/`, and attaches the signed RPM to the GitHub Release.
+  `/srv/dnf-repo-private/` (LAN-only, served at `http://repo.lan/`),
+  and attaches the signed RPM to the GitHub Release.
 
 CHANGELOG is regenerated each release from commit messages — don't
 hand-edit it. If the changelog reads wrong, fix the commit message

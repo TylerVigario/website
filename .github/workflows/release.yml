@@ -102,21 +102,26 @@ jobs:
 
   # =========================================================================
   # Release — bumps version, generates changelog, tags, builds + signs the
-  # RPM inside a Fedora 43 container (matches prod's glibc for
-  # better-sqlite3), uploads to repo.tylervigario.com, attaches the signed
-  # RPM to the GitHub Release.
+  # RPM on the self-hosted runner (running on the prod host itself),
+  # publishes to /srv/dnf-repo-private/, attaches the signed RPM to the
+  # GitHub Release.
+  #
+  # tylervigario-website is a *private* package — it goes to the LAN-only
+  # repo served at http://repo.lan/, not the public-facing
+  # https://repo.tylervigario.com/.
+  #
+  # Signing model: github-runner has zero key material. It calls
+  # `sudo /usr/bin/rpmsign --addsign <rpm>` via a narrow sudoers rule;
+  # the actual signing runs as root with /root/.rpmmacros bound to the
+  # private-signer subkey on /etc/server-admin/gnupg/.
   #
   # Runs on workflow_dispatch only. Production picks up the new RPM via
-  # `sudo dnf upgrade tylervigario-website`, manually, when Tyler chooses.
+  # `sudo dnf --refresh upgrade tylervigario-website`, manually.
   # =========================================================================
   release:
     name: Release
     needs: gate
     if: github.event_name == 'workflow_dispatch'
-    # Self-hosted runner on the repo host itself (rpm-build, rpm-sign,
-    # createrepo_c, gpg2 all preinstalled; github-runner user is in the
-    # apache group with g+ws on /srv/dnf-repo). Drops the previous
-    # Fedora-container + SSH-publish chain in favor of a local cp.
     runs-on: [self-hosted, fedora-43]
     timeout-minutes: 30
     permissions:
@@ -201,13 +206,19 @@ jobs:
           git push origin main --follow-tags
 
       # ---- RPM build ----
+      #
+      # Build under $GITHUB_WORKSPACE/rpmbuild, not $HOME/rpmbuild.
+      # actions/checkout's default `clean: true` runs `git clean -ffdx`
+      # on the workspace at the start of every job, which wipes any
+      # leftover rpmbuild tree from prior runs. Hermetic builds; no
+      # state leaks between releases.
       - name: Prepare rpmbuild tree
         if: steps.version.outputs.skip != 'true'
         run: |
-          mkdir -p $HOME/rpmbuild/{SOURCES,SPECS,BUILD,RPMS,SRPMS}
+          mkdir -p "$GITHUB_WORKSPACE"/rpmbuild/{SOURCES,SPECS,BUILD,RPMS,SRPMS}
           VERSION="${{ steps.version.outputs.version }}"
           git archive --prefix="${PKG_NAME}-${VERSION}/" --format=tar.gz \
-              -o $HOME/rpmbuild/SOURCES/${PKG_NAME}-${VERSION}.tar.gz HEAD
+              -o "$GITHUB_WORKSPACE/rpmbuild/SOURCES/${PKG_NAME}-${VERSION}.tar.gz" HEAD
 
       - name: rpmbuild -ba
         if: steps.version.outputs.skip != 'true'
@@ -216,99 +227,59 @@ jobs:
         run: |
           rpmbuild -ba \
             --define "_version ${{ steps.version.outputs.version }}" \
-            --define "_topdir $HOME/rpmbuild" \
+            --define "_topdir $GITHUB_WORKSPACE/rpmbuild" \
             packaging/${PKG_NAME}.spec
 
       - name: Locate built RPM
         id: rpm
         if: steps.version.outputs.skip != 'true'
         run: |
-          # Match by exact version (not just package name). The
-          # self-hosted runner's rpmbuild tree persists across runs,
-          # so leftover RPMs from earlier builds sit alongside the
-          # one we just produced. `find ... | head -1` was returning
-          # whichever the kernel handed back first — frequently the
-          # wrong (old) file — and downstream steps signed/published
-          # that one. Match by ${PKG_NAME}-${VERSION}-* and assert
-          # exactly one hit.
+          # Workspace is clean per actions/checkout's git-clean step,
+          # so a glob on ${PKG_NAME}-${VERSION}-*.rpm resolves to
+          # exactly one file. No find, no scan.
           VERSION="${{ steps.version.outputs.version }}"
-          mapfile -t MATCHES < <(find "$HOME/rpmbuild/RPMS" -name "${PKG_NAME}-${VERSION}-*.rpm" -type f)
-          if [ "${#MATCHES[@]}" -eq 0 ]; then
-            echo "::error::no RPM produced for version ${VERSION}"
+          RPM=$(echo "$GITHUB_WORKSPACE"/rpmbuild/RPMS/x86_64/${PKG_NAME}-${VERSION}-*.rpm)
+          if [ ! -f "$RPM" ]; then
+            echo "::error::expected RPM not found at $RPM"
+            ls -la "$GITHUB_WORKSPACE/rpmbuild/RPMS/x86_64/" || :
             exit 1
           fi
-          if [ "${#MATCHES[@]}" -gt 1 ]; then
-            echo "::error::multiple RPMs match ${PKG_NAME}-${VERSION}-*.rpm — ambiguous build state"
-            printf '  %s\n' "${MATCHES[@]}"
-            exit 1
-          fi
-          RPM="${MATCHES[0]}"
           echo "Built: $RPM"
           rpm -qpi "$RPM"
           echo "path=$RPM" >> "$GITHUB_OUTPUT"
           echo "name=$(basename "$RPM")" >> "$GITHUB_OUTPUT"
 
       # ---- Sign ----
-      - name: Import GPG signing subkey
-        if: steps.version.outputs.skip != 'true'
-        env:
-          GPG_SIGNING_SUBKEY: ${{ secrets.GPG_SIGNING_SUBKEY }}
-        run: |
-          # Subkey goes into the runner user's own gpg keyring (under
-          # $HOME/.gnupg) — used by rpmsign --addsign in the next step.
-          #
-          # NOTE: previous workflow also did `rpm --import` here so the
-          # system rpm keyring would trust the pubkey for `rpm -K`. That
-          # step needs root (rpm writes to /usr/lib/sysimage/rpm). On
-          # this self-hosted runner the host's rpm keyring ALREADY
-          # trusts the master pubkey — it was imported when the existing
-          # server-admin-* RPMs got signed and shipped from the same
-          # /etc/server-admin/gnupg keyring. Verified via `rpm -K` on
-          # an in-repo server-admin-base RPM returning "digests
-          # signatures OK". No further import needed.
-          echo "$GPG_SIGNING_SUBKEY" | base64 -d | gpg --batch --import
-          gpg --list-secret-keys
-
       - name: Sign RPM
         if: steps.version.outputs.skip != 'true'
-        env:
-          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_SIGNING_PASSPHRASE }}
         run: |
-          # Write the passphrase to a tempfile and use --passphrase-file
-          # via %_gpg_sign_cmd_extra_args. Avoids re-defining the whole
-          # %__gpg_sign_cmd macro (the previous attempt copied a stale
-          # form with a duplicated `gpg` argv that confused the parser
-          # into treating every flag as a filename). The default macro
-          # on Fedora already does the right thing; we just need to
-          # inject --batch + --pinentry-mode loopback + --passphrase-file.
-          PASSFILE=$(mktemp)
-          chmod 600 "$PASSFILE"
-          trap 'rm -f "$PASSFILE"' EXIT
-          printf '%s' "$GPG_PASSPHRASE" > "$PASSFILE"
-
-          cat > $HOME/.rpmmacros <<EOF
-          %_signature gpg
-          %_gpg_name ${GPG_KEY_ID}
-          %_gpg_sign_cmd_extra_args --batch --pinentry-mode loopback --passphrase-file ${PASSFILE}
-          EOF
-          rpmsign --addsign "${{ steps.rpm.outputs.path }}"
+          # Sign via sudo: github-runner has a narrow sudoers rule
+          # allowing `/usr/bin/rpmsign --addsign` on paths under
+          # /var/lib/github-runner/_work/*/*/rpmbuild/RPMS/x86_64/*.rpm.
+          # The actual signing runs as root, which reads /root/.rpmmacros
+          # (binds to the private-signer subkey on /etc/server-admin/gnupg).
+          # No signing-key material ever lives in this runner's keyring
+          # or in a GitHub secret — compromise scope of github-runner is
+          # "can sign an RPM at the constrained path," not "can take the
+          # subkey elsewhere."
+          sudo /usr/bin/rpmsign --addsign "${{ steps.rpm.outputs.path }}"
           rpm -K "${{ steps.rpm.outputs.path }}"
 
-      # ---- Publish to /srv/dnf-repo (local) ----
-      - name: Publish RPM to dnf repo
+      # ---- Publish to /srv/dnf-repo-private/ (LAN-only, http://repo.lan/) ----
+      - name: Publish RPM to private dnf repo
         if: steps.version.outputs.skip != 'true'
         run: |
-          # Self-hosted runner: github-runner is in the apache group
-          # and /srv/dnf-repo is g+ws apache, so the cp + createrepo_c
-          # below run without sudo. restorecon picks up the dir's
-          # default SELinux context (httpd_sys_content_t) for the new
-          # file. cp -p preserves permissions from the source (root
-          # 0644 from rpmbuild) which is fine for read-by-apache.
-          cp -p "${{ steps.rpm.outputs.path }}" /srv/dnf-repo/
-          restorecon -F "/srv/dnf-repo/${{ steps.rpm.outputs.name }}"
-          createrepo_c --update --quiet /srv/dnf-repo
-          echo "Published /srv/dnf-repo/${{ steps.rpm.outputs.name }}"
+          # github-runner is in the apache group; /srv/dnf-repo-private/ is
+          # g+ws apache, so the cp + createrepo_c run without sudo. fcontext
+          # policy assigns httpd_sys_content_t to anything under that path;
+          # restorecon applies it. tylervigario-website is a private package
+          # (Tyler-business app, no public reach) — it publishes to the LAN-
+          # only tree served at http://repo.lan/, not the public-facing
+          # https://repo.tylervigario.com/.
+          cp -p "${{ steps.rpm.outputs.path }}" /srv/dnf-repo-private/
+          restorecon -F "/srv/dnf-repo-private/${{ steps.rpm.outputs.name }}"
+          createrepo_c --update --quiet /srv/dnf-repo-private
+          echo "Published /srv/dnf-repo-private/${{ steps.rpm.outputs.name }}"
 
       # ---- GitHub Release ----
       - name: Create GitHub Release with RPM asset

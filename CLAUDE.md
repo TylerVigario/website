@@ -26,10 +26,11 @@ own forms.
 
 This repo owns its own deploy contract — see
 [`docs/deployment.md`](docs/deployment.md). The model is
-**RPM-as-artifact**: CI builds a signed RPM inside a Fedora 43
-container, uploads to `repo.tylervigario.com`, attaches it to the
-GitHub Release. Production installs via `sudo dnf upgrade
-tylervigario-website` (manual). The spec is at
+**RPM-as-artifact**: a self-hosted GitHub Actions runner on the prod
+host itself builds + signs the RPM, copies it into the LAN-only
+private dnf repo at `/srv/dnf-repo-private/` (served via
+`http://repo.lan/`). Production installs via `sudo dnf --refresh
+upgrade tylervigario-website` (manual). The spec is at
 [`packaging/tylervigario-website.spec`](../packaging/tylervigario-website.spec).
 
 The prior contract (build-on-prod, shared with `vis-daily-tracker`
@@ -142,8 +143,8 @@ export async function POST(req: NextRequest) {
 RPM-as-artifact. CI builds + signs `tylervigario-website-<version>-1.fc43.x86_64.rpm`
 on a self-hosted GitHub Actions runner running on the prod host
 (better-sqlite3's native binding compiles against the actual runtime
-glibc), copies into `/srv/dnf-repo/`, attaches the signed RPM to the
-GitHub Release.
+glibc), copies into `/srv/dnf-repo-private/` (LAN-only, served at
+`http://repo.lan/`), attaches the signed RPM to the GitHub Release.
 Production runs `sudo dnf upgrade tylervigario-website`. The spec
 ([`packaging/tylervigario-website.spec`](../packaging/tylervigario-website.spec))
 drives the build: `%build` invokes `npm ci && npm run build`, `%install`
