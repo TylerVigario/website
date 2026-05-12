@@ -156,23 +156,50 @@ jobs:
         id: version
         run: |
           CURRENT=$(node -p "require('./package.json').version")
+          # When inputs.bump is set, compute the target version directly
+          # from CURRENT + the bump type — DON'T ask git-cliff for it.
+          # `git-cliff --bump <type> --bumped-version` is silently a
+          # no-op when the cliff config's skip list filters out every
+          # commit since the last release (chore/docs/test under our
+          # six-type setup): cliff prints "There is nothing to bump"
+          # and emits the unchanged current version. That makes the
+          # `bump` workflow_dispatch input — advertised as a "force a
+          # release" affordance — fail to force anything when all
+          # queued commits are skipped. Doing the arithmetic ourselves
+          # makes the affordance honest.
           if [ -n "${{ inputs.bump }}" ]; then
-            TAG=$(git-cliff --bump ${{ inputs.bump }} --bumped-version)
+            IFS='.' read -r MAJ MIN PAT <<< "$CURRENT"
+            case "${{ inputs.bump }}" in
+              major) BARE="$((MAJ + 1)).0.0" ;;
+              minor) BARE="${MAJ}.$((MIN + 1)).0" ;;
+              patch) BARE="${MAJ}.${MIN}.$((PAT + 1))" ;;
+              *) echo "::error::Unknown bump type '${{ inputs.bump }}' (expected major/minor/patch)"; exit 1 ;;
+            esac
+            TAG="v${BARE}"
           else
             TAG=$(git-cliff --bumped-version)
+            BARE="${TAG#v}"
           fi
-          BARE="${TAG#v}"
           if [ "$BARE" = "$CURRENT" ]; then
             echo "::warning::No version change detected (already at $CURRENT). Skipping release."
             echo "skip=true" >> "$GITHUB_OUTPUT"
+            SKIP=true
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
+            SKIP=false
           fi
           echo "version=$BARE" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "Next version: $TAG (current: $CURRENT)"
 
-          if git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
+          # Only check for an existing tag on the non-skip path. When
+          # SKIP=true the TAG resolves to the current release's tag
+          # (which exists by construction), so an unconditional check
+          # turns the warned-and-skip path into a hard failure of the
+          # whole release job. All downstream steps already guard on
+          # `steps.version.outputs.skip != 'true'`; this guard needs
+          # to match.
+          if [ "$SKIP" != "true" ] && git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
             echo "::error::Tag $TAG already exists in git. A previous release run probably partially completed. Manually delete the tag (git push --delete origin $TAG) or bump past it before retrying."
             exit 1
           fi
