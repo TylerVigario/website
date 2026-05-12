@@ -72,6 +72,12 @@ BuildRequires:  systemd-rpm-macros
 # `nodejs >= 24` Requires would resolve in surprising ways. The
 # service unit's ExecStart hardcodes /usr/bin/node-24 to match.
 Requires:       nodejs24
+# %%pre uses systemd-sysusers (via %%sysusers_create_package); the
+# other three scriptlet phases use %%systemd_post/_preun/_postun.
+# All four expand into calls against binaries from the systemd
+# package — declare each explicitly. Implicit on every Fedora install,
+# but the orthodox declaration documents intent.
+Requires(pre):  systemd
 Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
