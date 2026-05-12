@@ -42,7 +42,7 @@ const port = await pickPort();
 // db.smoke.invalid, which leans on RFC 6761's reserved-unresolvable
 // TLD because Prisma might init eagerly — different mechanism for
 // a different DB.)
-const stubSqlitePath = path.join(os.tmpdir(), "tylervigario-postbuild-smoke.stub");
+const stubSqlitePath = path.join(os.tmpdir(), "vigario-website-postbuild-smoke.stub");
 
 // Hermetic stub env — every required value forced regardless of
 // inherited env. SENTRY_DSN forced empty so Sentry init no-ops.

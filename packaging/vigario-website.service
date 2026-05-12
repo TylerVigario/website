@@ -9,7 +9,7 @@ StartLimitIntervalSec=300
 Type=simple
 User=website
 Group=website
-WorkingDirectory=/usr/share/tylervigario-website
+WorkingDirectory=/usr/share/vigario-website
 # Versioned binary on purpose. `/usr/bin/node` is whatever Fedora's
 # unversioned `nodejs` package decided is the system default — on F43
 # that's v22. The package's Requires: nodejs24 ensures node-24 exists.
@@ -23,18 +23,18 @@ RestartSec=5
 # overrides earlier" semantics. The `-` on the second line makes it
 # optional, so the unit starts cleanly on hosts where the operator
 # hasn't created the override file.
-EnvironmentFile=/usr/lib/tylervigario-website/default.env
-EnvironmentFile=-/etc/sysconfig/tylervigario-website
+EnvironmentFile=/usr/lib/vigario-website/default.env
+EnvironmentFile=-/etc/sysconfig/vigario-website
 Environment=NODE_ENV=production
-Environment=HOME=/var/lib/tylervigario-website
+Environment=HOME=/var/lib/vigario-website
 
 # State + cache live outside /usr (read-only under ProtectSystem=strict).
 # StateDirectory= and CacheDirectory= create /var/lib/<pkg> and
 # /var/cache/<pkg> at unit-start with correct ownership and add both
 # to ReadWritePaths automatically. The tmpfiles.d config is a
 # backstop for boot ordering.
-StateDirectory=tylervigario-website
-CacheDirectory=tylervigario-website
+StateDirectory=vigario-website
+CacheDirectory=vigario-website
 
 # Filesystem hardening
 NoNewPrivileges=true

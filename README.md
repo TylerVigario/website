@@ -2,11 +2,11 @@
 
 Marketing front for Vigario Technology Solutions, but really this exists
 because I needed somewhere for businesses panicking about POTS sunset to
-land. Deploys as a signed RPM (`tylervigario-website`) to the private
+land. Deploys as a signed RPM (`vigario-website`) to the private
 LAN-only dnf repo at `http://repo.lan/`; prod installs with `sudo dnf
---refresh upgrade tylervigario-website`. The full contract lives in
+--refresh upgrade vigario-website`. The full contract lives in
 [docs/deployment.md](docs/deployment.md); the spec is at
-[packaging/tylervigario-website.spec](packaging/tylervigario-website.spec).
+[packaging/vigario-website.spec](packaging/vigario-website.spec).
 Read those for anything past "how do I run it locally."
 
 Stack: Next 16 (App Router), Tailwind v4, better-sqlite3 for
@@ -68,7 +68,7 @@ scripts/check-public-env.ts    # fails build if a required NEXT_PUBLIC_* is miss
 **RPM-as-artifact.** CI builds and signs the RPM on a self-hosted
 GitHub Actions runner running on the prod host itself, lands it in
 the private LAN-only dnf repo, attaches it to the GitHub Release.
-Production installs via `sudo dnf --refresh upgrade tylervigario-website`.
+Production installs via `sudo dnf --refresh upgrade vigario-website`.
 See [docs/deployment.md](docs/deployment.md) for the full contract.
 
 `.github/workflows/release.yml`:
@@ -92,34 +92,34 @@ before tagging, or amend cliff.toml's parsers/grouping.
 ## Prod side (the Fedora box)
 
 ```text
-/usr/share/tylervigario-website/      # RPM-owned, read-only
+/usr/share/vigario-website/      # RPM-owned, read-only
   server.js                            # compiled custom entrypoint
   .next/                               # Next build output
   node_modules/                        # full prod dep tree, incl. better-sqlite3 native binding
   public/
   package.json
   apache-snippet.conf                  # operator Includes this from their own vhost
-/usr/lib/tylervigario-website/
+/usr/lib/vigario-website/
   default.env                          # canonical env defaults (read-only)
-/usr/lib/systemd/system/tylervigario-website.service   # systemd unit
-/usr/lib/sysusers.d/tylervigario-website.conf          # declarative system user
+/usr/lib/systemd/system/vigario-website.service   # systemd unit
+/usr/lib/sysusers.d/vigario-website.conf          # declarative system user
 
 # Operator-owned (NOT in RPM):
 /etc/httpd/conf.d/<vhost>.conf         # operator's vhost; Include's apache-snippet.conf
-/etc/sysconfig/tylervigario-website    # operator env overrides (SMTP, Sentry, etc.)
-/var/lib/tylervigario-website/quotes.db  # SQLite, created at runtime
-/var/cache/tylervigario-website/       # Next runtime cache
+/etc/sysconfig/vigario-website    # operator env overrides (SMTP, Sentry, etc.)
+/var/lib/vigario-website/quotes.db  # SQLite, created at runtime
+/var/cache/vigario-website/       # Next runtime cache
 ```
 
-Deploy: `sudo dnf --refresh upgrade tylervigario-website`. Rollback:
-`sudo dnf downgrade tylervigario-website-<previous>` or `dnf history
+Deploy: `sudo dnf --refresh upgrade vigario-website`. Rollback:
+`sudo dnf downgrade vigario-website-<previous>` or `dnf history
 undo <id>`. No webhook, no path units, no build-on-host — the RPM
 ships pre-built, validated, signed.
 
 Apache reverse-proxies to port 3000. Server binds `127.0.0.1` by
 default — operator's reverse proxy fronts on :443. SQLite handle,
 in-flight drain, Sentry flush all live in the systemd unit at
-`packaging/tylervigario-website.service`. The unit doesn't ship an
+`packaging/vigario-website.service`. The unit doesn't ship an
 `OnFailure=` hook — operator adds that via a systemd drop-in if
 they want failure-email notification.
 

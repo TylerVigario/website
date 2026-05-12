@@ -9,7 +9,7 @@ env:
   # Node major pins agree" step enforces the first three; the spec
   # and unit are edited manually in lockstep when bumping.
   NODE_VERSION: "24"
-  PKG_NAME: tylervigario-website
+  PKG_NAME: vigario-website
 
 on:
   push:
@@ -102,7 +102,7 @@ jobs:
   # publishes to /srv/dnf-repo-private/, attaches the signed RPM to the
   # GitHub Release.
   #
-  # tylervigario-website is a *private* package — it goes to the LAN-only
+  # vigario-website is a *private* package — it goes to the LAN-only
   # repo served at http://repo.lan/, not the public-facing
   # https://repo.tylervigario.com/.
   #
@@ -112,7 +112,7 @@ jobs:
   # private-signer subkey on /etc/server-admin/gnupg/.
   #
   # Runs on workflow_dispatch only. Production picks up the new RPM via
-  # `sudo dnf --refresh upgrade tylervigario-website`, manually.
+  # `sudo dnf --refresh upgrade vigario-website`, manually.
   # =========================================================================
   release:
     name: Release
@@ -281,7 +281,7 @@ jobs:
           # github-runner is in the apache group; /srv/dnf-repo-private/ is
           # g+ws apache, so the cp + createrepo_c run without sudo. fcontext
           # policy assigns httpd_sys_content_t to anything under that path;
-          # restorecon applies it. tylervigario-website is a private package
+          # restorecon applies it. vigario-website is a private package
           # (Tyler-business app, no public reach) — it publishes to the LAN-
           # only tree served at http://repo.lan/, not the public-facing
           # https://repo.tylervigario.com/.

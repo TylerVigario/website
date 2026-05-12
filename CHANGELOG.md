@@ -87,7 +87,7 @@
 ### Features
 
 * **forms:** Adopt rfc 9457 problem details + react-hook-form
-* **packaging:** Introduce tylervigario-website RPM, retire build-on-prod 
+* **packaging:** Introduce vigario-website RPM, retire build-on-prod 
 
 ### Bug Fixes
 

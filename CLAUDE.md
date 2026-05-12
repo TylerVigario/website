@@ -37,14 +37,14 @@ This repo owns its own deploy contract — see
 [`docs/deployment.md`](docs/deployment.md). Single-line summary:
 
 **RPM-as-artifact.** A self-hosted GitHub Actions runner on the prod
-host builds + `sudo rpmsign`s `tylervigario-website-<v>-1.fc43.x86_64.rpm`,
+host builds + `sudo rpmsign`s `vigario-website-<v>-1.fc43.x86_64.rpm`,
 copies it into the LAN-only private dnf repo at `/srv/dnf-repo-private/`
 (served via `http://repo.lan/`), attaches it to the GitHub Release.
-Production runs `sudo dnf --refresh upgrade tylervigario-website`
+Production runs `sudo dnf --refresh upgrade vigario-website`
 when ready. Spec lives at
-[`packaging/tylervigario-website.spec`](packaging/tylervigario-website.spec);
+[`packaging/vigario-website.spec`](packaging/vigario-website.spec);
 `%build` invokes `npm ci && npm run build`; `%install` lays out the
-tree under `/usr/share/tylervigario-website/`.
+tree under `/usr/share/vigario-website/`.
 
 [`server.ts`](server.ts) is the custom Next.js entrypoint — esbuild
 compiles it to `server.js` at the repo root via
@@ -111,10 +111,10 @@ docs/
 └── deployment.md                     # source-side deploy contract — RPM-as-artifact
 
 packaging/
-├── tylervigario-website.spec         # RPM spec; %build invokes `npm ci && npm run build`
-├── tylervigario-website.service      # systemd service unit (installed under /usr/lib/systemd/system/)
-├── tylervigario-website.tmpfiles.conf # /var/lib + /var/cache state-dir ownership
-├── tylervigario-website.sysusers     # sysusers.d snippet (declarative system user creation)
+├── vigario-website.spec         # RPM spec; %build invokes `npm ci && npm run build`
+├── vigario-website.service      # systemd service unit (installed under /usr/lib/systemd/system/)
+├── vigario-website.tmpfiles.conf # /var/lib + /var/cache state-dir ownership
+├── vigario-website.sysusers     # sysusers.d snippet (declarative system user creation)
 ├── apache-snippet.conf               # Apache reverse-proxy snippet (operator Includes from their own vhost)
 └── default.env                       # canonical env defaults (installed RO at /usr/lib/<pkg>/default.env)
 ```
@@ -187,7 +187,7 @@ npm run clean                     # rm .next, server.js, .eslintcache, node_modu
 ## Environment
 
 - **Dev**: Windows 11 + git-bash. Node via `fnm` — Bash sessions need `eval "$(fnm env --use-on-cd --shell bash)"` once before `npm`/`node` resolve. PowerShell tool also available.
-- **Prod**: Fedora 43 + systemd. Service binds 127.0.0.1 by default ([`server.ts`](server.ts)); operator's reverse proxy (Apache) fronts on :443. App tree at `/usr/share/tylervigario-website/` (RPM-owned, read-only). SQLite at `/var/lib/tylervigario-website/quotes.db` (StateDirectory, owned by `website:website`). Env: canonical defaults at `/usr/lib/<pkg>/default.env` (RPM-owned), operator overrides at `/etc/sysconfig/<pkg>` (NOT in RPM).
+- **Prod**: Fedora 43 + systemd. Service binds 127.0.0.1 by default ([`server.ts`](server.ts)); operator's reverse proxy (Apache) fronts on :443. App tree at `/usr/share/vigario-website/` (RPM-owned, read-only). SQLite at `/var/lib/vigario-website/quotes.db` (StateDirectory, owned by `website:website`). Env: canonical defaults at `/usr/lib/<pkg>/default.env` (RPM-owned), operator overrides at `/etc/sysconfig/<pkg>` (NOT in RPM).
 - **Tools required on prod for the *runtime*** are just `nodejs24` (pulled in by the RPM's `Requires:`). Build tooling (`make`/`g++`/`python`/`node-gyp`/`rpm-build`/`rpm-sign`/`createrepo_c`) lives on the prod host too because the self-hosted GitHub Actions runner runs there; build + sign + publish all happen locally. better-sqlite3 still compiles to a `.node` file once per release, just on the runner not at install time.
 
 ## Guardrails — things that break correctness if ignored
@@ -195,8 +195,8 @@ npm run clean                     # rm .next, server.js, .eslintcache, node_modu
 - **`Sentry.close()` requires the default import.** [`server.ts`](server.ts) uses `import Sentry from "@sentry/nextjs"`, not `import * as Sentry from`. The namespace form silently lacks `Sentry.close` under the CJS-via-ESM-namespace shape `@sentry/nextjs` ships — a deploy with the wrong form skips the Sentry flush on every shutdown without erroring. Everywhere else (instrumentation, error boundaries, sentry.{server,edge}.config.ts) keeps namespace — those only call `init` / `captureException` / `captureRequestError`, which exist on both shapes.
 - **`SQLITE_PATH` must be absolute.** [`src/lib/runtime-config.ts`](src/lib/runtime-config.ts) rejects relative paths at startup. Don't default it; don't make it optional; don't fall back to cwd.
 - **Don't wrap route handlers in top-level try/catch.** Errors must propagate to Next so `onRequestError` (in [`src/instrumentation.ts`](src/instrumentation.ts)) forwards them to Sentry. The email-send `try/catch` inside the route is the only legitimate catch — the row is already saved by that point, the email is best-effort.
-- **Don't drift the spec's runtime contract from the unit + vhost + env template.** [`packaging/tylervigario-website.spec`](../packaging/tylervigario-website.spec) declares paths under `/usr/share/<pkg>/`, `/var/lib/<pkg>/`, `/etc/<pkg>/`. The systemd unit's `WorkingDirectory`, `EnvironmentFile`, `StateDirectory`, and `CacheDirectory` must match. The vhost's `ProxyPass` target must match the env's `PORT`. Misalignment shows up as runtime path errors that are obvious in hindsight and expensive to debug live.
-- **Don't add `output: "standalone"` back.** Next's static-trace machinery keeps tripping over custom server entrypoints + dynamic requires (v2.80.0–v2.83.0 in vis-daily-tracker were four consecutive bad releases). Under the current shape, `next() + app.prepare()` works because the full Next module tree is present in `/usr/share/tylervigario-website/node_modules/`. Shipping a 100MB+ RPM beats a flaky tracer.
+- **Don't drift the spec's runtime contract from the unit + vhost + env template.** [`packaging/vigario-website.spec`](../packaging/vigario-website.spec) declares paths under `/usr/share/<pkg>/`, `/var/lib/<pkg>/`, `/etc/<pkg>/`. The systemd unit's `WorkingDirectory`, `EnvironmentFile`, `StateDirectory`, and `CacheDirectory` must match. The vhost's `ProxyPass` target must match the env's `PORT`. Misalignment shows up as runtime path errors that are obvious in hindsight and expensive to debug live.
+- **Don't add `output: "standalone"` back.** Next's static-trace machinery keeps tripping over custom server entrypoints + dynamic requires (v2.80.0–v2.83.0 in vis-daily-tracker were four consecutive bad releases). Under the current shape, `next() + app.prepare()` works because the full Next module tree is present in `/usr/share/vigario-website/node_modules/`. Shipping a 100MB+ RPM beats a flaky tracer.
 - **Don't bypass `check:public-env`.** Required `NEXT_PUBLIC_*` vars missing from the build-time env get inlined as literal `undefined` in client chunks — silent runtime degradation. The check fails the build loudly. Optional `NEXT_PUBLIC_*` (currently just `NEXT_PUBLIC_SENTRY_DSN`) lives in the allowlist inside the script and only emits a warning.
 - **Bump Node major across all five pins together.** `NODE_VERSION` env in `.github/workflows/release.yml`, `.nvmrc`, `package.json#engines.node`, the RPM spec's `Requires: nodejs<N>`, and the systemd unit's `ExecStart=/usr/bin/node-<N>` must agree. The gate's first step enforces three of the five; the spec and unit have to be bumped manually in lockstep. Why the explicit versioned binary: Fedora's unversioned `nodejs` package on F43 is v22; `/usr/bin/node` would resolve to that. `nodejs24` is a parallel-install package that ships `/usr/bin/node-24` only.
 - **`better-sqlite3` is a native module.** Marked external in [`next.config.ts`](next.config.ts)'s `serverExternalPackages` and [`scripts/build-server.ts`](scripts/build-server.ts)'s esbuild externals. The native `.node` binding compiles during `npm ci` on the self-hosted runner (which IS the prod host) and ships pre-built in the RPM — production never recompiles it. Bumping the Node major changes the binding's ABI; the gate's Node-major-pin-alignment step is the canary.

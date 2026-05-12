@@ -1,4 +1,4 @@
-# tylervigario-website.spec
+# vigario-website.spec
 #
 # Marketing site for Vigario Technology Solutions (VTS), Tyler Vigario's
 # IT consultancy. Built on Next.js 16 with a custom server entrypoint
@@ -37,7 +37,7 @@
 # on stripped-upstream files and would just churn timestamps.
 %global         __strip /bin/true
 
-Name:           tylervigario-website
+Name:           vigario-website
 Version:        %{?_version}%{!?_version:0.0.0}
 Release:        1%{?dist}
 Summary:        tylervigario.com — Vigario Technology Solutions marketing site
@@ -95,18 +95,18 @@ submissions, nodemailer for optional notification email, and Sentry
 for error + performance monitoring.
 
 Ships:
-  - Pre-built Next.js tree at /usr/share/tylervigario-website/
+  - Pre-built Next.js tree at /usr/share/vigario-website/
   - systemd service unit at /usr/lib/systemd/system/
   - tmpfiles.d snippet for the /var/lib + /var/cache state dirs
   - sysusers.d snippet declaring the 'website' system user
-  - Canonical default env at /usr/lib/tylervigario-website/default.env
-  - Apache reverse-proxy snippet at /usr/share/tylervigario-website/
+  - Canonical default env at /usr/lib/vigario-website/default.env
+  - Apache reverse-proxy snippet at /usr/share/vigario-website/
     apache-snippet.conf (operator Include's it from their own vhost)
 
 Operator-owned, NOT shipped here:
   - The Apache vhost itself (TLS, ServerName, log paths — all host-
     specific)
-  - The env override file at /etc/sysconfig/tylervigario-website
+  - The env override file at /etc/sysconfig/vigario-website
     (optional drop-in over the canonical default)
   - The SQLite database at /var/lib/<pkg>/quotes.db (created at
     runtime by the app)
@@ -136,7 +136,7 @@ Operator-owned, NOT shipped here:
 # empty, otherwise scripts/check-public-env.ts fails the build.
 # It's deliberately empty here — the build artifact ships with no
 # baked-in Sentry DSN; the server-side DSN is set per-host via
-# /etc/sysconfig/tylervigario-website.
+# /etc/sysconfig/vigario-website.
 export CI=true
 export HUSKY=0
 export NEXT_PUBLIC_SENTRY_DSN=

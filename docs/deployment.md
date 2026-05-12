@@ -9,12 +9,12 @@ rollback, fleet management) is out of scope here.
 
 **RPM-as-artifact.** A tagged commit on `main` is built by CI on a
 self-hosted GitHub Actions runner (running on the prod host) into a
-signed `tylervigario-website-<version>-1.fc43.x86_64.rpm`, copied
+signed `vigario-website-<version>-1.fc43.x86_64.rpm`, copied
 into `/srv/dnf-repo-private/` (served at `http://repo.lan/`, LAN-only),
 and attached to the GitHub Release. Production installs it with
-`sudo dnf --refresh upgrade tylervigario-website`.
+`sudo dnf --refresh upgrade vigario-website`.
 
-`tylervigario-website` is a **private** package — it doesn't go to
+`vigario-website` is a **private** package — it doesn't go to
 `https://repo.tylervigario.com/` (the public-facing endpoint reserved
 for shareable third-party packaging Tyler eventually weeds out).
 
@@ -25,7 +25,7 @@ SSH or HTTPS to the home server is required.
 
 ## RPM dependencies
 
-Declared by `packaging/tylervigario-website.spec`'s `Requires:`:
+Declared by `packaging/vigario-website.spec`'s `Requires:`:
 
 | Package | Why |
 |---|---|
@@ -67,9 +67,9 @@ installing a package to discover where to install packages from.
 
 Two-layer environment:
 
-1. **Canonical defaults** at `/usr/lib/tylervigario-website/default.env`
+1. **Canonical defaults** at `/usr/lib/vigario-website/default.env`
    — read-only, RPM-owned. Lists every env var the app understands.
-2. **Operator overrides** at `/etc/sysconfig/tylervigario-website`
+2. **Operator overrides** at `/etc/sysconfig/vigario-website`
    — not RPM-owned, optional. Anything the operator sets here wins
    over the default.
 
@@ -84,7 +84,7 @@ override file with secrets (SMTP creds, Sentry DSN, etc).
 |---|---|---|
 | `HOSTNAME` | `127.0.0.1` | Bind addr. Reverse-proxy fronts on `:443`. |
 | `PORT` | `3000` | Bind port. |
-| `SQLITE_PATH` | `/var/lib/tylervigario-website/quotes.db` | Must be absolute. State dir owned by `website:website`, 0750. |
+| `SQLITE_PATH` | `/var/lib/vigario-website/quotes.db` | Must be absolute. State dir owned by `website:website`, 0750. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | (empty) | Optional. Empty disables email notifications on form submission. |
 | `SENTRY_DSN` | (empty) | Optional. Empty disables server-side Sentry. |
 
@@ -99,36 +99,36 @@ All paths read-only, RPM-owned:
 
 | Path | Purpose |
 |---|---|
-| `/usr/share/tylervigario-website/server.js` | Custom Next.js entrypoint (compiled from `server.ts`). |
-| `/usr/share/tylervigario-website/.next/` | Next build output. |
-| `/usr/share/tylervigario-website/.next/cache` | Symlink → `/var/cache/tylervigario-website/`. Next's runtime cache writes redirected into a writable, systemd-managed dir. |
-| `/usr/share/tylervigario-website/node_modules/` | Full prod dep tree incl. better-sqlite3 native binding. |
-| `/usr/share/tylervigario-website/public/` | Static assets. |
-| `/usr/share/tylervigario-website/package.json` | Read by Node at startup. |
-| `/usr/share/tylervigario-website/apache-snippet.conf` | Reverse-proxy snippet — operator Includes from their own vhost. |
-| `/usr/lib/tylervigario-website/default.env` | Canonical env defaults — read-only, RPM-owned. |
-| `/usr/lib/systemd/system/tylervigario-website.service` | systemd unit. |
-| `/usr/lib/tmpfiles.d/tylervigario-website.conf` | tmpfiles backstop for state dirs. |
-| `/usr/lib/sysusers.d/tylervigario-website.conf` | Declarative `website` user/group definition (processed by `systemd-sysusers` from `%pre`). |
+| `/usr/share/vigario-website/server.js` | Custom Next.js entrypoint (compiled from `server.ts`). |
+| `/usr/share/vigario-website/.next/` | Next build output. |
+| `/usr/share/vigario-website/.next/cache` | Symlink → `/var/cache/vigario-website/`. Next's runtime cache writes redirected into a writable, systemd-managed dir. |
+| `/usr/share/vigario-website/node_modules/` | Full prod dep tree incl. better-sqlite3 native binding. |
+| `/usr/share/vigario-website/public/` | Static assets. |
+| `/usr/share/vigario-website/package.json` | Read by Node at startup. |
+| `/usr/share/vigario-website/apache-snippet.conf` | Reverse-proxy snippet — operator Includes from their own vhost. |
+| `/usr/lib/vigario-website/default.env` | Canonical env defaults — read-only, RPM-owned. |
+| `/usr/lib/systemd/system/vigario-website.service` | systemd unit. |
+| `/usr/lib/tmpfiles.d/vigario-website.conf` | tmpfiles backstop for state dirs. |
+| `/usr/lib/sysusers.d/vigario-website.conf` | Declarative `website` user/group definition (processed by `systemd-sysusers` from `%pre`). |
 
 NOT shipped, operator-owned:
 
 | Path | Purpose |
 |---|---|
 | `/etc/httpd/conf.d/<vhost>.conf` (or wherever) | Operator's vhost — picks domain, TLS cert paths, log paths. `Include`s `/usr/share/<pkg>/apache-snippet.conf` inside. |
-| `/etc/sysconfig/tylervigario-website` | Operator env overrides — SMTP creds, Sentry DSN, anything host-specific. Optional. |
-| `/etc/systemd/system/tylervigario-website.service.d/*.conf` | Operator drop-ins for resource limits, `OnFailure=` notification, etc. |
-| `/var/lib/tylervigario-website/quotes.db` | SQLite db, created on first write. Backups operator-owned. |
+| `/etc/sysconfig/vigario-website` | Operator env overrides — SMTP creds, Sentry DSN, anything host-specific. Optional. |
+| `/etc/systemd/system/vigario-website.service.d/*.conf` | Operator drop-ins for resource limits, `OnFailure=` notification, etc. |
+| `/var/lib/vigario-website/quotes.db` | SQLite db, created on first write. Backups operator-owned. |
 | `/etc/letsencrypt/live/<domain>/...` | TLS certs, certbot-managed. |
 
 Created at runtime by the service unit:
-`/var/lib/tylervigario-website/` (StateDirectory) and
-`/var/cache/tylervigario-website/` (CacheDirectory). The
+`/var/lib/vigario-website/` (StateDirectory) and
+`/var/cache/vigario-website/` (CacheDirectory). The
 `.next/cache` symlink resolves through the latter.
 
 ## Build
 
-`packaging/tylervigario-website.spec` drives the build. The
+`packaging/vigario-website.spec` drives the build. The
 self-hosted runner invokes `rpmbuild -ba` directly on the prod host
 — the spec's `%build` runs `npm ci && npm run build` (which also
 exercises `scripts/build-server.ts` and `scripts/postbuild.ts`'s
@@ -151,7 +151,7 @@ vars (allowlisted in the script — currently just
 
 The RPM build deliberately leaves `NEXT_PUBLIC_SENTRY_DSN` empty.
 Client-side Sentry DSN is configured per-host at runtime via
-`/etc/sysconfig/tylervigario-website`, not baked into the build.
+`/etc/sysconfig/vigario-website`, not baked into the build.
 
 ## Signing
 
@@ -253,8 +253,8 @@ selects magnitude, not whether to bump.
 Reference, not contract:
 
 ```bash
-sudo dnf upgrade --refresh tylervigario-website
-sudo systemctl status tylervigario-website
+sudo dnf upgrade --refresh vigario-website
+sudo systemctl status vigario-website
 curl -sf https://tylervigario.com/api/health
 ```
 
@@ -264,8 +264,8 @@ version is visible immediately.
 Rollback:
 
 ```bash
-sudo dnf downgrade tylervigario-website-<previous-version>
+sudo dnf downgrade vigario-website-<previous-version>
 # or
-sudo dnf history list tylervigario-website
+sudo dnf history list vigario-website
 sudo dnf history undo <id>
 ```
