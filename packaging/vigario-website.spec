@@ -44,7 +44,7 @@
 # JS, w7 is ~5x faster to compress and ~2-5% larger on disk — the
 # few MB hit is invisible against the dispatch frequency and
 # download surface of a private repo. Package-local override
-# (%global, not /etc/rpm/macros) so no leakage to other packages
+# (%%global, not /etc/rpm/macros) so no leakage to other packages
 # that haven't measured this trade-off.
 %global         _binary_payload w7.zstdio
 
