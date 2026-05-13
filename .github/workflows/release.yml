@@ -215,18 +215,31 @@ jobs:
           git-cliff --bump ${BUMP_ARG:+$BUMP_ARG} --output CHANGELOG.md
           git-cliff --bump ${BUMP_ARG:+$BUMP_ARG} --unreleased --strip header --output RELEASE_NOTES.md
 
-      - name: Commit, tag and push
+      - name: Commit chore(release) locally
         if: steps.version.outputs.skip != 'true'
         run: |
+          # Commit the bump LOCALLY — don't push, don't tag yet. The
+          # rpmbuild "Prepare" step below runs `git archive HEAD` to
+          # produce the source tarball, and the spec's %build invokes
+          # `npm run build` against it; both need to see the bumped
+          # package.json so the Sentry release identifier and the
+          # artifact filename embed the right version. The commit
+          # therefore has to land in HEAD before the tarball is
+          # generated.
+          #
+          # BUT — pushing this commit (or the tag) would publish a
+          # version number to origin before the artifact exists. If
+          # any of rpmbuild / sign / publish fails, the runner's
+          # checkout dies at job end and origin/main is unchanged.
+          # The push + tag move to the end of the job, AFTER the RPM
+          # is durable in /srv/dnf-repo-private/. See "Tag and push
+          # to origin" near the bottom of this job. Failure mode this
+          # eliminates: a "burned" version tag on origin that points
+          # at no shippable artifact, like v1.5.2 from run
+          # 25774739519 (rpmbuild died on a comment-escape regression
+          # after the tag had already been pushed).
           git add package.json package-lock.json CHANGELOG.md
           git commit -m "chore(release): ${{ steps.version.outputs.tag }}"
-          # Annotated tag (-a) — required for `git push --follow-tags`
-          # to actually push it. Lightweight tags are silently skipped
-          # by --follow-tags, which leaves the commit on main and the
-          # tag nowhere (and dnf would have nothing to point a rollback
-          # at, since rollbacks index by git tag).
-          git tag -a ${{ steps.version.outputs.tag }} -m "Release ${{ steps.version.outputs.tag }}"
-          git push origin main --follow-tags
 
       # ---- RPM build ----
       #
@@ -327,6 +340,32 @@ jobs:
           restorecon -F "/srv/dnf-repo-private/${{ steps.rpm.outputs.name }}"
           createrepo_c --update --quiet /srv/dnf-repo-private
           echo "Published /srv/dnf-repo-private/${{ steps.rpm.outputs.name }}"
+
+      # ---- Tag + push origin (the RPM is durable in the dnf repo now) ----
+      - name: Tag and push to origin
+        if: steps.version.outputs.skip != 'true'
+        run: |
+          # Tag-after-artifact. By this point the signed RPM is sitting
+          # in /srv/dnf-repo-private/ and createrepo_c has updated the
+          # metadata — the version number is durable. Now and only now
+          # do we publish the chore(release) commit + the tag to origin.
+          # Invariant going forward: a tag on origin means an artifact
+          # exists for that tag. No more burned version numbers from
+          # rpmbuild failures that already ran past the push.
+          #
+          # Annotated tag (-a) — required for `git push --follow-tags`
+          # to actually push it. Lightweight tags are silently skipped
+          # by --follow-tags, which would leave the commit on main and
+          # the tag nowhere (and dnf would have nothing to point a
+          # rollback at, since rollbacks index by git tag).
+          #
+          # --atomic makes the two-ref push (main + the annotated tag)
+          # all-or-nothing at the server side. Without it, you could in
+          # principle land the commit on main but not the tag —
+          # a smaller-window version of the same "tag/commit/artifact
+          # disagree" anomaly this whole reorder eliminates.
+          git tag -a ${{ steps.version.outputs.tag }} -m "Release ${{ steps.version.outputs.tag }}"
+          git push origin main --atomic --follow-tags
 
       # ---- GitHub Release ----
       - name: Create GitHub Release with RPM asset
