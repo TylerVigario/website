@@ -37,6 +37,17 @@
 # on stripped-upstream files and would just churn timestamps.
 %global         __strip /bin/true
 
+# Drop the RPM payload compression from the Fedora default
+# (w19.zstdio — zstd at max level) to w7.zstdio. The default is
+# tuned for distro-scale bandwidth + mirror storage; we publish to
+# a LAN-only private repo serving one host. For a tree of mostly
+# JS, w7 is ~5x faster to compress and ~2-5% larger on disk — the
+# few MB hit is invisible against the dispatch frequency and
+# download surface of a private repo. Package-local override
+# (%global, not /etc/rpm/macros) so no leakage to other packages
+# that haven't measured this trade-off.
+%global         _binary_payload w7.zstdio
+
 Name:           vigario-website
 Version:        %{?_version}%{!?_version:0.0.0}
 Release:        1%{?dist}
@@ -173,8 +184,17 @@ npm prune --omit=dev --no-audit --no-fund
 
 %install
 # App tree — everything the runtime needs lives under /usr/share/<pkg>/.
+# Use `cp -al` (hardlink instead of copy-content) for the big trees.
+# BUILD/ and BUILDROOT/ live on the same filesystem under
+# $RUNNER_TEMP/rpmbuild, so hardlinks are valid and shed the IO that
+# a plain copy of node_modules + .next would incur. Safe here because
+# we've disabled every BRP that mutates files in place
+# (__brp_mangle_shebangs, __brp_python_bytecompile, __strip,
+# debug_package) — nothing further down the build pipeline rewrites
+# a file in BUILDROOT that would inadvertently mutate the BUILD-tree
+# original via the shared inode.
 install -d %{buildroot}%{_datadir}/%{name}
-cp -a server.js .next public node_modules package.json package-lock.json \
+cp -al server.js .next public node_modules package.json package-lock.json \
     %{buildroot}%{_datadir}/%{name}/
 
 # Strip build-time cache and replace with a symlink into /var/cache.
