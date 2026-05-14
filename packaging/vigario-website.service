@@ -58,6 +58,13 @@ RestrictNamespaces=true
 RestrictRealtime=true
 LockPersonality=true
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+# Hide other-user processes — the website uid has no reason to see
+# root-owned or sshd-owned PIDs. ProcSubset=pid is deliberately NOT
+# set: libuv reads /proc/cpuinfo for os.cpus() and
+# uv_resident_set_memory(); ProcSubset=pid would make both silently
+# return empty/wrong values. Don't "complete the hardening" by adding
+# it back.
+ProtectProc=invisible
 
 # Syscall filtering — @chown allowed because libuv's copyfile uses fchown.
 SystemCallArchitectures=native

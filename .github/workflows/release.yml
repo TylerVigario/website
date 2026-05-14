@@ -15,19 +15,22 @@ on:
   push:
     branches: [main]
   pull_request:
-  workflow_dispatch:
-    inputs:
-      bump:
-        description: "Version bump for release (leave empty to auto-detect from commits)"
-        required: false
-        type: choice
-        options: ["", "major", "minor", "patch"]
-        default: ""
+
+# Pure conventional-commit CD: the type of the merged commit IS the
+# release signal. feat/fix/refactor bump; chore/docs/test skip. If you
+# need to force a release of a chore-only window, push an empty commit
+# with the appropriate type:
+#
+#   git commit --allow-empty -m "fix(packaging): force release of <reason>"
+#   git push origin main
+#
+# The commit type documents intent in the changelog. No workflow_dispatch
+# input, no tag-push override — the conventional-commit type is the
+# single source of truth.
 
 # Concurrency: PRs cancel prior runs of the same PR (saves CI time
-# on rapid pushes), main pushes and dispatch runs queue serially
-# (don't cancel — every commit on main matters, every dispatch is a
-# release attempt).
+# on rapid pushes), main pushes queue serially (don't cancel — every
+# commit on main is a potential release).
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -111,13 +114,20 @@ jobs:
   # the actual signing runs as root with /root/.rpmmacros bound to the
   # private-signer subkey on /etc/server-admin/gnupg/.
   #
-  # Runs on workflow_dispatch only. Production picks up the new RPM via
+  # Trigger model: every push to main runs the gate, and if any
+  # bumpable conventional commits landed (feat/fix/refactor — git-
+  # cliff's skip-list filters chore/docs/test), this job auto-fires
+  # and ships an RPM. The startsWith filter breaks the loop the bot's
+  # chore(release) commit would otherwise create (push triggers
+  # release triggers push). Production picks up the new RPM via
   # `sudo dnf --refresh upgrade vigario-website`, manually.
   # =========================================================================
   release:
     name: Release
     needs: gate
-    if: github.event_name == 'workflow_dispatch'
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      !startsWith(github.event.head_commit.message, 'chore(release):')
     runs-on: [self-hosted, fedora-43]
     timeout-minutes: 30
     permissions:
@@ -156,30 +166,15 @@ jobs:
         id: version
         run: |
           CURRENT=$(node -p "require('./package.json').version")
-          # When inputs.bump is set, compute the target version directly
-          # from CURRENT + the bump type — DON'T ask git-cliff for it.
-          # `git-cliff --bump <type> --bumped-version` is silently a
-          # no-op when the cliff config's skip list filters out every
-          # commit since the last release (chore/docs/test under our
-          # six-type setup): cliff prints "There is nothing to bump"
-          # and emits the unchanged current version. That makes the
-          # `bump` workflow_dispatch input — advertised as a "force a
-          # release" affordance — fail to force anything when all
-          # queued commits are skipped. Doing the arithmetic ourselves
-          # makes the affordance honest.
-          if [ -n "${{ inputs.bump }}" ]; then
-            IFS='.' read -r MAJ MIN PAT <<< "$CURRENT"
-            case "${{ inputs.bump }}" in
-              major) BARE="$((MAJ + 1)).0.0" ;;
-              minor) BARE="${MAJ}.$((MIN + 1)).0" ;;
-              patch) BARE="${MAJ}.${MIN}.$((PAT + 1))" ;;
-              *) echo "::error::Unknown bump type '${{ inputs.bump }}' (expected major/minor/patch)"; exit 1 ;;
-            esac
-            TAG="v${BARE}"
-          else
-            TAG=$(git-cliff --bumped-version)
-            BARE="${TAG#v}"
-          fi
+          # Conventional-commit-driven bump. git-cliff walks commits
+          # since the last tag, classifies by type (feat → minor, fix /
+          # refactor → patch, chore / docs / test → skip), and emits the
+          # resolved next version. When the unreleased window contains
+          # only skip-list types, --bumped-version returns the current
+          # version unchanged → the skip=true branch below trips and the
+          # rest of the job no-ops.
+          TAG=$(git-cliff --bumped-version)
+          BARE="${TAG#v}"
           if [ "$BARE" = "$CURRENT" ]; then
             echo "::warning::No version change detected (already at $CURRENT). Skipping release."
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -211,9 +206,8 @@ jobs:
       - name: Generate changelog
         if: steps.version.outputs.skip != 'true'
         run: |
-          BUMP_ARG="${{ inputs.bump }}"
-          git-cliff --bump ${BUMP_ARG:+$BUMP_ARG} --output CHANGELOG.md
-          git-cliff --bump ${BUMP_ARG:+$BUMP_ARG} --unreleased --strip header --output RELEASE_NOTES.md
+          git-cliff --bump --output CHANGELOG.md
+          git-cliff --bump --unreleased --strip header --output RELEASE_NOTES.md
 
       - name: Commit chore(release) locally
         if: steps.version.outputs.skip != 'true'
@@ -395,7 +389,6 @@ jobs:
               echo "|------|-------|"
               echo "| **Version** | v${VERSION} |"
               echo "| **Tag** | \`${TAG}\` |"
-              echo "| **Bump** | ${{ inputs.bump || 'auto-detected' }} |"
               echo "| **RPM** | \`${RPM}\` |"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
