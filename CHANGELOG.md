@@ -1,4 +1,15 @@
 # Changelog
+## [1.5.4](https://github.com/TylerVigario/website/compare/v1.5.3...v1.5.4) (2026-05-14)
+
+### Bug Fixes
+
+* **packaging:** Remove backticks from sysusers comment to unblock %pre
+* **workflow:** Tag-after-artifact ordering in release job
+
+### Refactoring
+
+* **ci:** Pure conventional-commit release trigger + ProtectProc + dep bumps
+
 ## [1.5.3](https://github.com/TylerVigario/website/compare/v1.5.2...v1.5.3) (2026-05-13)
 
 ### Bug Fixes
