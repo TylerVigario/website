@@ -1,0 +1,11 @@
+# actionlint config. Declares the self-hosted runner label so actionlint
+# doesn't flag `runs-on: [self-hosted, fedora-43]` (the release job) as
+# an unknown label.
+#
+# fedora-43: the release job runs on the prod host itself — a Fedora 43
+# machine running github-runner as a service; the label is set at runner
+# registration. See docs/deployment.md for the deploy contract.
+
+self-hosted-runner:
+  labels:
+    - fedora-43

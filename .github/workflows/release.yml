@@ -66,6 +66,17 @@ jobs:
             echo "::error::Node major mismatch — bump NODE_VERSION env (release.yml), .nvmrc, and package.json engines.node together."
             exit 1
           fi
+      - name: Run actionlint
+        # Lints workflow YAML (bad ${{ }} expressions, deprecated action
+        # refs, shell-syntax errors in run: blocks) before the heavier
+        # steps — needs no node_modules, so failing here is cheap. Pin
+        # BOTH the installer-script tag (not `main`, which is mutable)
+        # AND the binary version so neither floats. The fedora-43
+        # self-hosted label is declared in .github/actionlint.yaml so
+        # the release job's runs-on passes.
+        run: |
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.6/scripts/download-actionlint.bash) 1.7.6
+          ./actionlint -color
       - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -259,7 +270,7 @@ jobs:
           # the spec for %sysusers_create_package. rpmbuild expects it
           # at SOURCES/<name>; the spec's Source1: declaration is a
           # bare filename so rpm resolves it relative to SOURCES/.
-          cp packaging/${PKG_NAME}.sysusers \
+          cp "packaging/${PKG_NAME}.sysusers" \
               "$RUNNER_TEMP/rpmbuild/SOURCES/${PKG_NAME}.sysusers"
 
       - name: rpmbuild -ba
@@ -281,7 +292,7 @@ jobs:
           rpmbuild -ba \
             --define "_version ${{ steps.version.outputs.version }}" \
             --define "_topdir $RUNNER_TEMP/rpmbuild" \
-            packaging/${PKG_NAME}.spec
+            "packaging/${PKG_NAME}.spec"
 
       - name: Locate built RPM
         id: rpm
@@ -291,7 +302,7 @@ jobs:
           # on ${PKG_NAME}-${VERSION}-*.rpm resolves to exactly one
           # file. No find, no scan.
           VERSION="${{ steps.version.outputs.version }}"
-          RPM=$(echo "$RUNNER_TEMP"/rpmbuild/RPMS/x86_64/${PKG_NAME}-${VERSION}-*.rpm)
+          RPM=$(echo "$RUNNER_TEMP/rpmbuild/RPMS/x86_64/${PKG_NAME}-${VERSION}-"*.rpm)
           if [ ! -f "$RPM" ]; then
             echo "::error::expected RPM not found at $RPM"
             ls -la "$RUNNER_TEMP/rpmbuild/RPMS/x86_64/" || :
