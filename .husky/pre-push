@@ -1,0 +1,57 @@
+# Branch-naming gate. Mirrors the type set commitlint accepts on
+# commits + PR titles (see .commitlintrc.js), plus `integration` for
+# the multi-PR-series integration-branch pattern (see CLAUDE.md
+# "Git + PR workflow"). Catches "I forgot the type/" or "wrong-case
+# slug" before it reaches origin.
+#
+# Reads stdin per the git pre-push protocol — one line per ref being
+# pushed, format `<local_ref> <local_sha> <remote_ref> <remote_sha>`.
+# Validates each remote_ref's short name independently, so:
+#   - `git push origin feat/foo:bad-name` IS caught (bad remote name)
+#   - Pushing while checked out on a malformed branch you aren't
+#     pushing is NOT blocked (only refs being pushed are checked)
+#   - Deletes (all-zero local_sha) skip the check
+#   - main pushes skip the check (the release workflow pushes
+#     chore(release) directly to main)
+#
+# Bypass for one push: git push --no-verify. Don't make a habit of it.
+#
+# Unlike pipetree, this hook does NOT also run typecheck/test — the
+# website keeps those in .husky/pre-commit (per-commit). This hook is
+# only the branch-name convention check.
+
+valid='^(feat|fix|refactor|perf|ci|build|docs|test|chore|revert|integration)/[a-z0-9]+(-[a-z0-9]+)*$'
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  # Delete refs have local_sha = 40 zeros. Nothing to validate.
+  case "$local_sha" in
+    0000000000000000000000000000000000000000) continue ;;
+  esac
+
+  # Only validate branch pushes (refs/heads/...). Tags, notes, etc.
+  # skip the convention check.
+  case "$remote_ref" in
+    refs/heads/*) branch="${remote_ref#refs/heads/}" ;;
+    *) continue ;;
+  esac
+
+  [ "$branch" = "main" ] && continue
+
+  if ! echo "$branch" | grep -Eq "$valid"; then
+    echo "error: branch name '$branch' doesn't match the convention." >&2
+    echo "" >&2
+    echo "Expected: <type>/<slug>" >&2
+    echo "  type: feat | fix | refactor | perf | ci | build | docs | test | chore | revert | integration" >&2
+    echo "  slug: kebab-case — starts and ends with [a-z0-9], single dashes only" >&2
+    echo "" >&2
+    echo "Examples:" >&2
+    echo "  feat/pots-audit-followup-email" >&2
+    echo "  ci/conventional-commit-cd" >&2
+    echo "  chore/bump-node-major" >&2
+    echo "  integration/cli-surface    (multi-PR series target; see CLAUDE.md)" >&2
+    echo "" >&2
+    echo "Rename: git branch -m <new-name>" >&2
+    echo "Bypass once: git push --no-verify" >&2
+    exit 1
+  fi
+done

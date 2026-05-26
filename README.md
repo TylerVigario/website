@@ -10,9 +10,10 @@ LAN-only dnf repo at `http://repo.lan/`; prod installs with `sudo dnf
 Read those for anything past "how do I run it locally."
 
 Stack: Next 16 (App Router), Tailwind v4, better-sqlite3 for
-quote/audit submissions, nodemailer for the optional "someone filled
-out a form" email, Sentry (`@sentry/nextjs`) for error + performance
-monitoring (no-op when DSNs unset).
+quote/audit submissions, nodemailer + react-email for the optional
+"someone filled out a form" notification email, Sentry
+(`@sentry/nextjs`) for error + performance monitoring (no-op when
+DSNs unset).
 
 ## Local dev
 
@@ -52,6 +53,8 @@ src/lib/
   required-env.json            # single source of truth for required-env names
   api/                         # zod: QuoteRequest, PotsAuditRequest, ProblemDetails (RFC 9457)
   services.tsx                 # service catalog (titles, blurbs, icons)
+  email/mailer.ts              # nodemailer transport + react-email render; best-effort form-notification send (Sentry-captured)
+src/emails/                    # react-email templates: quote-request, pots-audit-request + shared layout (preview: npm run email:dev)
 src/components/                # Nav, Hero, ContactForm, FadeIn, the usual
 src/instrumentation.ts         # Next runtime hook: Sentry init + runtime-config validation at startup
 src/instrumentation-client.ts  # Sentry browser init (replays-on-error, masked PII, extension-frame filter)

@@ -16,8 +16,9 @@ is the `/pots-migration` landing page — a campaign target for
 businesses panicking about copper-POTS sunset rate hikes. The rest of
 the site (home, about, contact, /services/\*) is supporting surface.
 
-Stack: Next 16 App Router, Tailwind v4, better-sqlite3, nodemailer
-for optional submission email, `@sentry/nextjs` for error + perf
+Stack: Next 16 App Router, Tailwind v4, better-sqlite3, nodemailer +
+react-email for the optional submission-notification email (templates
+in `src/emails/`), `@sentry/nextjs` for error + perf
 monitoring (no-op when DSNs unset), react-hook-form + zodResolver
 for form validation. No auth, no API consumers other than the site's
 own forms.
@@ -86,10 +87,12 @@ src/
 │   ├── runtime-config.ts             # validates required env at startup; fails fast before serving
 │   ├── required-env.json             # single canonical list
 │   ├── services.tsx                  # service catalog (titles, blurbs, icons)
-│   └── api/
-│       ├── error.ts                  # ProblemDetails zod schema + zodError() helper (RFC 9457)
-│       ├── quote.ts                  # QuoteRequest zod schema (shared client + server)
-│       └── pots-audit.ts             # PotsAuditRequest zod schema (shared)
+│   ├── api/
+│   │   ├── error.ts                  # ProblemDetails zod schema + zodError() helper (RFC 9457)
+│   │   ├── quote.ts                  # QuoteRequest zod schema (shared client + server)
+│   │   └── pots-audit.ts             # PotsAuditRequest zod schema (shared)
+│   └── email/mailer.ts               # nodemailer transport + react-email render; sendQuote/PotsAuditNotification (best-effort, Sentry-captured). Imported by the two POST routes.
+├── emails/                           # react-email templates: quote-request.tsx, pots-audit-request.tsx, components/layout.tsx (preview via `npm run email:dev`)
 ├── components/
 │   ├── ContactForm.tsx               # The shared quote form
 │   ├── Nav.tsx, Footer.tsx, Hero.tsx, FadeIn.tsx, etc.
@@ -155,7 +158,9 @@ export async function POST(req: NextRequest) {
   // ...
 
   // Email send retains its own try/catch (the row is already saved;
-  // SMTP failure is best-effort, just console.error'd).
+  // SMTP failure is best-effort). mailer.ts Sentry-captures the
+  // failure with redacted context and rethrows; the route catches it
+  // and logs via console.error.
 }
 ```
 
@@ -180,9 +185,31 @@ npm run clean                     # rm .next, server.js, .eslintcache, node_modu
 - Prettier: 100 col, double quotes, trailing commas, semicolons.
 - ESLint flat config with type-aware rules (`recommendedTypeChecked`). `req.json()` returns `any` — always parse through a zod schema.
 - Path alias: `@/*` → `src/*`.
-- **Conventional Commits** — minimalist 6-type set: `feat` (minor bump), `fix` / `refactor` (patch bump), `chore` / `docs` / `test` (skipped from changelog). Same set vis-daily-tracker uses. `.commitlintrc.js` enforces lowercase subject + the 6-type whitelist. `footer-leading-blank` is deliberately off (the conventional-changelog parser greedy-detected mid-body `Word:` line starts as the footer boundary and false-fired on natural prose like "What landed:" / "Why:"; the comment in `.commitlintrc.js` records why).
-- Husky hooks: `pre-commit` runs `lint-staged` (with Windows defensive re-stage) → `typecheck` → `test`; `commit-msg` runs `commitlint`.
-- `CHANGELOG.md` is regenerated from commits by git-cliff at release time — never hand-edit. Fix the commit message, not the changelog.
+- **Conventional Commits** — Angular 10-type set: `feat` (minor bump), `fix` / `revert` (patch bump), and `refactor` / `perf` / `ci` / `build` / `docs` / `test` / `chore` (no bump, no changelog entry). **Type = release impact, not change-nature** — a bug fix inside CI infra is `ci:` (no release), not `fix(ci):`. Matches pipetree's set (the canonical sibling). `.commitlintrc.js` enforces lowercase subject + the type whitelist; the matching bump matrix lives in `cliff.toml`'s `commit_parsers`. `footer-leading-blank` is deliberately off (the conventional-changelog parser greedy-detected mid-body `Word:` line starts as the footer boundary and false-fired on natural prose like "What landed:" / "Why:"; the comment in `.commitlintrc.js` records why).
+- Husky hooks: `pre-commit` runs `lint-staged` (with Windows defensive re-stage) → `typecheck` → `test`; `commit-msg` runs `commitlint`; `pre-push` enforces the `<type>/<slug>` branch-name convention.
+- `CHANGELOG.md` is regenerated from commits by git-cliff at release time — never hand-edit. Fix the commit message, not the changelog. (Because only `feat`/`fix`/`revert` are parsed, a regeneration drops historical `refactor`/`perf` entries — the changelog reflects user-facing change, not every commit.)
+
+## Git + PR workflow
+
+Hard rules. These mirror pipetree's; they exist because violating them produced concrete, hard-to-undo damage in the sibling repos.
+
+- **No direct commits to `main`.** Always branch first — `git branch --show-current` before any commit; if it says `main`, `git checkout -b <type>/<slug>` first. The release workflow's `chore(release)` push is the only thing that lands directly on `main`.
+- **Linear-only `main`, no force-push.** Rebase is the workflow. If a pull created a merge commit, fix it (reset + rebase + re-apply) rather than merging.
+- **Type = release impact, not change-nature.** The commit/PR *type* carries "does this ship to users" (only `feat`/`fix`/`revert` bump); the *scope* carries "where in the codebase." A bug fix inside CI infrastructure is `ci:` (no release), not `fix(ci):` (would bump patch).
+- **PR titles MUST be conventional.** Squash-merge uses the PR title as `main`'s commit message, so a non-conventional title pollutes `main` and breaks the release pipeline that walks commits to drive bumps. Enforced by [`.github/workflows/pr-title.yml`](.github/workflows/pr-title.yml), which reuses `.commitlintrc.js` as the single source of truth.
+- **Branch names match `<type>/<slug>`** — same type vocabulary as commitlint, plus `integration` for multi-PR series. Enforced by `.husky/pre-push`. Bypass once with `git push --no-verify`; don't make a habit of it.
+- **Never force-push a closed PR's branch.** GitHub permanently locks reopen with "branch was force-pushed or recreated." If a force-push is needed, confirm the PR is currently OPEN first (`gh pr view <n> --json state`).
+- **PR numbers are permanent.** When `gh pr reopen` / `gh pr edit` fails on the right PR, STOP and ask — never fall back to `gh pr create` for the same body of work, which burns a PR number on a duplicate.
+- **Empty commits drop on rebase-update.** `git commit --allow-empty` + GitHub's rebase-update silently drops the commit and auto-closes the PR. Make the commit non-empty, or use merge-update.
+
+### Multi-PR series
+
+A change spanning 2+ PRs needs the series-as-shipped to be what you tested, not the per-PR view (per-PR green ≠ series-as-shipped green).
+
+- **Predictable upfront**: branch `integration/<slug>` off `main`; sub-PRs target the integration branch (each still gets full CI via `pull_request`). The closing `integration/<slug>` → `main` PR is the release unit.
+- **Not predictable upfront**: control the release boundary with commit type. Intermediate PRs merge as `refactor:` / `chore:` (no bump); the closing PR that makes the series cohere gets `fix:` / `feat:` and ships.
+
+Don't introduce a permanent `develop` branch — the ceremony outweighs the benefit for a single-prod app. Integration branches are short-lived and per-series; `main` stays trunk.
 
 ## Environment
 
