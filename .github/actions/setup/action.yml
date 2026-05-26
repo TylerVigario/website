@@ -1,0 +1,47 @@
+name: Setup CI environment
+description: >-
+  Install Node (version pinned by .nvmrc), cache npm, and run
+  `npm ci`. The reusable block every job that runs npm scripts needs.
+
+  Caller is responsible for `actions/checkout` BEFORE invoking this
+  composite — local-path action references (`uses: ./.github/...`)
+  require the action.yml to already be on disk, so checkout has to
+  land first.
+
+  Node-pin verification lives in its own step (the gate's "Verify
+  Node major pins agree") — a repo-state check (.nvmrc vs
+  package.json#engines.node), so running it once is enough.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v6
+      with:
+        # .nvmrc IS the pin. Reading it here means the composite needs
+        # no node-version input — that would just be another place to
+        # drift from the file.
+        node-version-file: .nvmrc
+
+    - name: Compute npm cache key
+      # Hash package.json's dep fields ONLY, not the full lockfile.
+      # The release path rewrites package-lock.json's root `version`
+      # on every run, so a key based on hashFiles('**/package-lock.json')
+      # would rotate every release and accumulate one stale cache per
+      # run. Node major is read from .nvmrc so the key invalidates
+      # correctly when the major bumps.
+      id: cache-key
+      shell: bash
+      run: |
+        NODE_MAJOR=$(sed -E 's/^[^0-9]*([0-9]+).*/\1/' .nvmrc)
+        HASH=$(jq -S '{dependencies,devDependencies,optionalDependencies,peerDependencies}' package.json | sha256sum | cut -c1-16)
+        echo "key=npm-${{ runner.os }}-node${NODE_MAJOR}-${HASH}" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/cache@v5
+      with:
+        path: ~/.npm
+        key: ${{ steps.cache-key.outputs.key }}
+        restore-keys: |
+          npm-${{ runner.os }}-
+
+    - shell: bash
+      run: npm ci --prefer-offline

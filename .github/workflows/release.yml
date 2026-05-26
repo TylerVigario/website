@@ -3,12 +3,6 @@ name: CI
 env:
   HUSKY: 0
   CI: true
-  # Node major. Five places must declare it: this env var, .nvmrc,
-  # package.json#engines.node, the spec's `Requires: nodejs<N>`, and
-  # the unit's `ExecStart=/usr/bin/node-<N>`. The gate's "Verify
-  # Node major pins agree" step enforces the first three; the spec
-  # and unit are edited manually in lockstep when bumping.
-  NODE_VERSION: "24"
   PKG_NAME: vigario-website
 
 on:
@@ -53,17 +47,19 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Verify Node major pins agree
-        # NODE_VERSION env (this workflow), .nvmrc, and package.json
-        # engines.node must all declare the same Node major. The
-        # production RPM's Requires also pins this major — drift here
-        # would let CI green-light a build prod won't accept.
+        # .nvmrc and package.json#engines.node must declare the same
+        # Node major. CI reads .nvmrc directly (node-version-file in the
+        # setup composite + the release job), so there's no separate
+        # workflow pin. The RPM spec's `Requires: nodejs<N>` and the
+        # unit's `ExecStart=/usr/bin/node-<N>` pin it too (edited
+        # manually in lockstep); drift here would let CI green-light a
+        # build prod won't accept.
         run: |
           NVMRC_MAJOR=$(sed -E 's/^[^0-9]*([0-9]+).*/\1/' .nvmrc)
           ENGINES_MAJOR=$(node -p "require('./package.json').engines.node.match(/\d+/)[0]")
-          ENV_VERSION="${{ env.NODE_VERSION }}"
-          echo "Node major check: NODE_VERSION=$ENV_VERSION  .nvmrc=$NVMRC_MAJOR  engines.node=$ENGINES_MAJOR"
-          if [ "$NVMRC_MAJOR" != "$ENV_VERSION" ] || [ "$ENGINES_MAJOR" != "$ENV_VERSION" ]; then
-            echo "::error::Node major mismatch — bump NODE_VERSION env (release.yml), .nvmrc, and package.json engines.node together."
+          echo "Node major check: .nvmrc=$NVMRC_MAJOR  engines.node=$ENGINES_MAJOR"
+          if [ "$NVMRC_MAJOR" != "$ENGINES_MAJOR" ]; then
+            echo "::error::Node major mismatch — bump .nvmrc and package.json engines.node together (the spec's Requires: nodejs<N> and the unit's ExecStart=/usr/bin/node-<N> pin it too)."
             exit 1
           fi
       - name: Run actionlint
@@ -77,26 +73,10 @@ jobs:
         run: |
           bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.6/scripts/download-actionlint.bash) 1.7.6
           ./actionlint -color
-      - uses: actions/setup-node@v6
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      # Cache key derived from package.json's deps fields ONLY, not
-      # the full lockfile. The release path rewrites
-      # package-lock.json's root `version` on every run, so a key
-      # based on `hashFiles('**/package-lock.json')` would rotate
-      # every release and accumulate one stale cache per run.
-      - name: Compute npm cache key
-        id: cache-key
-        run: |
-          HASH=$(jq -S '{dependencies,devDependencies,optionalDependencies,peerDependencies}' package.json | sha256sum | cut -c1-16)
-          echo "key=npm-${{ runner.os }}-node${{ env.NODE_VERSION }}-${HASH}" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ steps.cache-key.outputs.key }}
-          restore-keys: |
-            npm-${{ runner.os }}-node${{ env.NODE_VERSION }}-
-      - run: npm ci --prefer-offline
+      # Node setup + npm cache + `npm ci`, factored into a composite so
+      # the release job (and future jobs) reuse the same block. Reads
+      # the Node version from .nvmrc.
+      - uses: ./.github/actions/setup
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run format
@@ -152,7 +132,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: .nvmrc
 
       - name: Install git-cliff
         run: |
