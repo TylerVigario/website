@@ -11,9 +11,10 @@ on:
   pull_request:
 
 # Pure conventional-commit CD: the type of the merged commit IS the
-# release signal. feat/fix/refactor bump; chore/docs/test skip. If you
-# need to force a release of a chore-only window, push an empty commit
-# with the appropriate type:
+# release signal. feat/fix/revert bump; refactor/perf/ci/build/docs/
+# test/chore skip (per cliff.toml's commit_parsers). If you need to
+# force a release of a chore-only window, push an empty commit with the
+# appropriate type:
 #
 #   git commit --allow-empty -m "fix(packaging): force release of <reason>"
 #   git push origin main
@@ -67,11 +68,11 @@ jobs:
         # refs, shell-syntax errors in run: blocks) before the heavier
         # steps — needs no node_modules, so failing here is cheap. Pin
         # BOTH the installer-script tag (not `main`, which is mutable)
-        # AND the binary version so neither floats. The fedora-43
-        # self-hosted label is declared in .github/actionlint.yaml so
-        # the release job's runs-on passes.
+        # AND the binary version so neither floats. The version-agnostic
+        # `fedora` self-hosted label is declared in .github/actionlint.yaml
+        # so the release job's runs-on passes.
         run: |
-          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.6/scripts/download-actionlint.bash) 1.7.6
+          bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12
           ./actionlint -color
       # Node setup + npm cache + `npm ci`, factored into a composite so
       # the release job (and future jobs) reuse the same block. Reads
@@ -106,9 +107,10 @@ jobs:
   # private-signer subkey on /etc/server-admin/gnupg/.
   #
   # Trigger model: every push to main runs the gate, and if any
-  # bumpable conventional commits landed (feat/fix/refactor — git-
-  # cliff's skip-list filters chore/docs/test), this job auto-fires
-  # and ships an RPM. The startsWith filter breaks the loop the bot's
+  # bumpable conventional commits landed (feat/fix/revert — git-cliff's
+  # skip-list filters refactor/perf/ci/build/docs/test/chore per
+  # cliff.toml), this job auto-fires and ships an RPM. The startsWith
+  # filter breaks the loop the bot's
   # chore(release) commit would otherwise create (push triggers
   # release triggers push). Production picks up the new RPM via
   # `sudo dnf --refresh upgrade vigario-website`, manually.
@@ -119,7 +121,13 @@ jobs:
     if: >-
       github.event_name == 'push' && github.ref == 'refs/heads/main' &&
       !startsWith(github.event.head_commit.message, 'chore(release):')
-    runs-on: [self-hosted, fedora-43]
+    # Version-agnostic label: targets the prod-host runner by its
+    # RPM-toolchain capability (rpmbuild / createrepo_c / rpmsign /
+    # SELinux restorecon), not its OS version. A versioned label like
+    # `fedora-43` silently stops matching the moment the host is
+    # upgraded or the runner is re-registered — the job would queue
+    # forever with no error. Keep this label OS-version-free.
+    runs-on: [self-hosted, fedora]
     timeout-minutes: 30
     permissions:
       contents: write
@@ -159,8 +167,9 @@ jobs:
           CURRENT=$(node -p "require('./package.json').version")
           # Conventional-commit-driven bump. git-cliff walks commits
           # since the last tag, classifies by type (feat → minor, fix /
-          # refactor → patch, chore / docs / test → skip), and emits the
-          # resolved next version. When the unreleased window contains
+          # revert → patch, breaking → major; refactor / perf / ci /
+          # build / docs / test / chore → skip per cliff.toml), and emits
+          # the resolved next version. When the unreleased window contains
           # only skip-list types, --bumped-version returns the current
           # version unchanged → the skip=true branch below trips and the
           # rest of the job no-ops.
