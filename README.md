@@ -35,8 +35,10 @@ a prior `npm run build` because `server.ts` hardcodes `dev: false` and
 with a missing-`.next/` error.
 
 Pre-commit hook runs lint-staged (eslint --fix + prettier) then
-`tsc --noEmit`. Commitlint enforces the 6-type set on the message:
-`feat | fix | refactor | docs | test | chore`. Don't try to be clever.
+`tsc --noEmit`. Commitlint enforces the Angular type set on the message
+— `feat`, `fix`, `refactor`, `perf`, `revert`, `ci`, `build`, `docs`,
+`test`, `chore`, lowercase subject. Only `feat`/`fix`/`revert` cut a
+release; the rest ship no version bump. Don't try to be clever.
 
 ## Where stuff lives
 
@@ -75,17 +77,20 @@ See [docs/deployment.md](docs/deployment.md) for the full contract.
 
 `.github/workflows/release.yml`:
 
-- **Gate** (runs on PR + push to main + dispatch): `npm ci` →
+- **Gate** (runs on every PR + every push to main): `npm ci` →
   typecheck → lint → format → test → build (with the real-boot
   postbuild smoke against the just-built server.js). First step
-  cross-checks three of the five Node-major pins (`NODE_VERSION`
-  env, `.nvmrc`, `engines.node`).
-- **Release** (dispatch only): git-cliff bumps version
-  (`feat→minor`, `fix/refactor→patch`, breaking→major;
-  chore/docs/test skip), annotated-tags, then builds + `sudo rpmsign`s
-  the RPM on the self-hosted runner, copies into
-  `/srv/dnf-repo-private/` (LAN-only, served at `http://repo.lan/`),
-  attaches the signed RPM to the GitHub Release.
+  cross-checks the two Node-major pins it can read directly (`.nvmrc`
+  vs `engines.node`) — the spec's `Requires: nodejs<N>` and the unit's
+  `ExecStart=/usr/bin/node-<N>` are the other two, bumped manually in
+  lockstep.
+- **Release** (push to main, when a bumpable commit landed): git-cliff
+  bumps version (`feat→minor`, `fix`/`revert`→patch, breaking→major;
+  `refactor`/`perf`/`ci`/`build`/`docs`/`test`/`chore` skip),
+  annotated-tags, then builds + `sudo rpmsign`s the RPM on the
+  self-hosted runner, copies into `/srv/dnf-repo-private/` (LAN-only,
+  served at `http://repo.lan/`), attaches the signed RPM to the GitHub
+  Release.
 
 CHANGELOG is regenerated each release from commit messages — don't
 hand-edit it. If the changelog reads wrong, fix the commit message
@@ -127,14 +132,14 @@ they want failure-email notification.
 
 ## Things that have bitten me / will bite me again
 
-- **Node major drift**. Bump `NODE_VERSION` env, `.nvmrc`,
-  `engines.node`, the spec's `Requires: nodejs<N>`, and the unit's
-  `ExecStart=/usr/bin/node-<N>` together. The gate enforces the first
-  three; the spec and unit have to move manually in lockstep.
+- **Node major drift**. Bump `.nvmrc`, `engines.node`, the spec's
+  `Requires: nodejs<N>`, and the unit's `ExecStart=/usr/bin/node-<N>`
+  together — four pins. The gate enforces the first two (`.nvmrc` vs
+  `engines.node`); the spec and unit move manually in lockstep.
 - **better-sqlite3 native binding**. The `.node` file compiles during
   `npm ci` on the self-hosted runner (which IS the prod host) and
   ships pre-built in the RPM. Bump Node major = ABI change → rebuild
-  in CI; prod just `dnf upgrade`s. The five Node-major pins above all
+  in CI; prod just `dnf upgrade`s. The four Node-major pins above all
   have to move together.
 - **SQLITE_PATH must be absolute**. App throws at startup via
   runtime-config if unset or relative. No cwd fallback — that bit me
