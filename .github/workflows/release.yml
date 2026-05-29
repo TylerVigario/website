@@ -57,7 +57,7 @@ jobs:
         # build prod won't accept.
         run: |
           NVMRC_MAJOR=$(sed -E 's/^[^0-9]*([0-9]+).*/\1/' .nvmrc)
-          ENGINES_MAJOR=$(node -p "require('./package.json').engines.node.match(/\d+/)[0]")
+          ENGINES_MAJOR=$(jq -r '.engines.node' package.json | grep -oE '[0-9]+' | head -1)
           echo "Node major check: .nvmrc=$NVMRC_MAJOR  engines.node=$ENGINES_MAJOR"
           if [ "$NVMRC_MAJOR" != "$ENGINES_MAJOR" ]; then
             echo "::error::Node major mismatch — bump .nvmrc and package.json engines.node together (the spec's Requires: nodejs<N> and the unit's ExecStart=/usr/bin/node-<N> pin it too)."
@@ -82,6 +82,19 @@ jobs:
       - run: npm run lint
       - run: npm run format
       - run: npm test
+      - name: Cache Next build
+        # Persist Next's incremental build cache across gate runs.
+        # `next build` writes per-route/module artifacts under
+        # `.next/cache`; a warm cache shaves wall-clock off the build.
+        # Key rotates when deps or source change; restore-keys let a
+        # stale cache still seed the next build's incremental layer.
+        uses: actions/cache@v5
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx', 'next.config.ts') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            nextjs-${{ runner.os }}-
       - name: Validate build
         # Gate's build runs on ubuntu-latest — sanity check that
         # `npm run build` works on the tagged commit before any release
@@ -109,10 +122,11 @@ jobs:
   # Trigger model: every push to main runs the gate, and if any
   # bumpable conventional commits landed (feat/fix/revert — git-cliff's
   # skip-list filters refactor/perf/ci/build/docs/test/chore per
-  # cliff.toml), this job auto-fires and ships an RPM. The startsWith
-  # filter breaks the loop the bot's
-  # chore(release) commit would otherwise create (push triggers
-  # release triggers push). Production picks up the new RPM via
+  # cliff.toml), this job auto-fires and ships an RPM. The bot's
+  # chore(release) commit carries `[skip ci]`, so pushing it dispatches
+  # no run at all; the `!startsWith(... 'chore(release):')` filter on
+  # this job's `if:` stays as defense-in-depth against the push →
+  # release → push loop. Production picks up the new RPM via
   # `sudo dnf --refresh upgrade vigario-website`, manually.
   # =========================================================================
   release:
@@ -233,7 +247,13 @@ jobs:
           # 25774739519 (rpmbuild died on a comment-escape regression
           # after the tag had already been pushed).
           git add package.json package-lock.json CHANGELOG.md
-          git commit -m "chore(release): ${{ steps.version.outputs.tag }}"
+          # `[skip ci]` suppresses the workflow run that pushing this
+          # commit to main would otherwise dispatch. Without it the gate
+          # re-runs in full on every release just for the release job's
+          # startsWith filter to no-op it — wasted minutes. The filter
+          # stays as defense-in-depth; [skip ci] is what stops the
+          # dispatch in the first place.
+          git commit -m "chore(release): ${{ steps.version.outputs.tag }} [skip ci]"
 
       # ---- RPM build ----
       #
@@ -358,6 +378,20 @@ jobs:
           # principle land the commit on main but not the tag —
           # a smaller-window version of the same "tag/commit/artifact
           # disagree" anomaly this whole reorder eliminates.
+          #
+          # Deliberately NO rebase before this push. If origin/main
+          # advanced during rpmbuild (e.g. a PR merged), this push is
+          # rejected non-fast-forward and the job fails — the SAFE
+          # outcome. The signed RPM was built by `git archive HEAD` from
+          # THIS commit's tree; rebasing the chore(release) commit onto
+          # the new arrivals would publish a tag pointing at a tree the
+          # artifact was NOT built from, and silently drop the intervening
+          # commit from the changelog (it becomes an ancestor of this tag,
+          # so the next release's git-cliff skips it too). Recovery is a
+          # re-run: it recomputes the version and rebuilds from the
+          # updated main, so artifact and tag match. An orphaned (untagged)
+          # RPM left in the dnf repo by the failed push is the accepted
+          # lesser evil.
           git tag -a ${{ steps.version.outputs.tag }} -m "Release ${{ steps.version.outputs.tag }}"
           git push origin main --atomic --follow-tags
 
