@@ -63,7 +63,6 @@ src/sentry.edge.config.ts      # Sentry edge-runtime init (no edge handlers yet,
 server.ts                      # source for the custom entrypoint (esbuild → server.js at repo root)
 scripts/build-server.ts        # compile server.ts → server.js
 scripts/postbuild.ts           # real-boot smoke against the just-built server.js (hermetic env)
-scripts/check-public-env.ts    # fails build if a required NEXT_PUBLIC_* is missing from build-time env
 ```
 
 ## Build & release

@@ -141,13 +141,13 @@ glibc exactly. Hosts running anything else are out of scope.
 The build is `BuildArch: x86_64` (not `noarch`) for the same reason
 — the bundled native binding makes the whole RPM arch-dependent.
 
-## Required `NEXT_PUBLIC_*` at build time
+## `NEXT_PUBLIC_*` at build time
 
-`scripts/check-public-env.ts` scans `src/` for `process.env.NEXT_PUBLIC_*`
-references and fails the build if any required public env var is
-missing or empty in the build-time environment. Optional public
-vars (allowlisted in the script — currently just
-`NEXT_PUBLIC_SENTRY_DSN`) emit a warning instead.
+The site references exactly one `NEXT_PUBLIC_*` var, the optional
+`NEXT_PUBLIC_SENTRY_DSN`. `instrumentation-client.ts` gates the whole
+browser `Sentry.init` on its presence, so an absent DSN makes the
+client SDK a no-op rather than breaking anything — there are no
+*required* public vars to guard at build time.
 
 The RPM build deliberately leaves `NEXT_PUBLIC_SENTRY_DSN` empty.
 Client-side Sentry DSN is configured per-host at runtime via
