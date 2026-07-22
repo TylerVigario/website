@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { caseStudies } from "@/lib/work";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
@@ -39,11 +40,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
-      url: "https://tylervigario.com/work/pipetree",
-      lastModified: "2026-07-17",
+      url: "https://tylervigario.com/work",
+      lastModified: "2026-07-22",
       changeFrequency: "monthly",
       priority: 0.8,
     },
+    // Per-case-study pages, generated from the shared data module so the
+    // sitemap can't drift when a study is added or removed.
+    ...caseStudies.map((cs) => ({
+      url: `https://tylervigario.com${cs.href}`,
+      lastModified: cs.lastModified,
+      changeFrequency: "monthly" as const,
+      priority: 0.8,
+    })),
     {
       url: "https://tylervigario.com/about",
       lastModified: "2026-04-02",
