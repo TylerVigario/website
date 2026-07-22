@@ -39,6 +39,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: "https://tylervigario.com/work/pipetree",
+      lastModified: "2026-07-17",
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
       url: "https://tylervigario.com/about",
       lastModified: "2026-04-02",
       changeFrequency: "monthly",

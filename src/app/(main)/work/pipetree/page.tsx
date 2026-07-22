@@ -1,0 +1,419 @@
+import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
+import FadeIn from "@/components/FadeIn";
+
+export const metadata: Metadata = {
+  title: "Pipetree Case Study",
+  description:
+    "How VTS built Pipetree — an operations platform for crossbore CCTV pipe inspection. Typed field data in, a live infrastructure graph out, PM review inline on the graph.",
+  alternates: {
+    canonical: "https://tylervigario.com/work/pipetree",
+  },
+  openGraph: {
+    title: "Pipetree Case Study | Vigario Technology Solutions",
+    description:
+      "How VTS built Pipetree — an operations platform for crossbore CCTV pipe inspection. Typed field data in, a live infrastructure graph out, PM review inline on the graph.",
+    url: "https://tylervigario.com/work/pipetree",
+    siteName: "Vigario Technology Solutions",
+    locale: "en_US",
+    type: "website",
+  },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "@id": "https://tylervigario.com/work/pipetree#software",
+  name: "Pipetree",
+  description:
+    "Operations platform for crossbore CCTV pipe inspection. Operators enter typed field data; the system derives a live infrastructure graph; PMs resolve problems inline on the graph.",
+  url: "https://tylervigario.com/work/pipetree",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Linux (self-hosted)",
+  license: "https://www.gnu.org/licenses/agpl-3.0.html",
+  author: {
+    "@type": "ProfessionalService",
+    "@id": "https://tylervigario.com/#business",
+    name: "Vigario Technology Solutions",
+  },
+};
+
+const stats = [
+  { value: "248", label: "production releases, Feb–Jul 2026" },
+  { value: "10", label: "typed field-entry kinds" },
+  { value: "0", label: "stored pipe models — the graph is derived" },
+  { value: "AGPL", label: "open source, v3.0-or-later" },
+];
+
+const ideas = [
+  {
+    title: "The data is the graph",
+    body: "There is no Pipe table, no CAD import, no pre-defined segments. As operators log inspections, segments connect into chains, chains group by address, and completeness is computed from the actual run data on every read. Delete an entry and the tree updates. Reroute a lateral and it reflows. There is never a sync bug between the data and the derived graph — they are the same thing.",
+  },
+  {
+    title: "Topology and completeness are two axes",
+    body: "A questionable camera run still shows the pipe on the map — but only a successful run (or one a PM explicitly accepts) proves the endpoint complete. A lateral can be visible and unproven at the same time, and the UI says so. Conflating those two axes is how inspection operations end up trusting maps they shouldn't.",
+  },
+  {
+    title: "The pipe tree is the review surface",
+    body: "There is no click-through-every-submission verification workflow. Project managers see the same graph the operators built, annotated with action tags — needs cleanout, orphaned branch, unlinked, pending review — and clear them inline. Accept flips a questionable run to success; Reject drops a wrong run so the next-newest wins automatically. Every change is audited.",
+  },
+];
+
+const stack = [
+  {
+    layer: "Application",
+    choice:
+      "Next.js 16 (App Router), React 19, TypeScript — one process, custom server entrypoint with WebSocket upgrade and graceful shutdown",
+  },
+  {
+    layer: "Data",
+    choice:
+      "PostgreSQL with Prisma, Zod validation at every API edge, native Postgres enums for closed sets",
+  },
+  {
+    layer: "Field UX",
+    choice:
+      "PWA with offline-aware service worker, 2-second draft auto-save with cross-device sync, typed photo slots with HEIC-to-JPEG processing",
+  },
+  {
+    layer: "Auth",
+    choice: "Session auth for people, service tokens for machines, one dispatch path for both",
+  },
+  { layer: "Geo", choice: "Google Places + Maps with per-tap GPS anomaly warnings" },
+  {
+    layer: "Deploy",
+    choice:
+      "GPG-signed RPMs from self-hosted CI onto hardened Fedora + systemd — no containers, no cloud dependency",
+  },
+];
+
+const screenshots = [
+  {
+    src: "/images/work/pipetree/project-mainline.webp",
+    alt: "Pipetree project Mainline tab: segments-clear progress bar, diagnostic filter chips, and mainline segment rows flagged as blocked on PM review",
+    caption:
+      "The Mainline tab — segment completeness at a glance, with diagnostic tags a PM clears inline.",
+  },
+  {
+    src: "/images/work/pipetree/project-addresses.webp",
+    alt: "Pipetree project Addresses tab: per-address completion stats and diagnostics like unlinked laterals and branches that did not reach a terminal",
+    caption:
+      "The Addresses tab — every address gets its own topology and completeness diagnostics, filterable by issue.",
+  },
+  {
+    src: "/images/work/pipetree/submission-editor.webp",
+    alt: "Pipetree submission view: a daily crew submission with a mainline inspection, its tap list at footages, and typed lateral inspection entries",
+    caption:
+      "A daily submission — a mainline run with its taps at footage, and the typed lateral entries that hang off it.",
+  },
+  {
+    src: "/images/work/pipetree/project-overview.webp",
+    alt: "Pipetree project Overview tab: project pace metrics, completion percentage, and per-operator footage contributions",
+    caption: "The Overview tab — project pace, completion, and per-operator contributions.",
+  },
+];
+
+export default function PipetreePage() {
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
+      {/* Hero */}
+      <section className="pt-32 pb-16 lg:pb-20 lg:pt-36">
+        <div className="mx-auto max-w-6xl px-6">
+          <FadeIn animation="fade-in-up" margin="0px">
+            <p className="text-sm font-medium text-accent">Work / Case Study</p>
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-navy sm:text-4xl md:text-5xl">
+              Pipetree
+            </h1>
+            <p className="mt-4 max-w-2xl text-lg text-muted leading-relaxed">
+              An operations platform for crossbore CCTV pipe inspection, built and operated by VTS.
+              Operators enter typed field data. The system derives a live infrastructure graph.
+              Project managers resolve problems inline on the graph &mdash; in production daily
+              since early 2026.
+            </p>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section className="bg-surface py-12 lg:py-14">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
+            {stats.map((s, i) => (
+              <FadeIn key={s.label} animation="fade-in" delay={i * 0.1}>
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-navy sm:text-4xl">{s.value}</p>
+                  <p className="mt-2 text-sm text-muted">{s.label}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* The problem */}
+      <section className="py-16 lg:py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <FadeIn animation="fade-in-up">
+            <div className="mx-auto max-w-3xl">
+              <h2 className="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                The problem
+              </h2>
+              <div className="mt-6 space-y-4 text-muted leading-relaxed sm:text-lg">
+                <p>
+                  When a gas line is bored through a sewer lateral &mdash; a crossbore &mdash; it
+                  can sit undetected for years until a plumber&apos;s cutter head finds it.
+                  Crossbore-prevention crews run CCTV cameras through sewer mainlines and laterals
+                  to prove that every address on a project is clear. Each crew turns in a daily
+                  submission: camera runs, taps discovered, access problems, photos, footage.
+                </p>
+                <p>
+                  The hard part isn&apos;t collecting that data &mdash; it&apos;s knowing what it
+                  adds up to. Which addresses are actually proven complete? Which laterals were seen
+                  but never verified? Which runs conflict? General-purpose tools &mdash; paper
+                  forms, spreadsheets, folders of video files &mdash; can&apos;t answer those
+                  questions, because they don&apos;t understand that the data describes a connected
+                  network of pipes.
+                </p>
+                <p>
+                  Pipetree was designed by someone who has run these crews. That&apos;s the
+                  difference: it encodes how the work actually happens in the field, not how an
+                  office imagines it happens.
+                </p>
+              </div>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* Three ideas */}
+      <section className="bg-surface py-16 lg:py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <FadeIn animation="fade-in-up">
+            <h2 className="text-center text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+              Three load-bearing ideas
+            </h2>
+          </FadeIn>
+          <div className="mt-10 grid gap-6 lg:grid-cols-3">
+            {ideas.map((idea, i) => (
+              <FadeIn key={idea.title} animation="fade-in" delay={i * 0.1}>
+                <div className="h-full rounded-xl border border-border bg-surface-light p-6">
+                  <h3 className="text-lg font-semibold text-navy">{idea.title}</h3>
+                  <p className="mt-3 text-sm text-muted leading-relaxed">{idea.body}</p>
+                </div>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Screenshots */}
+      <section className="py-16 lg:py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <FadeIn animation="fade-in-up">
+            <h2 className="text-center text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+              The product
+            </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-center text-muted sm:text-lg">
+              Captured from a demo instance seeded with fictional inspection data.
+            </p>
+          </FadeIn>
+          <div className="mt-10 grid gap-6 md:grid-cols-2">
+            {screenshots.map((s, i) => (
+              <FadeIn key={s.src} animation="fade-in" delay={i * 0.1}>
+                <figure className="overflow-hidden rounded-xl border border-border bg-surface-light">
+                  <Image
+                    src={s.src}
+                    alt={s.alt}
+                    width={2400}
+                    height={1500}
+                    sizes="(min-width: 768px) 50vw, 100vw"
+                    className="w-full border-b border-border"
+                  />
+                  <figcaption className="p-4 text-sm text-muted leading-relaxed">
+                    {s.caption}
+                  </figcaption>
+                </figure>
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Field-first design */}
+      <section className="bg-surface py-16 lg:py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <FadeIn animation="fade-in-up">
+            <div className="mx-auto max-w-3xl">
+              <h2 className="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                Built for muddy gloves, not office chairs
+              </h2>
+              <div className="mt-6 space-y-4 text-muted leading-relaxed sm:text-lg">
+                <p>
+                  Operators don&apos;t get input gates &mdash; they get suggestions and warnings.
+                  Bad data is a review concern, not a submission blocker; a tap GPS reading 1,000
+                  feet from its siblings surfaces an amber warning without stopping the save. Drafts
+                  auto-save every two seconds and sync across devices, so a submission started on
+                  the truck laptop finishes on a phone. Photos are typed slots per entry &mdash; the
+                  operator sees exactly which shots this entry still needs, and requirements are
+                  enforced at submission, not mid-crawl.
+                </p>
+                <p>
+                  New entries pre-fill from the previous one &mdash; but only fields where being
+                  wrong costs nothing to fix. Addresses carry forward; lateral IDs never do. Getting
+                  that boundary right is field knowledge, not software knowledge.
+                </p>
+              </div>
+            </div>
+          </FadeIn>
+          <div className="mx-auto mt-10 grid max-w-3xl gap-6 sm:grid-cols-2">
+            <FadeIn animation="fade-in">
+              <figure className="overflow-hidden rounded-xl border border-border bg-surface-light">
+                <Image
+                  src="/images/work/pipetree/mobile-draft-form.webp"
+                  alt="Pipetree mainline inspection entry form on a phone: from and to access points, direction, distance, pass/review/fail result, and notes"
+                  width={1179}
+                  height={1980}
+                  sizes="(min-width: 640px) 24rem, 100vw"
+                  className="w-full border-b border-border"
+                />
+                <figcaption className="p-4 text-sm text-muted leading-relaxed">
+                  A mainline run entered from the truck &mdash; typed fields, suggestions over
+                  gates, auto-saved as a draft every two seconds.
+                </figcaption>
+              </figure>
+            </FadeIn>
+            <FadeIn animation="fade-in" delay={0.1}>
+              <figure className="overflow-hidden rounded-xl border border-border bg-surface-light">
+                <Image
+                  src="/images/work/pipetree/mobile-entry-picker.webp"
+                  alt="Pipetree Add Entry picker on a phone: searchable entry kinds grouped into inspections and requests, each with a type badge"
+                  width={1179}
+                  height={1980}
+                  sizes="(min-width: 640px) 24rem, 100vw"
+                  className="w-full border-b border-border"
+                />
+                <figcaption className="p-4 text-sm text-muted leading-relaxed">
+                  Add Entry on a phone &mdash; every entry kind the trade actually files, grouped
+                  and searchable.
+                </figcaption>
+              </figure>
+            </FadeIn>
+          </div>
+        </div>
+      </section>
+
+      {/* Architecture */}
+      <section className="py-16 lg:py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <FadeIn animation="fade-in-up">
+            <div className="mx-auto max-w-3xl">
+              <h2 className="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                Deliberately boring architecture
+              </h2>
+              <p className="mt-6 text-muted leading-relaxed sm:text-lg">
+                One Next.js process, one PostgreSQL database, one Linux host. No message broker, no
+                queue, no background-worker fleet &mdash; scheduled work is CLI subcommands the app
+                ships, run by systemd timers. Boring is what lets one engineer ship 248 production
+                releases in five months without an ops team.
+              </p>
+            </div>
+          </FadeIn>
+          <div className="mx-auto mt-10 max-w-3xl">
+            <FadeIn animation="fade-in">
+              <div className="overflow-hidden rounded-xl border border-border bg-surface-light">
+                {stack.map((row, i) => (
+                  <div
+                    key={row.layer}
+                    className={`flex flex-col gap-1 p-4 sm:flex-row sm:gap-6 ${
+                      i > 0 ? "border-t border-border" : ""
+                    }`}
+                  >
+                    <p className="w-28 shrink-0 text-sm font-semibold text-navy">{row.layer}</p>
+                    <p className="text-sm text-muted leading-relaxed">{row.choice}</p>
+                  </div>
+                ))}
+              </div>
+            </FadeIn>
+          </div>
+        </div>
+      </section>
+
+      {/* Open source */}
+      <section className="bg-surface py-16 lg:py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <FadeIn animation="fade-in-up">
+            <div className="mx-auto max-w-3xl">
+              <h2 className="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                Open source, on purpose
+              </h2>
+              <div className="mt-6 space-y-4 text-muted leading-relaxed sm:text-lg">
+                <p>
+                  Pipetree&apos;s source is released under AGPL-3.0-or-later. If someone modifies it
+                  and runs the modified copy as a service, the people using that service get the
+                  source &mdash; reciprocity that survives the SaaS era. Install it, self-host it,
+                  hack on it; the deployment contract is real and documented.
+                </p>
+                <p>
+                  <a
+                    href="https://github.com/Vigario-Technology-Solutions/pipetree"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-accent underline transition-colors hover:text-accent-bright"
+                  >
+                    Read the source on GitHub
+                  </a>
+                </p>
+              </div>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="py-16 lg:py-20">
+        <div className="mx-auto max-w-6xl px-6">
+          <FadeIn animation="fade-in-up">
+            <div className="mx-auto max-w-3xl text-center">
+              <h2 className="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                Software that understands field operations
+              </h2>
+              <p className="mt-4 text-lg text-muted">
+                Pipetree exists because the person writing the code has run the crews. If your
+                operation needs software built by someone who speaks both languages, let&apos;s
+                talk.
+              </p>
+              <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                <Link
+                  href="/contact"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-base font-semibold text-white transition-all hover:bg-accent-bright hover:shadow-lg hover:shadow-accent/15"
+                >
+                  Get in touch
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    className="h-5 w-5"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </Link>
+              </div>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+    </>
+  );
+}

@@ -29,6 +29,10 @@ export default function Footer() {
               Services
             </Link>
             <span className="hidden text-border md:inline">|</span>
+            <Link href="/work/pipetree" className="py-3 transition-colors hover:text-foreground">
+              Work
+            </Link>
+            <span className="hidden text-border md:inline">|</span>
             <Link href="/about" className="py-3 transition-colors hover:text-foreground">
               About
             </Link>
