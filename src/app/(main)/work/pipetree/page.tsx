@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
+import Screenshots from "./screenshots";
 
 export const metadata: Metadata = {
   title: "Pipetree Case Study",
@@ -86,32 +86,6 @@ const stack = [
     layer: "Deploy",
     choice:
       "GPG-signed RPMs from self-hosted CI onto hardened Fedora + systemd — no containers, no cloud dependency",
-  },
-];
-
-const screenshots = [
-  {
-    src: "/images/work/pipetree/project-mainline.webp",
-    alt: "Pipetree project Mainline tab: segments-clear progress bar, diagnostic filter chips, and mainline segment rows flagged as blocked on PM review",
-    caption:
-      "The Mainline tab — segment completeness at a glance, with diagnostic tags a PM clears inline.",
-  },
-  {
-    src: "/images/work/pipetree/project-addresses.webp",
-    alt: "Pipetree project Addresses tab: per-address completion stats and diagnostics like unlinked laterals and branches that did not reach a terminal",
-    caption:
-      "The Addresses tab — every address gets its own topology and completeness diagnostics, filterable by issue.",
-  },
-  {
-    src: "/images/work/pipetree/submission-editor.webp",
-    alt: "Pipetree submission view: a daily crew submission with a mainline inspection, its tap list at footages, and typed lateral inspection entries",
-    caption:
-      "A daily submission — a mainline run with its taps at footage, and the typed lateral entries that hang off it.",
-  },
-  {
-    src: "/images/work/pipetree/project-overview.webp",
-    alt: "Pipetree project Overview tab: project pace metrics, completion percentage, and per-operator footage contributions",
-    caption: "The Overview tab — project pace, completion, and per-operator contributions.",
   },
 ];
 
@@ -224,25 +198,7 @@ export default function PipetreePage() {
               Captured from a demo instance seeded with fictional inspection data.
             </p>
           </FadeIn>
-          <div className="mt-10 grid gap-6 md:grid-cols-2">
-            {screenshots.map((s, i) => (
-              <FadeIn key={s.src} animation="fade-in" delay={i * 0.1}>
-                <figure className="overflow-hidden rounded-xl border border-border bg-surface-light">
-                  <Image
-                    src={s.src}
-                    alt={s.alt}
-                    width={2400}
-                    height={1500}
-                    sizes="(min-width: 768px) 50vw, 100vw"
-                    className="w-full border-b border-border"
-                  />
-                  <figcaption className="p-4 text-sm text-muted leading-relaxed">
-                    {s.caption}
-                  </figcaption>
-                </figure>
-              </FadeIn>
-            ))}
-          </div>
+          <Screenshots from={0} to={4} className="mt-10 grid gap-6 md:grid-cols-2" />
         </div>
       </section>
 
@@ -272,40 +228,11 @@ export default function PipetreePage() {
               </div>
             </div>
           </FadeIn>
-          <div className="mx-auto mt-10 grid max-w-3xl gap-6 sm:grid-cols-2">
-            <FadeIn animation="fade-in">
-              <figure className="overflow-hidden rounded-xl border border-border bg-surface-light">
-                <Image
-                  src="/images/work/pipetree/mobile-draft-form.webp"
-                  alt="Pipetree mainline inspection entry form on a phone: from and to access points, direction, distance, pass/review/fail result, and notes"
-                  width={1179}
-                  height={1980}
-                  sizes="(min-width: 640px) 24rem, 100vw"
-                  className="w-full border-b border-border"
-                />
-                <figcaption className="p-4 text-sm text-muted leading-relaxed">
-                  A mainline run entered from the truck &mdash; typed fields, suggestions over
-                  gates, auto-saved as a draft every two seconds.
-                </figcaption>
-              </figure>
-            </FadeIn>
-            <FadeIn animation="fade-in" delay={0.1}>
-              <figure className="overflow-hidden rounded-xl border border-border bg-surface-light">
-                <Image
-                  src="/images/work/pipetree/mobile-entry-picker.webp"
-                  alt="Pipetree Add Entry picker on a phone: searchable entry kinds grouped into inspections and requests, each with a type badge"
-                  width={1179}
-                  height={1980}
-                  sizes="(min-width: 640px) 24rem, 100vw"
-                  className="w-full border-b border-border"
-                />
-                <figcaption className="p-4 text-sm text-muted leading-relaxed">
-                  Add Entry on a phone &mdash; every entry kind the trade actually files, grouped
-                  and searchable.
-                </figcaption>
-              </figure>
-            </FadeIn>
-          </div>
+          <Screenshots
+            from={4}
+            to={6}
+            className="mx-auto mt-10 grid max-w-3xl gap-6 sm:grid-cols-2"
+          />
         </div>
       </section>
 
