@@ -1,4 +1,10 @@
 # Changelog
+## [1.7.0](https://github.com/TylerVigario/website/compare/v1.6.0...v1.7.0) (2026-07-22)
+
+### Features
+
+* Add /work case-study index and VoIP case study 
+
 ## [1.6.0](https://github.com/TylerVigario/website/compare/v1.5.4...v1.6.0) (2026-07-22)
 
 ### Features
