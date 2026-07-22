@@ -1,14 +1,20 @@
 # Changelog
+## [1.6.0](https://github.com/TylerVigario/website/compare/v1.5.4...v1.6.0) (2026-07-22)
+
+### Features
+
+* Add pipetree case-study page under /work 
+
+### Bug Fixes
+
+* **packaging:** Harden the service sandbox (PrivateUsers, owner-only state) 
+
 ## [1.5.4](https://github.com/TylerVigario/website/compare/v1.5.3...v1.5.4) (2026-05-14)
 
 ### Bug Fixes
 
 * **packaging:** Remove backticks from sysusers comment to unblock %pre
 * **workflow:** Tag-after-artifact ordering in release job
-
-### Refactoring
-
-* **ci:** Pure conventional-commit release trigger + ProtectProc + dep bumps
 
 ## [1.5.3](https://github.com/TylerVigario/website/compare/v1.5.2...v1.5.3) (2026-05-13)
 
@@ -38,10 +44,6 @@
 
 * **packaging:** Obsolete tylervigario-website + document the cutover
 
-### Refactoring
-
-* **packaging:** Rename to vigario-website + repoint urls at new gh org
-
 ## [1.4.6](https://github.com/TylerVigario/website/compare/v1.4.5...v1.4.6) (2026-05-12)
 
 ### Bug Fixes
@@ -49,33 +51,17 @@
 * **packaging:** Move rpmbuild topdir to RUNNER_TEMP 
 * **build:** Externalize instrumentation chain to dodge turbopack hash-require bug 
 
-## [1.4.5](https://github.com/TylerVigario/website/compare/v1.4.4...v1.4.5) (2026-05-12)
-
-### Refactoring
-
-* **packaging:** Host-portable RPM — operator owns vhost, env overrides, OnFailure 
-
 ## [1.4.4](https://github.com/TylerVigario/website/compare/v1.4.3...v1.4.4) (2026-05-12)
 
 ### Bug Fixes
 
 * **packaging:** Scope rpmbuild to $GITHUB_WORKSPACE, drop the find scan 
 
-### Refactoring
-
-* **packaging:** Private/public dnf split + sudo rpmsign 
-
 ## [1.4.3](https://github.com/TylerVigario/website/compare/v1.4.2...v1.4.3) (2026-05-11)
 
 ### Bug Fixes
 
 * **packaging:** Own env file root:root to avoid group(website) dep 
-
-## [1.4.2](https://github.com/TylerVigario/website/compare/v1.4.1...v1.4.2) (2026-05-11)
-
-### Refactoring
-
-* **packaging:** Drop unused SELinux fcontext rules + move env to /etc/sysconfig 
 
 ## [1.4.1](https://github.com/TylerVigario/website/compare/v1.4.0...v1.4.1) (2026-05-11)
 
@@ -137,12 +123,6 @@
 * **packaging:** Use --passphrase-file in rpmsign macros 
 * **packaging:** Use versioned Node binary throughout 
 * **packaging:** Install nodejs24-npm alongside nodejs24 
-
-### Refactoring
-
-* **deploy:** Build-on-prod contract + drop output:standalone
-* **security:** Add hsts + permissions-policy headers
-* **emails:** Adopt react-email for quote + pots-audit notifications
 
 ## [1.2.1](https://github.com/TylerVigario/website/compare/v1.2.0...v1.2.1) (2026-05-09)
 
@@ -209,14 +189,4 @@
 * Correct business address in JSON-LD
 * Skip-to-content link — use focus-visible to prevent resize flash
 * SEO quick wins — custom 404, Twitter cards, trailing slash config
-
-### Refactoring
-
-* Reposition copy for B2B market
-* Rewrite site copy — company voice, benefit-led headings, honest tone
-* Drop framer-motion, CSS animations, server components, font/image optimization
-* Use plain img for nav logo — immediate LCP discovery
-* Enable standalone output for self-hosted deployment
-* Convert single-page site to multi-page architecture
-* Increase color contrast and redesign hero section
 
