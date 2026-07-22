@@ -1,4 +1,10 @@
 # Changelog
+## [1.8.0](https://github.com/TylerVigario/website/compare/v1.7.0...v1.8.0) (2026-07-22)
+
+### Features
+
+* **work:** Open pipetree screenshots full-size in a lightbox 
+
 ## [1.7.0](https://github.com/TylerVigario/website/compare/v1.6.0...v1.7.0) (2026-07-22)
 
 ### Features
