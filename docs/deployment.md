@@ -84,7 +84,7 @@ override file with secrets (SMTP creds, Sentry DSN, etc).
 |---|---|---|
 | `HOSTNAME` | `127.0.0.1` | Bind addr. Reverse-proxy fronts on `:443`. |
 | `PORT` | `3000` | Bind port. |
-| `SQLITE_PATH` | `/var/lib/vigario-website/quotes.db` | Must be absolute. State dir owned by `website:website`, 0750. |
+| `SQLITE_PATH` | `/var/lib/vigario-website/quotes.db` | Must be absolute. State dir owned by `website:website`, 0700. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` | (empty) | Optional. Empty disables email notifications on form submission. |
 | `SENTRY_DSN` | (empty) | Optional. Empty disables server-side Sentry. |
 

@@ -34,6 +34,13 @@ Environment=HOME=/var/lib/vigario-website
 # to ReadWritePaths automatically. The tmpfiles.d config is a
 # backstop for boot ordering.
 StateDirectory=vigario-website
+# 0700 (not the 0755 default) so only the website user can traverse
+# /var/lib/vigario-website. The SQLite db there holds form-submission
+# PII; locking the directory protects it regardless of the db file's
+# own mode — UMask below only constrains newly-created files, so an
+# already-created quotes.db on an upgraded host keeps its old mode,
+# but the dir lock shuts the door either way.
+StateDirectoryMode=0700
 CacheDirectory=vigario-website
 
 # Filesystem hardening
@@ -43,6 +50,19 @@ ProtectHome=true
 PrivateTmp=true
 PrivateDevices=true
 RemoveIPC=true
+# Run inside a user namespace — the service sees only its own UID/GID
+# plus root mapped to nobody. Safe here because the only persistent
+# state is a SQLite file under /var/lib/<pkg> (a StateDirectory owned
+# by the service user); there's no local-socket peer-auth path (the
+# Postgres case that user-namespacing would break). Ported from
+# pipetree, which added it to close a PrivateUsers gap on its audit.
+PrivateUsers=true
+# Service-created files are private to the website user. The SQLite db
+# and its WAL hold form-submission PII — names, emails, phone numbers;
+# UMask 0077 keeps newly-created files at 0600 instead of the default
+# 0644. Pairs with StateDirectoryMode=0700 above (which covers a
+# pre-existing db that this umask wouldn't retroactively re-mode).
+UMask=0077
 
 # Kernel hardening
 ProtectKernelTunables=true
