@@ -1,4 +1,10 @@
 # Changelog
+## [1.9.0](https://github.com/TylerVigario/website/compare/v1.8.1...v1.9.0) (2026-07-23)
+
+### Features
+
+* **work:** Add product visuals to the /work case-study pages 
+
 ## [1.8.1](https://github.com/TylerVigario/website/compare/v1.8.0...v1.8.1) (2026-07-23)
 
 ### Bug Fixes
