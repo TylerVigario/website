@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
 import Screenshots from "./screenshots";
@@ -98,20 +99,35 @@ export default function PipetreePage() {
       />
 
       {/* Hero */}
-      <section className="pt-32 pb-16 lg:pb-20 lg:pt-36">
+      <section className="relative overflow-hidden pt-32 pb-16 lg:pb-20 lg:pt-36">
         <div className="mx-auto max-w-6xl px-6">
-          <FadeIn animation="fade-in-up" margin="0px">
-            <p className="text-sm font-medium text-accent">Work / Case Study</p>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-navy sm:text-4xl md:text-5xl">
-              Pipetree
-            </h1>
-            <p className="mt-4 max-w-2xl text-lg text-muted leading-relaxed">
-              An operations platform for crossbore CCTV pipe inspection, built and operated by VTS.
-              Operators enter typed field data. The system derives a live infrastructure graph.
-              Project managers resolve problems inline on the graph &mdash; in production daily
-              since early 2026.
-            </p>
-          </FadeIn>
+          <div className="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
+            <FadeIn animation="fade-in-up" margin="0px">
+              <p className="text-sm font-medium text-accent">Work / Case Study</p>
+              <h1 className="mt-4 text-3xl font-bold tracking-tight text-navy sm:text-4xl md:text-5xl">
+                Pipetree
+              </h1>
+              <p className="mt-4 text-lg text-muted leading-relaxed">
+                An operations platform for crossbore CCTV pipe inspection, built and operated by
+                VTS. Operators enter typed field data. The system derives a live infrastructure
+                graph. Project managers resolve problems inline on the graph &mdash; in production
+                daily since early 2026.
+              </p>
+            </FadeIn>
+            <FadeIn animation="fade-in-scale" delay={0.1}>
+              <div className="relative overflow-hidden rounded-xl border border-border bg-surface-light shadow-2xl">
+                <Image
+                  src="/images/work/pipetree/addresses-full.webp"
+                  alt="Pipetree Addresses view — per-address completeness with unlinked, reach-failure, and jetting diagnostics"
+                  width={2000}
+                  height={1131}
+                  priority
+                  sizes="(min-width: 1024px) 55vw, 100vw"
+                  className="w-full"
+                />
+              </div>
+            </FadeIn>
+          </div>
         </div>
       </section>
 

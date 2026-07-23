@@ -12,6 +12,14 @@ export type CaseStudy = {
   year: string;
   status: string;
   lastModified: string;
+  preview?: string;
+  outcome?: {
+    logo: string;
+    logoAlt: string;
+    before: string;
+    after: string;
+    caption: string;
+  };
 };
 
 export const caseStudies: CaseStudy[] = [
@@ -26,6 +34,7 @@ export const caseStudies: CaseStudy[] = [
     year: "2026",
     status: "In production",
     lastModified: "2026-07-17",
+    preview: "/images/work/pipetree/addresses-full.webp",
   },
   {
     slug: "voip",
@@ -38,5 +47,12 @@ export const caseStudies: CaseStudy[] = [
     year: "2026",
     status: "Client engagement",
     lastModified: "2026-07-22",
+    outcome: {
+      logo: "/images/work/voip/bravo-farms-logo.png",
+      logoAlt: "Bravo Farms",
+      before: "$945/mo",
+      after: "under $50/mo",
+      caption: "FCC complaint won in 15 days · $10k+/yr saved",
+    },
   },
 ];
