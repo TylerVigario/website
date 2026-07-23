@@ -1,4 +1,10 @@
 # Changelog
+## [1.8.1](https://github.com/TylerVigario/website/compare/v1.8.0...v1.8.1) (2026-07-23)
+
+### Bug Fixes
+
+* **build:** Regenerate lockfile under npm 11.17.0 to restore libc guards 
+
 ## [1.8.0](https://github.com/TylerVigario/website/compare/v1.7.0...v1.8.0) (2026-07-22)
 
 ### Features
