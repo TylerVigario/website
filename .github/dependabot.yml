@@ -1,0 +1,53 @@
+# Dependency updates. Until this existed, npm and action bumps only
+# happened when someone went looking — on a WAN-facing app that ships an
+# RPM straight onto the prod host.
+#
+# Everything here lands as a PR, so it is gated by ci.yml like any other
+# change; nothing auto-merges.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: sunday
+    open-pull-requests-limit: 5
+    commit-message:
+      # Matches the repo's conventional-commit gate (pr-title.yml) and
+      # keeps dependency noise out of the release changelog's feat/fix
+      # sections.
+      prefix: chore
+      include: scope
+    groups:
+      # One PR per ecosystem-ish cluster rather than per package: a Next
+      # bump that needs a matching eslint-config bump should be reviewed
+      # and gated together, not as two PRs that are each red alone.
+      next:
+        patterns:
+          - next
+          - "@next/*"
+          - eslint-config-next
+      react:
+        patterns:
+          - react
+          - react-dom
+          - "@types/react"
+          - "@types/react-dom"
+      dev-tooling:
+        dependency-type: development
+        patterns:
+          - "*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: sunday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      actions:
+        patterns:
+          - "*"
