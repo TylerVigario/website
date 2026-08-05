@@ -221,32 +221,62 @@ file changes. Hence the explicit re-import.
 
 ## Versioning + tagging
 
-`workflow_dispatch` on `release.yml` is the sole release entry
-point. The workflow:
+A push to `main` is the sole release entry point — the merged commit's
+conventional-commit type is the release signal (feat/fix/revert bump;
+chore/docs/ci and friends skip). There is no `workflow_dispatch` and no
+tag-push override. `ci.yml` gates the push, then releases it:
 
-1. Determines the next version via `git-cliff --bumped-version` (or
-   the `bump` workflow input).
-2. Updates `package.json`, regenerates `CHANGELOG.md` +
-   `RELEASE_NOTES.md`, commits `chore(release): v<version>`,
-   annotated-tags, pushes.
+1. Determines the next version via `git-cliff --bumped-version`. If
+   the window since the last tag holds only skip-list types the
+   version comes back unchanged, and every downstream step no-ops.
+2. Bumps `package.json`, regenerates `CHANGELOG.md` +
+   `RELEASE_NOTES.md`, and commits `chore(release): v<version>`
+   **locally** — no tag, no push yet. `rpmbuild` takes its source
+   tarball from `git archive HEAD`, so the bumped `package.json` has
+   to be in the tree before the build, not after.
 3. Builds + signs the RPM on the self-hosted runner (sign via `sudo
    rpmsign`; private-signer subkey on prod's keyring), copies it into
    `/srv/dnf-repo-private/`, runs `createrepo_c --update`.
-4. Creates the GitHub Release with the signed RPM attached.
+4. *Then* annotated-tags and pushes the commit and tag together
+   (`git push origin main --atomic --follow-tags`).
+5. Creates the GitHub Release with the signed RPM attached.
 
-Conventional Commits drives the bump magnitude:
+Tag-after-artifact (steps 3 → 4) is the ordering invariant: a tag on
+origin means an artifact exists for that tag. The cost is that if
+`origin/main` advances during the build, the push is rejected
+non-fast-forward and the job fails — deliberately, since the RPM was
+built from *this* tree and rebasing would tag a tree nothing was built
+from. Recovery is a re-run, which recomputes the version against the
+updated `main`. An orphaned RPM in the dnf repo is the accepted lesser
+evil.
+
+Conventional Commits drives the bump magnitude. `commit_parsers` in
+`cliff.toml` is the source of truth; this table tracks it:
 
 | Type | Bump |
 |---|---|
+| breaking (`!` or `BREAKING CHANGE:`) | major |
 | `feat` | minor |
-| `fix`, `refactor` | patch |
-| `docs`, `test`, `chore` | none (no release) |
+| `fix`, `revert` | patch |
+| `refactor`, `perf`, `style`, `ci`, `build`, `docs`, `test`, `chore` | none (no release) |
 
-Dispatching with no releasable commits since the last tag is a no-op
-— git-cliff says "nothing to bump" and the workflow's
-`tag-already-exists` guard refuses. Force a bump by landing at
-least one `fix`/`feat`/`refactor` commit first; the `bump` input
-selects magnitude, not whether to bump.
+Note `refactor` does **not** release, despite changing code — it is on
+the skip list with the housekeeping types.
+
+A push whose window contains only skip-list types is a no-op by
+design: `--bumped-version` returns the current version, the job logs a
+warning, and nothing is tagged or built. (The separate
+`tag-already-exists` guard is not this case — it fires only on the
+releasing path, and means a previous run partially completed and left
+its tag behind.) To force a release out of a skipped window, land a
+commit whose type releases:
+
+```bash
+git commit --allow-empty -m "fix(packaging): force release of <reason>"
+git push origin main
+```
+
+The type is the intent, and it shows up in the changelog as such.
 
 ## Production cycle
 

@@ -75,7 +75,7 @@ the private LAN-only dnf repo, attaches it to the GitHub Release.
 Production installs via `sudo dnf --refresh upgrade vigario-website`.
 See [docs/deployment.md](docs/deployment.md) for the full contract.
 
-`.github/workflows/release.yml`:
+`.github/workflows/ci.yml`:
 
 - **Gate** (runs on every PR + every push to main): `npm ci` →
   typecheck → lint → format → test → build (with the real-boot
