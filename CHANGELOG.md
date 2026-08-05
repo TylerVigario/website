@@ -1,4 +1,10 @@
 # Changelog
+## [1.10.0](https://github.com/TylerVigario/website/compare/v1.9.0...v1.10.0) (2026-08-05)
+
+### Features
+
+* **work:** Add the iTaleSoWell case study 
+
 ## [1.9.0](https://github.com/TylerVigario/website/compare/v1.8.1...v1.9.0) (2026-07-23)
 
 ### Features
