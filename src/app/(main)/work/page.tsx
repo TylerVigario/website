@@ -7,14 +7,14 @@ import { caseStudies } from "@/lib/work";
 export const metadata: Metadata = {
   title: "Work",
   description:
-    "Case studies from Vigario Technology Solutions — custom field-operations software and telecom advocacy that saved a Central Valley family business five figures.",
+    "Case studies from Vigario Technology Solutions — custom field-operations software, a home for an author's work, and telecom advocacy that saved a Central Valley family business five figures.",
   alternates: {
     canonical: "https://tylervigario.com/work",
   },
   openGraph: {
     title: "Work | Vigario Technology Solutions",
     description:
-      "Case studies from Vigario Technology Solutions — custom field-operations software and telecom advocacy for Central Valley businesses.",
+      "Case studies from Vigario Technology Solutions — custom field-operations software, creator platforms, and telecom advocacy for Central Valley businesses.",
     url: "https://tylervigario.com/work",
     siteName: "Vigario Technology Solutions",
     locale: "en_US",
@@ -59,8 +59,8 @@ export default function WorkPage() {
             </h1>
             <p className="mt-4 max-w-2xl text-lg text-muted leading-relaxed">
               A few engagements where VTS built &mdash; or fought for &mdash; something real, from
-              custom field-operations software to telecom advocacy that saved a family business five
-              figures.
+              custom field-operations software to a home for an author&apos;s work to telecom
+              advocacy that saved a family business five figures.
             </p>
           </FadeIn>
         </div>

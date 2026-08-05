@@ -24,6 +24,19 @@ export type CaseStudy = {
 
 export const caseStudies: CaseStudy[] = [
   {
+    slug: "italesowell",
+    href: "/work/italesowell",
+    title: "iTaleSoWell",
+    category: "Creator platform",
+    summary:
+      "Dark short fiction by Aniken D. Robinson, scattered across five platforms that each owned a slice of his audience. VTS built him an address of his own \u2014 a masked host, twenty tales with cover art and an ePub apiece, a reader built for phones, a mailing list nobody can throttle, and the back office he runs all of it from.",
+    tags: ["Static site", "Editorial back office", "ePub generation", "Wattpad sync", "SES"],
+    year: "2026",
+    status: "Live",
+    lastModified: "2026-08-04",
+    preview: "/images/work/italesowell/hero.webp",
+  },
+  {
     slug: "pipetree",
     href: "/work/pipetree",
     title: "Pipetree",
