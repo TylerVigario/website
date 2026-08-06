@@ -9,9 +9,7 @@
   "conditions": {
     "ref_name": {
       "exclude": [],
-      "include": [
-        "~DEFAULT_BRANCH"
-      ]
+      "include": ["~DEFAULT_BRANCH"]
     }
   },
   "enforcement": "active",
@@ -28,9 +26,7 @@
     },
     {
       "parameters": {
-        "allowed_merge_methods": [
-          "squash"
-        ],
+        "allowed_merge_methods": ["squash"],
         "dismiss_stale_reviews_on_push": true,
         "dismissal_restriction": {
           "allowed_actors": [],

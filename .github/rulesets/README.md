@@ -8,7 +8,7 @@ This repository learned that the expensive way. The ruleset was applied on 2026-
 three days after the last release, and nothing in the tree recorded it. The next release
 attempt — two weeks later — failed at `git push origin main` with
 
-```
+```text
 remote: - Changes must be made through a pull request.
 ```
 
@@ -19,8 +19,8 @@ the repository, reviewable like any other.
 The file is the source of truth. Apply it, do not hand-configure:
 
 ```bash
-gh api repos/<org>/<repo>/rulesets --method POST --input .github/rulesets/main.json   # create
-gh api repos/<org>/<repo>/rulesets/<id> --method PUT --input .github/rulesets/main.json # update
+gh api repos/<owner>/<repo>/rulesets --method POST --input .github/rulesets/main.json   # create
+gh api repos/<owner>/<repo>/rulesets/<id> --method PUT --input .github/rulesets/main.json # update
 ```
 
 Read back what is actually enforced — from the **rules** endpoint, not the legacy
@@ -28,7 +28,7 @@ branch-protection API, which reports `enforcement_level: off` even where a rules
 demonstrably active:
 
 ```bash
-gh api repos/<org>/<repo>/rules/branches/main
+gh api repos/<owner>/<repo>/rules/branches/main
 ```
 
 ## Why each rule
