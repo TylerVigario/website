@@ -89,9 +89,11 @@ the same commits.
   This used to be four pins — the spec's `Requires: nodejs<N>` and the
   unit's `ExecStart=/usr/bin/node-<N>` were the other two and went with
   the packaging tree. The gate check is now the whole of it.
-- **better-sqlite3 native binding**. Compiles from source during
-  `npm ci`, so it needs a toolchain wherever that runs, and its ABI is
-  tied to the Node major. Nothing pre-builds or ships it any more.
+- **better-sqlite3 native binding**. Since v13 it is N-API-based, so
+  the prebuilt binary ships with the package and survives a Node major
+  bump — that stopped being a rebuild trigger. It still compiles from
+  source where no prebuilt matches the platform, which needs a
+  toolchain wherever `npm ci` runs.
 - **SQLITE_PATH must be absolute**. App throws at startup via
   runtime-config if unset or relative. No cwd fallback — that bit me
   when an old deploy wrote `data/quotes.db` inside a release dir that
