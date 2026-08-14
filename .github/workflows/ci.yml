@@ -3,42 +3,29 @@ name: CI
 env:
   HUSKY: 0
   CI: true
-  PKG_NAME: vigario-website
 
 on:
   push:
     branches: [main]
   pull_request:
 
-# Pure conventional-commit CD: the type of the merged commit IS the
-# release signal. feat/fix/revert bump; refactor/perf/ci/build/docs/
-# test/chore skip (per cliff.toml's commit_parsers). If you need to
-# force a release of a chore-only window, push an empty commit with the
-# appropriate type:
-#
-#   git commit --allow-empty -m "fix(packaging): force release of <reason>"
-#   git push origin main
-#
-# The commit type documents intent in the changelog. No workflow_dispatch
-# input, no tag-push override — the conventional-commit type is the
-# single source of truth.
-
-# Concurrency: PRs cancel prior runs of the same PR (saves CI time
-# on rapid pushes), main pushes queue serially (don't cancel — every
-# commit on main is a potential release).
+# Concurrency: PRs cancel prior runs of the same PR (saves CI time on
+# rapid pushes), main pushes queue serially. Nothing releases from here
+# yet — the RPM pipeline was retired and the replacement is not built.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Default to read-only. The release job escalates per-job.
+# Read-only. No job here writes anything.
 permissions:
   contents: read
 
 jobs:
   # =========================================================================
-  # Gate — quality checks + full-build validation. Runs on every PR, every
-  # push to main, and at the start of every release attempt. Failure here
-  # blocks a release attempt from ever invoking the rpmbuild path.
+  # Gate — quality checks + full-build validation. Runs on every PR and
+  # every push to main. It is currently the whole of CI: the RPM release
+  # job was retired with the packaging tree, and no replacement release
+  # shape exists yet.
   # =========================================================================
   gate:
     name: Gate
@@ -51,16 +38,15 @@ jobs:
         # .nvmrc and package.json#engines.node must declare the same
         # Node major. CI reads .nvmrc directly (node-version-file in the
         # setup composite + the release job), so there's no separate
-        # workflow pin. The RPM spec's `Requires: nodejs<N>` and the
-        # unit's `ExecStart=/usr/bin/node-<N>` pin it too (edited
-        # manually in lockstep); drift here would let CI green-light a
-        # build prod won't accept.
+        # workflow pin. These were two of four pins; the other two lived
+        # in the RPM spec and systemd unit and went with them, so this
+        # check is now the whole of it.
         run: |
           NVMRC_MAJOR=$(sed -E 's/^[^0-9]*([0-9]+).*/\1/' .nvmrc)
           ENGINES_MAJOR=$(jq -r '.engines.node' package.json | grep -oE '[0-9]+' | head -1)
           echo "Node major check: .nvmrc=$NVMRC_MAJOR  engines.node=$ENGINES_MAJOR"
           if [ "$NVMRC_MAJOR" != "$ENGINES_MAJOR" ]; then
-            echo "::error::Node major mismatch — bump .nvmrc and package.json engines.node together (the spec's Requires: nodejs<N> and the unit's ExecStart=/usr/bin/node-<N> pin it too)."
+            echo "::error::Node major mismatch — bump .nvmrc and package.json engines.node together."
             exit 1
           fi
       - name: Run actionlint
@@ -68,9 +54,7 @@ jobs:
         # refs, shell-syntax errors in run: blocks) before the heavier
         # steps — needs no node_modules, so failing here is cheap. Pin
         # BOTH the installer-script tag (not `main`, which is mutable)
-        # AND the binary version so neither floats. The version-agnostic
-        # `fedora` self-hosted label is declared in .github/actionlint.yaml
-        # so the release job's runs-on passes.
+        # AND the binary version so neither floats.
         run: |
           bash <(curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash) 1.7.12
           ./actionlint -color
@@ -96,333 +80,10 @@ jobs:
             nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
             nextjs-${{ runner.os }}-
       - name: Validate build
-        # Gate's build runs on ubuntu-latest — sanity check that
-        # `npm run build` works on the tagged commit before any release
-        # attempt invokes the load-bearing rpmbuild on the self-hosted
-        # Fedora runner. Cheaper to fail here than after a version bump.
+        # The full production build, including the postbuild real-boot
+        # smoke against the compiled server.js. Nothing downstream
+        # consumes it yet — it proves the tree builds, which is the whole
+        # claim until a release shape replaces the retired one.
         run: npm run build
         env:
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
-
-  # =========================================================================
-  # Release — bumps version, generates changelog, tags, builds + signs the
-  # RPM on the self-hosted runner (running on the prod host itself),
-  # publishes to /srv/dnf-repo-private/, attaches the signed RPM to the
-  # GitHub Release.
-  #
-  # vigario-website is a *private* package — it goes to the LAN-only
-  # repo served at http://repo.lan/, not the public-facing
-  # https://repo.tylervigario.com/.
-  #
-  # Signing model: github-runner has zero key material. It calls
-  # `sudo /usr/bin/rpmsign --addsign <rpm>` via a narrow sudoers rule;
-  # the actual signing runs as root with /root/.rpmmacros bound to the
-  # private-signer subkey on /etc/server-admin/gnupg/.
-  #
-  # Trigger model: every push to main runs the gate, and if any
-  # bumpable conventional commits landed (feat/fix/revert — git-cliff's
-  # skip-list filters refactor/perf/ci/build/docs/test/chore per
-  # cliff.toml), this job auto-fires and ships an RPM. The bot's
-  # chore(release) commit carries `[skip ci]`, so pushing it dispatches
-  # no run at all; the `!startsWith(... 'chore(release):')` filter on
-  # this job's `if:` stays as defense-in-depth against the push →
-  # release → push loop. Production picks up the new RPM via
-  # `sudo dnf --refresh upgrade vigario-website`, manually.
-  # =========================================================================
-  release:
-    name: Release
-    needs: gate
-    if: >-
-      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
-      !startsWith(github.event.head_commit.message, 'chore(release):')
-    # Version-agnostic label: targets the prod-host runner by its
-    # RPM-toolchain capability (rpmbuild / createrepo_c / rpmsign /
-    # SELinux restorecon), not its OS version. A versioned label like
-    # `fedora-43` silently stops matching the moment the host is
-    # upgraded or the runner is re-registered — the job would queue
-    # forever with no error. Keep this label OS-version-free.
-    runs-on: [self-hosted, fedora]
-    timeout-minutes: 30
-    permissions:
-      contents: write
-
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-
-      - name: Install git-cliff
-        run: |
-          curl -sSL -o /tmp/git-cliff.tar.gz \
-            https://github.com/orhun/git-cliff/releases/download/v2.6.1/git-cliff-2.6.1-x86_64-unknown-linux-gnu.tar.gz
-          tar xzf /tmp/git-cliff.tar.gz -C /tmp
-          # /usr/local/bin is system-owned and the runner user can't
-          # write to it. Install under the runner's own .local/bin and
-          # prepend to $GITHUB_PATH so subsequent steps see it.
-          mkdir -p "$HOME/.local/bin"
-          install -m 0755 /tmp/git-cliff-*/git-cliff "$HOME/.local/bin/git-cliff"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-          "$HOME/.local/bin/git-cliff" --version
-
-      - name: Configure git
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      - name: Determine next version
-        id: version
-        run: |
-          CURRENT=$(node -p "require('./package.json').version")
-          # Conventional-commit-driven bump. git-cliff walks commits
-          # since the last tag, classifies by type (feat → minor, fix /
-          # revert → patch, breaking → major; refactor / perf / ci /
-          # build / docs / test / chore → skip per cliff.toml), and emits
-          # the resolved next version. When the unreleased window contains
-          # only skip-list types, --bumped-version returns the current
-          # version unchanged → the skip=true branch below trips and the
-          # rest of the job no-ops.
-          TAG=$(git-cliff --bumped-version)
-          BARE="${TAG#v}"
-          if [ "$BARE" = "$CURRENT" ]; then
-            echo "::warning::No version change detected (already at $CURRENT). Skipping release."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            SKIP=true
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-            SKIP=false
-          fi
-          echo "version=$BARE" >> "$GITHUB_OUTPUT"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "Next version: $TAG (current: $CURRENT)"
-
-          # Only check for an existing tag on the non-skip path. When
-          # SKIP=true the TAG resolves to the current release's tag
-          # (which exists by construction), so an unconditional check
-          # turns the warned-and-skip path into a hard failure of the
-          # whole release job. All downstream steps already guard on
-          # `steps.version.outputs.skip != 'true'`; this guard needs
-          # to match.
-          if [ "$SKIP" != "true" ] && git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
-            echo "::error::Tag $TAG already exists in git. A previous release run probably partially completed. Manually delete the tag (git push --delete origin $TAG) or bump past it before retrying."
-            exit 1
-          fi
-
-      - name: Bump package.json
-        if: steps.version.outputs.skip != 'true'
-        run: npm version ${{ steps.version.outputs.version }} --no-git-tag-version
-
-      - name: Generate changelog
-        if: steps.version.outputs.skip != 'true'
-        run: |
-          git-cliff --bump --output CHANGELOG.md
-          git-cliff --bump --unreleased --strip header --output RELEASE_NOTES.md
-
-      - name: Commit chore(release) locally
-        if: steps.version.outputs.skip != 'true'
-        run: |
-          # Commit the bump LOCALLY — don't push, don't tag yet. The
-          # rpmbuild "Prepare" step below runs `git archive HEAD` to
-          # produce the source tarball, and the spec's %build invokes
-          # `npm run build` against it; both need to see the bumped
-          # package.json so the Sentry release identifier and the
-          # artifact filename embed the right version. The commit
-          # therefore has to land in HEAD before the tarball is
-          # generated.
-          #
-          # BUT — pushing this commit (or the tag) would publish a
-          # version number to origin before the artifact exists. If
-          # any of rpmbuild / sign / publish fails, the runner's
-          # checkout dies at job end and origin/main is unchanged.
-          # The push + tag move to the end of the job, AFTER the RPM
-          # is durable in /srv/dnf-repo-private/. See "Tag and push
-          # to origin" near the bottom of this job. Failure mode this
-          # eliminates: a "burned" version tag on origin that points
-          # at no shippable artifact, like v1.5.2 from run
-          # 25774739519 (rpmbuild died on a comment-escape regression
-          # after the tag had already been pushed).
-          git add package.json package-lock.json CHANGELOG.md
-          # `[skip ci]` suppresses the workflow run that pushing this
-          # commit to main would otherwise dispatch. Without it the gate
-          # re-runs in full on every release just for the release job's
-          # startsWith filter to no-op it — wasted minutes. The filter
-          # stays as defense-in-depth; [skip ci] is what stops the
-          # dispatch in the first place.
-          git commit -m "chore(release): ${{ steps.version.outputs.tag }} [skip ci]"
-
-      # ---- RPM build ----
-      #
-      # Build under $RUNNER_TEMP/rpmbuild, not $GITHUB_WORKSPACE/rpmbuild
-      # or $HOME/rpmbuild. RUNNER_TEMP is GitHub Actions' documented
-      # per-job scratch dir, emptied at the start and end of every job —
-      # hermetic across runs without any cleanup step. Crucially it sits
-      # outside $GITHUB_WORKSPACE, so the actions/checkout copy of the
-      # repo (with its own package-lock.json one directory above the
-      # rpmbuild BUILD/<name>-<ver>/ tree) can't confuse Turbopack's
-      # project-root walker into resolving to the outer tree and
-      # emitting mis-chunked output. Earlier releases used
-      # $GITHUB_WORKSPACE/rpmbuild and the resulting builds shipped
-      # broken instrumentation-hook chunks.
-      - name: Prepare rpmbuild tree
-        if: steps.version.outputs.skip != 'true'
-        run: |
-          mkdir -p "$RUNNER_TEMP"/rpmbuild/{SOURCES,SPECS,BUILD,RPMS,SRPMS}
-          VERSION="${{ steps.version.outputs.version }}"
-          git archive --prefix="${PKG_NAME}-${VERSION}/" --format=tar.gz \
-              -o "$RUNNER_TEMP/rpmbuild/SOURCES/${PKG_NAME}-${VERSION}.tar.gz" HEAD
-          # Source1 (sysusers.d snippet) — referenced by %{SOURCE1} in
-          # the spec for %sysusers_create_package. rpmbuild expects it
-          # at SOURCES/<name>; the spec's Source1: declaration is a
-          # bare filename so rpm resolves it relative to SOURCES/.
-          cp "packaging/${PKG_NAME}.sysusers" \
-              "$RUNNER_TEMP/rpmbuild/SOURCES/${PKG_NAME}.sysusers"
-
-      - name: rpmbuild -ba
-        if: steps.version.outputs.skip != 'true'
-        env:
-          # Sentry source-map upload trio. Read by withSentryConfig in
-          # next.config.ts during `next build` (which the spec's %build
-          # invokes via `npm run build`). Without these, the upload
-          # silently no-ops and prod stack traces stay minified.
-          #
-          # NEXT_PUBLIC_SENTRY_DSN is intentionally NOT passed: the
-          # spec's %build does `export NEXT_PUBLIC_SENTRY_DSN=` so the
-          # client-side DSN ships unset. Server-side DSN is set per-host
-          # at runtime via /etc/sysconfig/vigario-website.
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
-          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
-        run: |
-          rpmbuild -ba \
-            --define "_version ${{ steps.version.outputs.version }}" \
-            --define "_topdir $RUNNER_TEMP/rpmbuild" \
-            "packaging/${PKG_NAME}.spec"
-
-      - name: Locate built RPM
-        id: rpm
-        if: steps.version.outputs.skip != 'true'
-        run: |
-          # RUNNER_TEMP is empty at the start of every job, so a glob
-          # on ${PKG_NAME}-${VERSION}-*.rpm resolves to exactly one
-          # file. No find, no scan.
-          VERSION="${{ steps.version.outputs.version }}"
-          RPM=$(echo "$RUNNER_TEMP/rpmbuild/RPMS/x86_64/${PKG_NAME}-${VERSION}-"*.rpm)
-          if [ ! -f "$RPM" ]; then
-            echo "::error::expected RPM not found at $RPM"
-            ls -la "$RUNNER_TEMP/rpmbuild/RPMS/x86_64/" || :
-            exit 1
-          fi
-          echo "Built: $RPM"
-          rpm -qpi "$RPM"
-          echo "path=$RPM" >> "$GITHUB_OUTPUT"
-          echo "name=$(basename "$RPM")" >> "$GITHUB_OUTPUT"
-
-      # ---- Sign ----
-      - name: Sign RPM
-        if: steps.version.outputs.skip != 'true'
-        run: |
-          # Sign via sudo: github-runner has a narrow sudoers rule
-          # (/etc/sudoers.d/github-runner-rpmsign) allowing
-          # `/usr/bin/rpmsign --addsign` on paths under
-          # /var/lib/github-runner/runner/_work/_temp/rpmbuild/RPMS/x86_64/*.rpm.
-          # Actual signing runs as root, which reads /root/.rpmmacros
-          # (binds to the private-signer subkey on /etc/server-admin/gnupg).
-          # No signing-key material lives in this runner's keyring or in
-          # any GitHub secret — compromise scope of github-runner is "can
-          # sign an RPM at the sudoers-allowed path," not "can take the
-          # subkey elsewhere."
-          sudo /usr/bin/rpmsign --addsign "${{ steps.rpm.outputs.path }}"
-          rpm -K "${{ steps.rpm.outputs.path }}"
-
-      # ---- Publish to /srv/dnf-repo-private/ (LAN-only, http://repo.lan/) ----
-      - name: Publish RPM to private dnf repo
-        if: steps.version.outputs.skip != 'true'
-        run: |
-          # github-runner is in the apache group; /srv/dnf-repo-private/ is
-          # g+ws apache, so the cp + createrepo_c run without sudo. fcontext
-          # policy assigns httpd_sys_content_t to anything under that path;
-          # restorecon applies it. vigario-website is a private package
-          # (Tyler-business app, no public reach) — it publishes to the LAN-
-          # only tree served at http://repo.lan/, not the public-facing
-          # https://repo.tylervigario.com/.
-          cp -p "${{ steps.rpm.outputs.path }}" /srv/dnf-repo-private/
-          restorecon -F "/srv/dnf-repo-private/${{ steps.rpm.outputs.name }}"
-          createrepo_c --update --quiet /srv/dnf-repo-private
-          echo "Published /srv/dnf-repo-private/${{ steps.rpm.outputs.name }}"
-
-      # ---- Tag + push origin (the RPM is durable in the dnf repo now) ----
-      - name: Tag and push to origin
-        if: steps.version.outputs.skip != 'true'
-        run: |
-          # Tag-after-artifact. By this point the signed RPM is sitting
-          # in /srv/dnf-repo-private/ and createrepo_c has updated the
-          # metadata — the version number is durable. Now and only now
-          # do we publish the chore(release) commit + the tag to origin.
-          # Invariant going forward: a tag on origin means an artifact
-          # exists for that tag. No more burned version numbers from
-          # rpmbuild failures that already ran past the push.
-          #
-          # Annotated tag (-a) — required for `git push --follow-tags`
-          # to actually push it. Lightweight tags are silently skipped
-          # by --follow-tags, which would leave the commit on main and
-          # the tag nowhere (and dnf would have nothing to point a
-          # rollback at, since rollbacks index by git tag).
-          #
-          # --atomic makes the two-ref push (main + the annotated tag)
-          # all-or-nothing at the server side. Without it, you could in
-          # principle land the commit on main but not the tag —
-          # a smaller-window version of the same "tag/commit/artifact
-          # disagree" anomaly this whole reorder eliminates.
-          #
-          # Deliberately NO rebase before this push. If origin/main
-          # advanced during rpmbuild (e.g. a PR merged), this push is
-          # rejected non-fast-forward and the job fails — the SAFE
-          # outcome. The signed RPM was built by `git archive HEAD` from
-          # THIS commit's tree; rebasing the chore(release) commit onto
-          # the new arrivals would publish a tag pointing at a tree the
-          # artifact was NOT built from, and silently drop the intervening
-          # commit from the changelog (it becomes an ancestor of this tag,
-          # so the next release's git-cliff skips it too). Recovery is a
-          # re-run: it recomputes the version and rebuilds from the
-          # updated main, so artifact and tag match. An orphaned (untagged)
-          # RPM left in the dnf repo by the failed push is the accepted
-          # lesser evil.
-          git tag -a ${{ steps.version.outputs.tag }} -m "Release ${{ steps.version.outputs.tag }}"
-          git push origin main --atomic --follow-tags
-
-      # ---- GitHub Release ----
-      - name: Create GitHub Release with RPM asset
-        if: steps.version.outputs.skip != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release create "${{ steps.version.outputs.tag }}" \
-            "${{ steps.rpm.outputs.path }}" \
-            --title "${{ steps.version.outputs.tag }}" \
-            --notes-file RELEASE_NOTES.md
-
-      - name: Generate job summary
-        if: always()
-        run: |
-          VERSION=${{ steps.version.outputs.version }}
-          TAG=${{ steps.version.outputs.tag }}
-          SKIP=${{ steps.version.outputs.skip }}
-          RPM=${{ steps.rpm.outputs.name }}
-          {
-            echo "## Release Summary"
-            echo
-            if [ "$SKIP" = "true" ]; then
-              echo "> **Skipped** — no version change (already at v${VERSION})"
-            else
-              echo "| Item | Value |"
-              echo "|------|-------|"
-              echo "| **Version** | v${VERSION} |"
-              echo "| **Tag** | \`${TAG}\` |"
-              echo "| **RPM** | \`${RPM}\` |"
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"

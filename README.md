@@ -2,12 +2,10 @@
 
 Marketing front for Vigario Technology Solutions, but really this exists
 because I needed somewhere for businesses panicking about POTS sunset to
-land. Deploys as a signed RPM (`vigario-website`) to the private
-LAN-only dnf repo at `http://repo.lan/`; prod installs with `sudo dnf
---refresh upgrade vigario-website`. The full contract lives in
-[docs/deployment.md](docs/deployment.md); the spec is at
-[packaging/vigario-website.spec](packaging/vigario-website.spec).
-Read those for anything past "how do I run it locally."
+land. It does not currently deploy anywhere — the RPM pipeline that
+shipped it was retired, and the site is moving to a static shape with a
+new release path to be built against that. Prod still serves `v1.10.0`
+from the old pipeline until the host is redeployed.
 
 Stack: Next 16 (App Router), Tailwind v4, better-sqlite3 for
 quote/audit submissions, nodemailer + react-email for the optional
@@ -69,78 +67,31 @@ scripts/postbuild.ts           # real-boot smoke against the just-built server.j
 
 ## Build & release
 
-**RPM-as-artifact.** CI builds and signs the RPM on a self-hosted
-GitHub Actions runner running on the prod host itself, lands it in
-the private LAN-only dnf repo, attaches it to the GitHub Release.
-Production installs via `sudo dnf --refresh upgrade vigario-website`.
-See [docs/deployment.md](docs/deployment.md) for the full contract.
+**There is no release pipeline.** The RPM one was retired — packaging
+tree, release job and deploy contract removed together — and the
+replacement is being built against the static shape the site is moving
+to, not restored. `v1.10.0` is the last RPM release.
 
-`.github/workflows/ci.yml`:
+`.github/workflows/ci.yml` is one job, `Gate`, on every PR and every
+push to main: Node-major pin check → actionlint → `npm ci` → typecheck
+→ lint → format → test → `npm run build`, including the postbuild
+real-boot smoke against the compiled `server.js`. Nothing downstream
+consumes it. It proves the tree builds, which is the whole claim.
 
-- **Gate** (runs on every PR + every push to main): `npm ci` →
-  typecheck → lint → format → test → build (with the real-boot
-  postbuild smoke against the just-built server.js). First step
-  cross-checks the two Node-major pins it can read directly (`.nvmrc`
-  vs `engines.node`) — the spec's `Requires: nodejs<N>` and the unit's
-  `ExecStart=/usr/bin/node-<N>` are the other two, bumped manually in
-  lockstep.
-- **Release** (push to main, when a bumpable commit landed): git-cliff
-  bumps version (`feat→minor`, `fix`/`revert`→patch, breaking→major;
-  `refactor`/`perf`/`ci`/`build`/`docs`/`test`/`chore` skip),
-  annotated-tags, then builds + `sudo rpmsign`s the RPM on the
-  self-hosted runner, copies into `/srv/dnf-repo-private/` (LAN-only,
-  served at `http://repo.lan/`), attaches the signed RPM to the GitHub
-  Release.
-
-CHANGELOG is regenerated each release from commit messages — don't
-hand-edit it. If the changelog reads wrong, fix the commit message
-before tagging, or amend cliff.toml's parsers/grouping.
-
-## Prod side (the Fedora box)
-
-```text
-/usr/share/vigario-website/      # RPM-owned, read-only
-  server.js                            # compiled custom entrypoint
-  .next/                               # Next build output
-  node_modules/                        # full prod dep tree, incl. better-sqlite3 native binding
-  public/
-  package.json
-  apache-snippet.conf                  # operator Includes this from their own vhost
-/usr/lib/vigario-website/
-  default.env                          # canonical env defaults (read-only)
-/usr/lib/systemd/system/vigario-website.service   # systemd unit
-/usr/lib/sysusers.d/vigario-website.conf          # declarative system user
-
-# Operator-owned (NOT in RPM):
-/etc/httpd/conf.d/<vhost>.conf         # operator's vhost; Include's apache-snippet.conf
-/etc/sysconfig/vigario-website    # operator env overrides (SMTP, Sentry, etc.)
-/var/lib/vigario-website/quotes.db  # SQLite, created at runtime
-/var/cache/vigario-website/       # Next runtime cache
-```
-
-Deploy: `sudo dnf --refresh upgrade vigario-website`. Rollback:
-`sudo dnf downgrade vigario-website-<previous>` or `dnf history
-undo <id>`. No webhook, no path units, no build-on-host — the RPM
-ships pre-built, validated, signed.
-
-Apache reverse-proxies to port 3000. Server binds `127.0.0.1` by
-default — operator's reverse proxy fronts on :443. SQLite handle,
-in-flight drain, Sentry flush all live in the systemd unit at
-`packaging/vigario-website.service`. The unit doesn't ship an
-`OnFailure=` hook — operator adds that via a systemd drop-in if
-they want failure-email notification.
+CHANGELOG is regenerated from commit messages by git-cliff — don't
+hand-edit it. `cliff.toml` and the conventional-commit convention
+outlive the pipeline that used to read them; whatever comes next reads
+the same commits.
 
 ## Things that have bitten me / will bite me again
 
-- **Node major drift**. Bump `.nvmrc`, `engines.node`, the spec's
-  `Requires: nodejs<N>`, and the unit's `ExecStart=/usr/bin/node-<N>`
-  together — four pins. The gate enforces the first two (`.nvmrc` vs
-  `engines.node`); the spec and unit move manually in lockstep.
-- **better-sqlite3 native binding**. The `.node` file compiles during
-  `npm ci` on the self-hosted runner (which IS the prod host) and
-  ships pre-built in the RPM. Bump Node major = ABI change → rebuild
-  in CI; prod just `dnf upgrade`s. The four Node-major pins above all
-  have to move together.
+- **Node major drift**. Bump `.nvmrc` and `engines.node` together.
+  This used to be four pins — the spec's `Requires: nodejs<N>` and the
+  unit's `ExecStart=/usr/bin/node-<N>` were the other two and went with
+  the packaging tree. The gate check is now the whole of it.
+- **better-sqlite3 native binding**. Compiles from source during
+  `npm ci`, so it needs a toolchain wherever that runs, and its ABI is
+  tied to the Node major. Nothing pre-builds or ships it any more.
 - **SQLITE_PATH must be absolute**. App throws at startup via
   runtime-config if unset or relative. No cwd fallback — that bit me
   when an old deploy wrote `data/quotes.db` inside a release dir that

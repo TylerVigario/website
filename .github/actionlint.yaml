@@ -1,17 +1,10 @@
-# actionlint config. Declares the self-hosted runner label so actionlint
-# doesn't flag `runs-on: [self-hosted, fedora]` (the release job) as an
-# unknown label.
+# actionlint config.
 #
-# Why a version-agnostic `fedora` label: the release job runs on the
-# prod host itself (a Fedora machine running github-runner as a service,
-# registered at the org level so it serves every Vigario-Technology-
-# Solutions repo). The label targets the runner by its RPM-toolchain
-# capability (rpmbuild / createrepo_c / rpmsign / SELinux restorecon),
-# NOT its OS version — a versioned label like `fedora-43` silently stops
-# matching the moment the host is upgraded or the runner is
-# re-registered. The label is set via the runner's `--labels` flag at
-# registration. See docs/deployment.md for the deploy contract.
-
-self-hosted-runner:
-  labels:
-    - fedora
+# Empty of runner-label declarations on purpose. The `fedora` self-hosted
+# label was declared here for the release job, which ran rpmbuild on the
+# prod host. That job and the packaging tree are retired, so every job
+# now runs on a hosted runner and actionlint needs nothing declared.
+#
+# When a release shape returns, whatever labels it targets are declared
+# here — actionlint flags an undeclared self-hosted label as unknown.
+{}

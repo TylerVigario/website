@@ -5,8 +5,7 @@ effectively on this codebase. Vocabulary + guardrails + canonical
 paths. Everything else is discoverable via grep/glob — don't duplicate
 here.
 
-See `README.md` for the feature showcase and design rationale,
-`docs/deployment.md` for the deploy contract.
+See `README.md` for the feature showcase and design rationale.
 
 ## What this is
 
@@ -29,41 +28,37 @@ Rights Reserved — separate from the AGPL grant. The site's footer
 carries a "Source" link to discharge AGPL §13's network-interaction
 obligation; if you ever rename the GitHub repo or change the public
 URL, that link in [Footer.tsx](src/components/Footer.tsx) moves with
-it. The RPM is not distributed (private LAN-only dnf repo); the
-source code is the public artifact.
+it.
 
-## Deploy contract
+## Deploy contract — there isn't one right now
 
-This repo owns its own deploy contract — see
-[`docs/deployment.md`](docs/deployment.md). Single-line summary:
+**The RPM pipeline is retired.** The packaging tree, the release job,
+and `docs/deployment.md` were removed together. This repository builds
+and gates; it does not release, publish or deploy anything. `v1.10.0`
+is the last RPM release and the last tag cut by automation.
 
-**RPM-as-artifact.** A self-hosted GitHub Actions runner on the prod
-host builds + `sudo rpmsign`s `vigario-website-<v>-1.fc43.x86_64.rpm`,
-copies it into the LAN-only private dnf repo at `/srv/dnf-repo-private/`
-(served via `http://repo.lan/`), attaches it to the GitHub Release.
-Production runs `sudo dnf --refresh upgrade vigario-website`
-when ready. Spec lives at
-[`packaging/vigario-website.spec`](packaging/vigario-website.spec);
-`%build` invokes `npm ci && npm run build`; `%install` lays out the
-tree under `/usr/share/vigario-website/`.
+Do not reconstruct any of it from memory or from a sibling repo. The
+site is moving to a static shape, and the release machinery is being
+rebuilt against that shape rather than restored. Until it exists,
+"how does this deploy" has the answer: it doesn't, yet.
 
+What survives, because it is about the app and not the artifact:
 [`server.ts`](server.ts) is the custom Next.js entrypoint — esbuild
 compiles it to `server.js` at the repo root via
-[`scripts/build-server.ts`](scripts/build-server.ts). The postbuild
-step [`scripts/postbuild.ts`](scripts/postbuild.ts) real-boot smokes
-the bundle against a hermetic stub env (port bind, SIGTERM, assert
-exit 0). All three run in `%build`.
+[`scripts/build-server.ts`](scripts/build-server.ts), and the postbuild
+step [`scripts/postbuild.ts`](scripts/postbuild.ts) real-boot smokes the
+bundle against a hermetic stub env (port bind, SIGTERM, assert exit 0).
+Both run under `npm run build`, which the gate exercises.
 
-The prior contract (build-on-prod, shared with `vis-daily-tracker`,
-`turf-tracker`, and `server-admin`) is retired here. The other repos
-follow the same migration on their own timeline.
+`cliff.toml` and `CHANGELOG.md` also survive — the conventional-commit
+convention outlives the pipeline that consumed it.
 
 ## Core vocabulary
 
 - **Quote** — a "request a quote" submission from the main contact form. Schema in [`src/lib/api/quote.ts`](src/lib/api/quote.ts). Route handler at [`src/app/api/quote/route.ts`](src/app/api/quote/route.ts).
 - **POTS audit** — a "free phone-bill audit" submission from the `/pots-migration` landing page. Different schema ([`src/lib/api/pots-audit.ts`](src/lib/api/pots-audit.ts)), same destination row.
 - **`quotes` table** — single SQLite table that holds both kinds of submission. The `services` column distinguishes: a real services array for quote submissions, the literal string `"POTS Migration Audit"` for audit submissions. Schema is `CREATE TABLE IF NOT EXISTS` inside `getDb()` — no migrations.
-- **`required-env.json`** — the canonical list of required env-var names. Imported by [`src/lib/runtime-config.ts`](src/lib/runtime-config.ts) for app-startup validation, and cited by [`docs/deployment.md`](docs/deployment.md) as the runtime env contract (the deploy mechanism is responsible for getting these into `process.env`; the app validates them at boot). [`tests/required-env.test.ts`](tests/required-env.test.ts) asserts the shape on every CI run + pre-commit.
+- **`required-env.json`** — the canonical list of required env-var names. Imported by [`src/lib/runtime-config.ts`](src/lib/runtime-config.ts) for app-startup validation. Whatever runs the app is responsible for getting these into `process.env`; the app validates them at boot. [`tests/required-env.test.ts`](tests/required-env.test.ts) asserts the shape on every CI run + pre-commit.
 - **Problem Details** — every API error response shape, per RFC 9457. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()` helper. Client (forms) parse via the exported `ProblemDetails` zod schema and map `errors[]` back to inline field errors via RHF `setError`. See "Form patterns" below.
 
 ## Key paths
@@ -78,7 +73,7 @@ src/
 │   ├── api/
 │   │   ├── quote/route.ts            # POST: zod-validated, writes sqlite, optionally emails
 │   │   ├── pots-audit/route.ts       # POST: same shape, scoped to /pots-migration
-│   │   └── health/route.ts           # GET: opens db, SELECT 1 FROM sqlite_schema. Deploy hits this.
+│   │   └── health/route.ts           # GET: opens db, SELECT 1 FROM sqlite_schema.
 │   ├── error.tsx                     # Segment-level error boundary — Sentry.captureException
 │   ├── global-error.tsx              # Top-of-tree error boundary — includes <html><body>
 │   └── not-found.tsx                 # 404 with brand styling
@@ -109,16 +104,7 @@ scripts/
 tests/
 └── required-env.test.ts              # contract shape check on src/lib/required-env.json
 
-docs/
-└── deployment.md                     # source-side deploy contract — RPM-as-artifact
-
-packaging/
-├── vigario-website.spec         # RPM spec; %build invokes `npm ci && npm run build`
-├── vigario-website.service      # systemd service unit (installed under /usr/lib/systemd/system/)
-├── vigario-website.tmpfiles.conf # /var/lib + /var/cache state-dir ownership
-├── vigario-website.sysusers     # sysusers.d snippet (declarative system user creation)
-├── apache-snippet.conf               # Apache reverse-proxy snippet (operator Includes from their own vhost)
-└── default.env                       # canonical env defaults (installed RO at /usr/lib/<pkg>/default.env)
+(no docs/ or packaging/ — both went with the RPM pipeline)
 ```
 
 ## Form patterns (RHF + zod + Problem Details)
@@ -168,7 +154,7 @@ export async function POST(req: NextRequest) {
 ```bash
 npm run dev                       # Next dev server (no custom server)
 npm run dev:server                # tsx server.ts — exercises the custom entrypoint. NEEDS prior `npm run build` (server.ts hardcodes dev: false; app.prepare() reads .next/).
-npm run build                     # prebuild (check:env-templates + build:server) → next build → postbuild real-boot smoke
+npm run build                     # prebuild (build:server) → next build → postbuild real-boot smoke
 npm start                         # node server.js (after build)
 npm run typecheck                 # tsc --noEmit
 npm test                          # vitest run (currently just required-env.test.ts)
@@ -213,15 +199,13 @@ Don't introduce a permanent `develop` branch — the ceremony outweighs the bene
 ## Environment
 
 - **Dev**: Windows 11 + git-bash. Node via `fnm` — Bash sessions need `eval "$(fnm env --use-on-cd --shell bash)"` once before `npm`/`node` resolve. PowerShell tool also available.
-- **Prod**: Fedora 43 + systemd. Service binds 127.0.0.1 by default ([`server.ts`](server.ts)); operator's reverse proxy (Apache) fronts on :443. App tree at `/usr/share/vigario-website/` (RPM-owned, read-only). SQLite at `/var/lib/vigario-website/quotes.db` (StateDirectory, owned by `website:website`). Env: canonical defaults at `/usr/lib/<pkg>/default.env` (RPM-owned), operator overrides at `/etc/sysconfig/<pkg>` (NOT in RPM).
-- **Tools required on prod for the *runtime*** are just `nodejs24` (pulled in by the RPM's `Requires:`). Build tooling (`make`/`g++`/`python`/`node-gyp`/`rpm-build`/`rpm-sign`/`createrepo_c`) lives on the prod host too because the self-hosted GitHub Actions runner runs there; build + sign + publish all happen locally. better-sqlite3 still compiles to a `.node` file once per release, just on the runner not at install time.
+- **Prod**: still running `vigario-website-1.10.0`, installed from the retired RPM pipeline, until the host is redeployed in the new shape. Nothing in this repository can update it. Host-side questions (Apache, TLS, DNS, what is actually installed) belong to server-admin.
 
 ## Guardrails — things that break correctness if ignored
 
 - **`Sentry.close()` requires the default import.** [`server.ts`](server.ts) uses `import Sentry from "@sentry/nextjs"`, not `import * as Sentry from`. The namespace form silently lacks `Sentry.close` under the CJS-via-ESM-namespace shape `@sentry/nextjs` ships — a deploy with the wrong form skips the Sentry flush on every shutdown without erroring. Everywhere else (instrumentation, error boundaries, sentry.{server,edge}.config.ts) keeps namespace — those only call `init` / `captureException` / `captureRequestError`, which exist on both shapes.
 - **`SQLITE_PATH` must be absolute.** [`src/lib/runtime-config.ts`](src/lib/runtime-config.ts) rejects relative paths at startup. Don't default it; don't make it optional; don't fall back to cwd.
 - **Don't wrap route handlers in top-level try/catch.** Errors must propagate to Next so `onRequestError` (in [`src/instrumentation.ts`](src/instrumentation.ts)) forwards them to Sentry. The email-send `try/catch` inside the route is the only legitimate catch — the row is already saved by that point, the email is best-effort.
-- **Don't drift the spec's runtime contract from the unit + vhost + env template.** [`packaging/vigario-website.spec`](../packaging/vigario-website.spec) declares paths under `/usr/share/<pkg>/`, `/var/lib/<pkg>/`, `/etc/<pkg>/`. The systemd unit's `WorkingDirectory`, `EnvironmentFile`, `StateDirectory`, and `CacheDirectory` must match. The vhost's `ProxyPass` target must match the env's `PORT`. Misalignment shows up as runtime path errors that are obvious in hindsight and expensive to debug live.
-- **Don't add `output: "standalone"` back.** Next's static-trace machinery keeps tripping over custom server entrypoints + dynamic requires (v2.80.0–v2.83.0 in vis-daily-tracker were four consecutive bad releases). Under the current shape, `next() + app.prepare()` works because the full Next module tree is present in `/usr/share/vigario-website/node_modules/`. Shipping a 100MB+ RPM beats a flaky tracer.
-- **Bump Node major across all four pins together.** `.nvmrc`, `package.json#engines.node`, the RPM spec's `Requires: nodejs<N>`, and the systemd unit's `ExecStart=/usr/bin/node-<N>` must agree. CI reads `.nvmrc` directly (`node-version-file` in the gate's setup composite + the release job), so there's no separate workflow pin. The gate's "Verify Node major pins agree" step enforces the first two; the spec and unit are bumped manually in lockstep. Why the explicit versioned binary: Fedora's unversioned `nodejs` package on F43 is v22; `/usr/bin/node` would resolve to that. `nodejs24` is a parallel-install package that ships `/usr/bin/node-24` only.
-- **`better-sqlite3` is a native module.** Marked external in [`next.config.ts`](next.config.ts)'s `serverExternalPackages` and [`scripts/build-server.ts`](scripts/build-server.ts)'s esbuild externals. The native `.node` binding compiles during `npm ci` on the self-hosted runner (which IS the prod host) and ships pre-built in the RPM — production never recompiles it. Bumping the Node major changes the binding's ABI; the gate's Node-major-pin-alignment step is the canary.
+- **Don't add `output: "standalone"` back.** Next's static-trace machinery keeps tripping over custom server entrypoints + dynamic requires (v2.80.0–v2.83.0 in vis-daily-tracker were four consecutive bad releases). `next() + app.prepare()` works because the full Next module tree is present. If the static migration removes the custom server entirely this guardrail retires with it — until then it holds.
+- **Bump Node major across both pins together.** `.nvmrc` and `package.json#engines.node` must agree; CI reads `.nvmrc` directly via `node-version-file`, so there is no separate workflow pin. This used to be four pins — the RPM spec's `Requires: nodejs<N>` and the unit's `ExecStart=/usr/bin/node-<N>` were the other two, and they went with the packaging tree. The gate's "Verify Node major pins agree" step is now the whole of it.
+- **`better-sqlite3` is a native module.** Marked external in [`next.config.ts`](next.config.ts)'s `serverExternalPackages` and [`scripts/build-server.ts`](scripts/build-server.ts)'s esbuild externals. It compiles from source during `npm ci`, so it needs a toolchain wherever that runs and its ABI is tied to the Node major. Nothing pre-builds or ships it any more.

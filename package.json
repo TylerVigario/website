@@ -11,8 +11,7 @@
   "scripts": {
     "build": "next build",
     "build:server": "tsx scripts/build-server.ts",
-    "check:env-templates": "tsx scripts/check-env-templates.ts",
-    "ci": "npm run lint && npm run typecheck && npm run format && npm test && npm run check:env-templates",
+    "ci": "npm run lint && npm run typecheck && npm run format && npm test",
     "clean": "node -e \"const fs=require('fs'); ['.next','server.js','node_modules/.cache','.eslintcache'].forEach(p=>fs.rmSync(p,{recursive:true,force:true}))\"",
     "dev": "next dev",
     "dev:server": "tsx server.ts",
@@ -25,7 +24,7 @@
     "lint:md": "markdownlint-cli2",
     "lint:md:fix": "markdownlint-cli2 --fix",
     "postbuild": "tsx scripts/postbuild.ts",
-    "prebuild": "npm run check:env-templates && npm run build:server",
+    "prebuild": "npm run build:server",
     "prepare": "husky",
     "start": "node server.js",
     "test": "vitest run",
