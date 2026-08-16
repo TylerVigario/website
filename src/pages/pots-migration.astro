@@ -1,0 +1,72 @@
+---
+import Base from "@/layouts/Base.astro";
+import POTSLanding from "@/components/POTSLanding.astro";
+import Nav from "@/components/Nav.astro";
+import Footer from "@/components/Footer.astro";
+
+// Built from Astro.site so the canonical domain lives in one place.
+const site = Astro.site!.href.replace(/\/$/, "");
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "@id": `${site}/pots-migration#service`,
+  name: "POTS to VoIP Migration",
+  description:
+    "Telecom audit, VoIP migration, and carrier dispute advocacy for small businesses still on legacy copper landlines.",
+  url: `${site}/pots-migration`,
+  provider: {
+    "@type": "ProfessionalService",
+    "@id": `${site}/#business`,
+    name: "Vigario Technology Solutions",
+    telephone: "+1-559-900-1400",
+    email: "tyler@tylervigario.com",
+    areaServed: [
+      { "@type": "City", name: "Fresno" },
+      { "@type": "City", name: "Clovis" },
+      { "@type": "City", name: "Madera" },
+      { "@type": "City", name: "Visalia" },
+      { "@type": "GeoShape", name: "Central Valley, CA" },
+    ],
+  },
+  serviceType: [
+    "Telecom Audit",
+    "VoIP Migration",
+    "Carrier Dispute Advocacy",
+    "POTS Line Replacement",
+  ],
+  offers: {
+    "@type": "Offer",
+    price: "0",
+    priceCurrency: "USD",
+    description: "Free telecom audit",
+  },
+};
+
+// Accepts input, so it renders per request like /contact — a
+// prerendered page reads searchParams at build time and the no-JS
+// repopulation would silently do nothing.
+export const prerender = false;
+
+const params = Astro.url.searchParams;
+const parseParam = (key: string) => {
+  const raw = params.get(key);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as Record<string, never>;
+  } catch {
+    return {};
+  }
+};
+const values = parseParam("v");
+const errors = parseParam("e");
+const submitted = params.get("sent") === "1";
+---
+
+<Base title="POTS to VoIP Migration | Stop Overpaying for Landline Service" description="Still on AT&T or Verizon copper landlines? Your carrier is charging you 5-20x what modern VoIP costs. Free telecom audit for Central Valley businesses." jsonLd={jsonLd}>
+  <Nav />
+
+    <>
+      <POTSLanding values={values} errors={errors} submitted={submitted} />
+    </>
+  <Footer />
+</Base>

@@ -9,13 +9,11 @@
   },
   "packageManager": "npm@11.17.0",
   "scripts": {
-    "build": "next build",
-    "build:server": "tsx scripts/build-server.ts",
-    "ci": "npm run lint && npm run typecheck && npm run format && npm test",
-    "clean": "node -e \"const fs=require('fs'); ['.next','server.js','node_modules/.cache','.eslintcache'].forEach(p=>fs.rmSync(p,{recursive:true,force:true}))\"",
-    "dev": "next dev",
-    "dev:server": "tsx server.ts",
-    "email:dev": "email dev --dir src/emails --port 3001",
+    "build": "astro build",
+    "check:bundles": "node scripts/check-bundles.mjs",
+    "ci": "npm run lint && npm run typecheck && npm run format && npm test && npm run build && npm run check:bundles",
+    "clean": "node -e \"const fs=require('fs'); ['dist','.astro','node_modules/.cache','.eslintcache'].forEach(p=>fs.rmSync(p,{recursive:true,force:true}))\"",
+    "dev": "astro dev",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "lint": "npm run lint:js && npm run lint:md",
@@ -23,63 +21,68 @@
     "lint:js:fix": "eslint --fix",
     "lint:md": "markdownlint-cli2",
     "lint:md:fix": "markdownlint-cli2 --fix",
-    "postbuild": "tsx scripts/postbuild.ts",
-    "prebuild": "npm run build:server",
     "prepare": "husky",
-    "start": "node server.js",
+    "preview": "astro preview",
+    "start": "node ./dist/server/entry.mjs",
     "test": "vitest run",
-    "test:ui": "vitest --ui",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "astro check"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.2.2",
-    "@react-email/components": "^1.0.12",
-    "@sentry/nextjs": "^10.53.1",
+    "@astrojs/node": "^11.1.2",
+    "@astrojs/sitemap": "^3.7.3",
+    "@fontsource-variable/geist": "^5.3.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.2.2",
     "better-sqlite3": "^13.0.3",
-    "next": "^16.2.6",
     "nodemailer": "^9.0.5",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "react-hook-form": "^7.75.0",
-    "yet-another-react-lightbox": "^3.32.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.10",
     "@commitlint/cli": "^21.0.1",
     "@commitlint/config-conventional": "^21.0.1",
-    "@tailwindcss/postcss": "^4.3.0",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24.12.4",
     "@types/nodemailer": "^8.0.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "dotenv": "^17.4.2",
-    "esbuild": "^0.28.0",
-    "eslint": "^9.39.5",
-    "eslint-config-next": "^16.2.6",
+    "browserslist": "^4.28.8",
+    "caniuse-lite": "^1.0.30001809",
+    "eslint": "^10.8.1",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-astro": "^3.1.0",
     "husky": "^9.1.7",
     "lint-staged": "^17.0.4",
     "markdownlint-cli2": "^0.23.2",
     "prettier": "^3.8.3",
-    "react-email": "^6.1.4",
-    "tailwindcss": "^4.3.0",
-    "tsx": "^4.21.0",
+    "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.3",
     "vitest": "^4.1.6"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
+    "*.astro": [
+      "eslint --cache --fix --max-warnings=0 --no-warn-ignored"
+    ],
+    "*.{ts,js,mjs}": [
       "eslint --cache --fix --max-warnings=0 --no-warn-ignored",
       "prettier --write"
     ],
     "*.md": [
       "markdownlint-cli2 --fix"
     ],
-    "*.{json,css}": [
+    "*.{json,jsonc,css}": [
       "prettier --write"
     ]
-  }
+  },
+  "browserslist": [
+    "> 0.2%",
+    "not dead",
+    "not op_mini all",
+    "not and_uc > 0",
+    "not op_mob > 0",
+    "not chrome < 111",
+    "not firefox < 128",
+    "not safari < 16.4",
+    "not ios_saf < 16.4"
+  ]
 }

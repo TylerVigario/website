@@ -30,7 +30,7 @@ npm ci
 npm run dev
 ```
 
-`npm run dev:server` exercises the custom `server.ts` entrypoint (needs a prior `npm run build`). See [README.md](README.md) for more, and [CLAUDE.md](CLAUDE.md) for the vocabulary and guardrails.
+`npm run build && npm run preview` serves the built output the way production does — worth doing before opening a PR that touches an `/api` route, since `npm run dev` and the built server are different processes. See [README.md](README.md) for more, and [CLAUDE.md](CLAUDE.md) for the vocabulary and guardrails.
 
 ## Branching, commits, and PRs
 

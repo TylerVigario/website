@@ -1,0 +1,547 @@
+---
+import { Image } from "astro:assets";
+import imgVtsLogo0 from "@/assets/images/vts-logo.png";
+import Check from "@/components/icons/Check.astro";
+import Email from "@/components/icons/Email.astro";
+import Phone from "@/components/icons/Phone.astro";
+import FaqItem from "@/components/FaqItem.astro";
+import PotsAuditForm from "@/components/PotsAuditForm.astro";
+
+interface Props {
+  values?: Record<string, string>;
+  errors?: Record<string, string>;
+  submitted?: boolean;
+}
+const { values = {}, errors = {}, submitted = false } = Astro.props;
+
+const checklistItems = [
+  "Your monthly phone bill is over $200 for basic service",
+  "You're paying for lines nobody uses",
+  'You received a letter about "copper retirement" or "network modernization"',
+  "Your rates have increased without explanation",
+  "You received a new contract or BSA you don't remember agreeing to",
+  "You've been told there's an early termination fee to leave",
+  'Your carrier offered an "alternative plan" that\'s still more expensive than VoIP',
+  "You've been with the same carrier for 10+ years and never audited your bill",
+];
+
+const faqs = [
+  {
+    q: "Will I lose my phone number?",
+    a: "No. Number porting is a legal right protected by FCC regulations. Your carrier cannot refuse to release your number, even if there's a billing dispute.",
+  },
+  {
+    q: "How long does the switch take?",
+    a: "Typically 1\u20134 weeks from start to finish, depending on how quickly your current carrier processes the port. I handle the coordination.",
+  },
+  {
+    q: "What if my carrier tries to charge me an early termination fee?",
+    a: "If you didn't agree to a contract, you likely don't owe it. I'll review your situation, and if they're in the wrong, I'll help you file complaints with the FCC and California PUC to get the fees waived.",
+  },
+  {
+    q: "Is VoIP reliable enough for a business?",
+    a: "Yes. VoIP has been the standard for business communications for years. With a decent internet connection, call quality meets or exceeds traditional landlines. I spec the hardware and configure the system to ensure reliability.",
+  },
+  {
+    q: "How much will I save?",
+    a: "It varies, but most businesses on legacy POTS are paying $200\u2013$1,500/month. VoIP typically costs $20\u2013$50/month for equivalent service. I've seen annual savings of $5,000\u2013$15,000+.",
+  },
+  {
+    q: "Do I need to buy new phones?",
+    a: "You'll need VoIP-compatible handsets. I recommend Yealink \u2014 professional grade, reliable, and affordable. I handle procurement and configuration.",
+  },
+  {
+    q: "What areas do you serve?",
+    a: "I'm based in the Central Valley but this work doesn't require me to be on-site. I can help businesses anywhere in California, and most of the advocacy work (audits, carrier disputes, FCC complaints) can be done remotely nationwide.",
+  },
+];
+
+---
+
+
+    <>
+      {/* ============================================================ */}
+      {/*  Minimal nav bar                                              */}
+      {/* ============================================================ */}
+      <header class="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-xl">
+        <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+          <a href="/" aria-label="Vigario Technology Solutions home">
+            <Image
+              src={imgVtsLogo0}
+              alt="Vigario Technology Solutions"
+              width={330}
+              height={124}
+              class="h-7 w-auto"
+              fetchpriority="high" />
+          </a>
+          <a
+            href="tel:+15599001400"
+            class="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-bright"
+          >
+            <Phone class="h-4 w-4" />
+            <span class="hidden sm:inline">(559) 900-1400</span>
+            <span class="sm:hidden">Call</span>
+          </a>
+        </div>
+      </header>
+
+      <main id="main" class="pt-16">
+        {/* ============================================================ */}
+        {/*  Hero                                                        */}
+        {/* ============================================================ */}
+        <section class="relative overflow-hidden py-16 sm:py-20 lg:py-28">
+          {/* Subtle background glow */}
+          <div class="pointer-events-none absolute -top-40 left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-accent/5 blur-[120px]" />
+
+          <div class="relative mx-auto max-w-6xl px-6">
+            <div data-reveal="up">
+              <div class="mx-auto max-w-3xl text-center">
+                <h1 class="text-3xl font-bold tracking-tight text-navy sm:text-5xl lg:text-6xl">
+                  Your phone carrier is betting you won&apos;t fight back.
+                </h1>
+                <p class="mt-6 text-lg text-muted sm:text-xl">
+                  I help small businesses escape overpriced legacy phone contracts, fight
+                  unauthorized fees, and migrate to modern VoIP &mdash; saving thousands per year.
+                </p>
+                <div class="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                  <a
+                    href="#audit"
+                    class="inline-block text-center w-full rounded-xl bg-accent px-6 py-3.5 text-base font-semibold text-white transition-all hover:bg-accent-bright hover:shadow-lg hover:shadow-accent/15 sm:w-auto"
+                    >
+                    Find Out If You&apos;re Overpaying
+                  </a>
+                  <a
+                    href="#case-study"
+                    class="w-full rounded-xl border border-border px-6 py-3.5 text-base font-semibold text-foreground transition-colors hover:border-accent/30 hover:bg-surface sm:w-auto text-center"
+                  >
+                    See the Case Study
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ============================================================ */}
+        {/*  The Problem                                                 */}
+        {/* ============================================================ */}
+        <section class="bg-surface py-16 lg:py-20">
+          <div class="mx-auto max-w-6xl px-6">
+            <div data-reveal="up">
+              <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                Here&apos;s what&apos;s happening to small businesses right now
+              </h2>
+            </div>
+
+            <div data-reveal>
+              <div class="mt-8 space-y-5 text-muted leading-relaxed sm:text-lg">
+                <p>
+                  Major carriers &mdash; AT&amp;T, Verizon, Lumen, Frontier &mdash; are actively
+                  retiring their copper POTS networks. AT&amp;T plans to shut down nearly all copper
+                  infrastructure by 2029, and the FCC has relaxed regulations to let them do it
+                  faster.
+                </p>
+                <p>
+                  But before they pull the plug, they&apos;re squeezing every dollar they can out of
+                  the businesses still connected. Lines that cost $30&ndash;$60/month a few years
+                  ago now bill at $150&ndash;$400/month. Some per-line prices have climbed past
+                  $1,000. Industry insiders have called these rate hikes 
+                  <span class="font-medium text-foreground">
+                    &ldquo;borderline extortion.&rdquo;
+                  </span>
+                </p>
+                <p>
+                  When businesses try to leave, carriers hit them with surprise contracts and early
+                  termination fees &mdash; sometimes generated without the customer&apos;s knowledge
+                  or consent. They&apos;re counting on small businesses not knowing their rights or
+                  not having the energy to fight back.
+                </p>
+                <p class="font-medium text-foreground">
+                  This isn&apos;t a theory. It happened to one of my clients.
+                </p>
+              </div>
+            </div>
+
+            {/* Stats bar */}
+            <div data-reveal="scale">
+              <div class="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  { value: "1,200%", label: "documented rate hikes on POTS lines" },
+                  { value: "$1,000+", label: "per-line monthly costs reported" },
+                  { value: "2029", label: "AT&T's copper retirement target" },
+                  { value: "90,000+", label: "customers approved for service discontinuation" },
+                ].map((stat) => (
+                  <div
+                    class="rounded-xl border border-border bg-surface-light p-5 text-center"
+                  >
+                    <div class="text-2xl font-bold text-accent sm:text-3xl">{stat.value}</div>
+                    <div class="mt-1 text-sm text-muted">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ============================================================ */}
+        {/*  Case Study: Bravo Farms                                     */}
+        {/* ============================================================ */}
+        <section id="case-study" class="scroll-mt-24 py-16 lg:py-20">
+          <div class="mx-auto max-w-6xl px-6">
+            <div data-reveal="up">
+              <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                How a 47-year AT&amp;T customer fought back &mdash; and won
+              </h2>
+            </div>
+
+            <div class="mt-8 grid gap-10 lg:grid-cols-5 lg:gap-16">
+              {/* Narrative */}
+              <div data-reveal class="lg:col-span-3">
+                <div class="space-y-5 text-muted leading-relaxed sm:text-lg">
+                  <p>
+                    Bravo Farms &mdash; a family business in Traver, CA operating since 1979 &mdash;
+                    had been a loyal AT&amp;T customer for 47 years. They were paying roughly 
+                    <span class="font-medium text-foreground">$945/month</span> for POTS lines,
+                    including lines that weren&apos;t even in use.
+                  </p>
+                  <p>
+                    After an audit, we recommended migrating to VoIP. On February 24, 2026, they
+                    canceled two unused lines. AT&amp;T&apos;s rep confirmed the cancellation via
+                    email &mdash; no mention of any contract or new terms.
+                  </p>
+                  <p>
+                    On March 1, a port request was submitted to move the remaining lines to VoIP.
+                    Two days later, AT&amp;T sent an automated email claiming a new Business Service
+                    Agreement had been created &mdash; a one-year contract with a 
+                    <span class="font-medium text-foreground">
+                      ~$5,000 early termination fee
+                    </span>
+                    . Bravo Farms never signed, agreed to, or consented to any contract.
+                  </p>
+                  <p>
+                    We built the case, assembled the timeline, identified the violations, and filed
+                    an FCC complaint. Within 
+                    <span class="font-medium text-foreground">15 days</span>, AT&amp;T&apos;s
+                    Office of the President responded. The account was fully disconnected, no early
+                    termination fee was charged, and prorated credits were refunded. AT&amp;T
+                    acknowledged that 
+                    <span class="font-medium text-foreground">
+                      &ldquo;renewals must be accepted by the account holder&rdquo;
+                    </span> 
+                    &mdash; confirming the unauthorized contract was invalid.
+                  </p>
+                </div>
+              </div>
+
+              {/* Before / After */}
+              <div data-reveal="scale" class="lg:col-span-2">
+                <div class="rounded-2xl border border-border bg-surface-light p-6 sm:p-8">
+                  <h3 class="text-lg font-semibold text-navy">Results</h3>
+
+                  <div class="mt-6 space-y-5">
+                    <div>
+                      <div class="text-sm font-medium text-muted">Monthly cost</div>
+                      <div class="mt-1 flex items-center gap-3">
+                        <span class="text-lg line-through text-muted/60">~$945</span>
+                        <span aria-hidden="true" class="text-muted">
+                          &rarr;
+                        </span>
+                        <span class="text-xl font-bold text-accent">~$30&ndash;50</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="text-sm font-medium text-muted">Early termination fee</div>
+                      <div class="mt-1 flex items-center gap-3">
+                        <span class="text-lg line-through text-muted/60">~$5,000</span>
+                        <span aria-hidden="true" class="text-muted">
+                          &rarr;
+                        </span>
+                        <span class="text-xl font-bold text-accent">$0</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="text-sm font-medium text-muted">Lines</div>
+                      <div class="mt-1 flex items-center gap-3">
+                        <span class="text-lg line-through text-muted/60">4 (2 unused)</span>
+                        <span aria-hidden="true" class="text-muted">
+                          &rarr;
+                        </span>
+                        <span class="text-xl font-bold text-accent">2 active</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div class="text-sm font-medium text-muted">FCC resolution</div>
+                      <div class="mt-1 text-xl font-bold text-accent">15 days</div>
+                    </div>
+
+                    <div class="border-t border-border pt-5">
+                      <div class="text-sm font-medium text-muted">Estimated annual savings</div>
+                      <div class="mt-1 text-2xl font-bold text-navy">$10,000+</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ============================================================ */}
+        {/*  Services                                                    */}
+        {/* ============================================================ */}
+        <section class="bg-surface py-16 lg:py-20">
+          <div class="mx-auto max-w-6xl px-6">
+            <div data-reveal="up">
+              <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">What I do</h2>
+            </div>
+
+            <div class="mt-10 grid gap-6 sm:grid-cols-2">
+              {[
+                {
+                  title: "Telecom Audit",
+                  desc: "I review your current phone setup \u2014 what you're paying, what you're actually using, and what you could be paying instead. Most businesses I've worked with are paying 5\u201320x what modern alternatives cost. The audit is free.",
+                },
+                {
+                  title: "VoIP Migration",
+                  desc: "I handle the full transition from legacy POTS to VoIP \u2014 provider selection, hardware, configuration, number porting, and testing. You keep your existing phone numbers. Your customers won't notice a thing except maybe better call quality.",
+                },
+                {
+                  title: "Carrier Dispute & Advocacy",
+                  desc: "If your carrier hits you with unauthorized contracts, surprise ETFs, or tries to block your port, I know how to fight it. I'll build your case and help you file complaints with the FCC and California PUC.",
+                },
+                {
+                  title: "Ongoing Support",
+                  desc: "VoIP systems need occasional attention \u2014 adding lines, configuring auto-attendants, adjusting call routing. I provide ongoing support so you're never stuck calling a 1-800 number and waiting on hold.",
+                },
+              ].map((service) => (
+                <div data-reveal>
+                  <div class="h-full rounded-xl border border-border bg-surface-light p-6 transition-all hover:border-accent/30 hover:-translate-y-1 hover:shadow-lg">
+                    <h3 class="text-lg font-semibold text-navy">{service.title}</h3>
+                    <p class="mt-3 text-muted leading-relaxed">{service.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ============================================================ */}
+        {/*  Interactive Checklist                                       */}
+        {/* ============================================================ */}
+        <section class="py-16 lg:py-20">
+          <div class="mx-auto max-w-6xl px-6">
+            <div data-reveal="up">
+              <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                Signs your carrier is taking advantage of you
+              </h2>
+            </div>
+
+            <div data-reveal>
+              <div class="mt-8 space-y-3">
+                {checklistItems.map((item) => (
+                  <label
+                  class="flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors border-border hover:border-accent/20 has-[:checked]:border-accent/40 has-[:checked]:bg-accent/5"
+                  >
+                    <input
+                      type="checkbox"
+                      class="peer"
+                      class="mt-0.5 h-5 w-5 shrink-0 rounded border-border text-accent accent-accent"
+                    />
+                    <span
+                      class="text-sm text-muted peer-checked:text-foreground sm:text-base"
+                    >
+                      {item}
+                    </span>
+                  </label>
+                ))}
+              </div>
+
+                {/* The React version restyled this box from a live count of
+                    ticked items. The checklist is plain checkboxes now, so
+                    :has() reads the same state in CSS, with no runtime. */}
+                <div
+                  class="mt-6 rounded-xl border border-border bg-surface p-5 transition-all has-[:checked]:border-accent/30 has-[:checked]:bg-accent/5"
+                >
+                <p class="text-muted">
+                  Tick any that apply. If more than a couple are true, your carrier is counting on
+                  you not doing anything about it.
+                </p>
+                <a
+                  href="#audit"
+                  class="mt-3 inline-block rounded-lg bg-accent px-5 py-2.5 text-center text-sm font-semibold text-white transition-colors hover:bg-accent-bright"
+                >
+                  Get a Free Audit
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ============================================================ */}
+        {/*  Why Me                                                      */}
+        {/* ============================================================ */}
+        <section class="bg-surface py-16 lg:py-20">
+          <div class="mx-auto max-w-6xl px-6">
+            <div data-reveal="up">
+              <div class="mx-auto max-w-3xl">
+                <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                  Why I do this
+                </h2>
+                <div class="mt-6 space-y-4 text-muted leading-relaxed sm:text-lg">
+                  <p>
+                    I&apos;m Tyler Vigario, an independent IT consultant based in California&apos;s
+                    Central Valley. I&apos;m not a telecom vendor. I&apos;m not an AT&amp;T
+                    reseller. I don&apos;t take commissions from carriers. I work for the client,
+                    not the phone company.
+                  </p>
+                  <p>
+                    I got into this because I saw a client &mdash; a family business that&apos;s
+                    been around since 1979 &mdash; getting squeezed by their carrier for thousands
+                    of dollars on service they weren&apos;t even fully using. When they tried to
+                    leave, the carrier generated a contract they never agreed to and threatened a
+                    $5,000 fee. That&apos;s not right. I helped them fight it, and now I help other
+                    businesses do the same.
+                  </p>
+                </div>
+
+                <div class="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                  {[
+                    { value: "20+", label: "years in tech" },
+                    { value: "0", label: "carrier commissions" },
+                    { value: "100%", label: "client-side" },
+                    { value: "15 days", label: "FCC resolution" },
+                  ].map((cred) => (
+                    <div class="text-center">
+                      <div class="text-xl font-bold text-accent sm:text-2xl">{cred.value}</div>
+                      <div class="mt-1 text-xs text-muted sm:text-sm">{cred.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ============================================================ */}
+        {/*  FAQ                                                         */}
+        {/* ============================================================ */}
+        <section class="py-16 lg:py-20">
+          <div class="mx-auto max-w-3xl px-6">
+            <div data-reveal="up">
+              <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                Frequently asked questions
+              </h2>
+            </div>
+
+            <div data-reveal>
+              <div class="mt-8">
+                {faqs.map((faq) => (
+                  <FaqItem q={faq.q} a={faq.a} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ============================================================ */}
+        {/*  Contact / CTA                                               */}
+        {/* ============================================================ */}
+        <section class="scroll-mt-24 bg-surface py-16 lg:py-20">
+          <div class="mx-auto max-w-6xl px-6">
+            <div class="grid gap-10 lg:grid-cols-2 lg:gap-16">
+              {/* Left — copy */}
+              <div data-reveal="up">
+                <div class="lg:py-4">
+                  <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl lg:text-5xl">
+                    Stop overpaying. Start here.
+                  </h2>
+                  <p class="mt-4 text-lg text-muted">
+                    Tell me about your current phone setup and I&apos;ll tell you exactly what you
+                    could be saving &mdash; free, no strings attached.
+                  </p>
+
+                  <div class="mt-8 space-y-4">
+                    <div class="flex items-center gap-3 text-muted">
+                      <Phone class="h-5 w-5 shrink-0 text-accent" />
+                      <span>
+                        Rather talk? 
+                        <a
+                          href="tel:+15599001400"
+                          class="inline-block py-2.5 -my-2.5 font-medium text-foreground hover:text-accent"
+                        >
+                          (559) 900-1400
+                        </a>
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-3 text-muted">
+                      <Email class="h-5 w-5 shrink-0 text-accent" />
+                      <span>
+                        Email: 
+                        <a
+                          href="mailto:tyler@tylervigario.com"
+                          class="inline-block py-2.5 -my-2.5 font-medium text-foreground hover:text-accent"
+                        >
+                          tyler@tylervigario.com
+                        </a>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="mt-10 space-y-3 text-sm text-muted">
+                    {[
+                      "Free audit \u2014 no obligation, no sales pitch",
+                      "Independent consultant \u2014 no carrier commissions",
+                      "Central Valley on-site \u2014 remote available anywhere",
+                    ].map((item) => (
+                      <div class="flex items-start gap-2.5">
+                        <Check class="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right — form */}
+              <div data-reveal="scale">
+                <div class="rounded-2xl border border-border bg-surface-light p-6 sm:p-8">
+                  <PotsAuditForm values={values} errors={errors} submitted={submitted} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      {/* ============================================================ */}
+      {/*  Footer                                                      */}
+      {/* ============================================================ */}
+      <footer class="border-t border-border py-8">
+        <div class="mx-auto max-w-6xl px-6">
+          <div class="flex flex-col items-center justify-between gap-4 text-sm text-muted sm:flex-row">
+            <a href="/" class="inline-block py-2">
+              <Image
+                src={imgVtsLogo0}
+                alt="Vigario Technology Solutions"
+                width={330}
+                height={124}
+                class="h-6 w-auto" />
+            </a>
+            <div class="flex items-center gap-4">
+              <a href="tel:+15599001400" class="py-2 transition-colors hover:text-foreground">
+                (559) 900-1400
+              </a>
+              <span class="text-border">|</span>
+              <a
+                href="mailto:tyler@tylervigario.com"
+                class="py-2 transition-colors hover:text-foreground"
+              >
+                tyler@tylervigario.com
+              </a>
+            </div>
+          </div>
+          <div class="mt-6 text-center text-xs text-muted">
+            &copy; {new Date().getFullYear()} Vigario Technology Solutions. All rights reserved.
+          </div>
+        </div>
+      </footer>
+    </>

@@ -1,0 +1,88 @@
+---
+import { Image } from "astro:assets";
+import imgVtsLogo0 from "@/assets/images/vts-logo.png";
+// Was a React client component holding `open` in useState and reading
+// the active route from usePathname(). Neither needs a runtime here:
+//
+//   active link  — every page is prerendered, so Astro.url.pathname is
+//                  known at build time and each page's HTML ships with
+//                  its own correct highlight baked in.
+//   mobile menu  — <details>/<summary> is a native disclosure widget.
+//                  It opens with JavaScript disabled, is keyboard
+//                  operable, and announces expanded state to screen
+//                  readers without aria-expanded bookkeeping.
+//
+// The hamburger-to-X animation and the slide are pure CSS off
+// details[open], which is what they already were — only the state was
+// ever JavaScript.
+const links = [
+  { label: "Services", href: "/services" },
+  { label: "Work", href: "/work" },
+  { label: "About", href: "/about" },
+  { label: "Contact", href: "/contact" },
+];
+
+const path = Astro.url.pathname;
+const isActive = (href: string) => path === href || path.startsWith(href + "/");
+const linkClass = (href: string) =>
+  `py-3 text-sm transition-colors hover:text-foreground ${
+    isActive(href) ? "text-accent font-medium" : "text-muted"
+  }`;
+---
+
+<nav class="fixed top-0 right-0 left-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+  <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+    <a href="/" class="flex items-center py-1.5">
+      <Image
+        src={imgVtsLogo0}
+        alt="Vigario Technology Solutions"
+        width="330"
+        height="124"
+        class="h-8 w-auto"
+        fetchpriority="high" />
+    </a>
+
+    <div class="hidden items-center gap-8 md:flex">
+      {links.map((l) => <a href={l.href} class={linkClass(l.href)}>{l.label}</a>)}
+      <a
+        href="tel:+15599001400"
+        class="rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-bright"
+      >
+        (559) 900-1400
+      </a>
+    </div>
+
+    <details class="group md:hidden">
+      <summary
+        class="flex min-h-11 min-w-11 cursor-pointer list-none flex-col items-center justify-center gap-1.5 p-3 [&::-webkit-details-marker]:hidden"
+        aria-label="Toggle menu"
+      >
+        <span
+          class="h-0.5 w-6 bg-foreground transition-transform group-open:translate-y-2 group-open:rotate-45"
+        ></span>
+        <span class="h-0.5 w-6 bg-foreground transition-opacity group-open:opacity-0"></span>
+        <span
+          class="h-0.5 w-6 bg-foreground transition-transform group-open:-translate-y-2 group-open:-rotate-45"
+        ></span>
+      </summary>
+
+      <div class="absolute right-0 left-0 border-t border-border bg-background/95 backdrop-blur-xl">
+        <div class="flex flex-col gap-4 px-6 py-6">
+          {
+            links.map((l) => (
+              <a href={l.href} class={linkClass(l.href).replace("py-3 text-sm", "py-2.5")}>
+                {l.label}
+              </a>
+            ))
+          }
+          <a
+            href="tel:+15599001400"
+            class="mt-2 rounded-lg bg-accent px-5 py-3 text-center font-semibold text-white"
+          >
+            (559) 900-1400
+          </a>
+        </div>
+      </div>
+    </details>
+  </div>
+</nav>

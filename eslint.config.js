@@ -1,59 +1,43 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import astro from "eslint-plugin-astro";
 import prettier from "eslint-config-prettier";
 
-const eslintConfig = defineConfig([
-  // TypeScript type-aware rules for all TS/JS files
-  // Includes: no-floating-promises, no-misused-promises, await-thenable, no-unused-vars, etc.
+export default defineConfig([
+  globalIgnores(["dist/**", "node_modules/**", ".astro/**"]),
+
+  // Type-aware rules across the TS surface. `projectService` picks up
+  // tsconfig, which now includes .astro files.
   ...tseslint.configs.recommendedTypeChecked,
   {
     languageOptions: {
-      parserOptions: {
-        projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
+      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
   },
 
-  // Next.js + React rules only for src/ (React, hooks, a11y, Next.js specific)
+  // .astro needs its own parser — without it every component file is a
+  // parse error, which is what "Parsing error" meant across 17 files
+  // during the port.
+  ...astro.configs.recommended,
   {
-    files: ["src/**/*.{ts,tsx,js,jsx}"],
-    extends: [...nextVitals, ...nextTs],
-  },
-
-  // Prettier must come last to override formatting rules
-  prettier,
-
-  // Rule customizations
-  {
+    files: ["**/*.astro"],
     rules: {
-      // Allow underscore-prefixed variables to be unused (common convention)
-      "@typescript-eslint/no-unused-vars": [
-        "warn",
-        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
-      ],
+      // The frontmatter is typechecked by `astro check`; the type-aware
+      // ESLint rules cannot see through the .astro parser and report
+      // every expression as `any`. Duplicated coverage, worse signal.
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
     },
   },
 
-  // Override default ignores of eslint-config-next + add our own
-  globalIgnores([
-    // Build outputs
-    ".next/**",
-    "out/**",
-    "build/**",
-    "server.js",
-    // Generated files
-    "next-env.d.ts",
-    // Root config files (not in tsconfig)
-    ".commitlintrc.js",
-    "eslint.config.js",
-    "postcss.config.js",
-    // Build / pipeline scripts (run via tsx, not part of the app
-    // type graph)
-    "scripts/**",
-  ]),
-]);
+  // Config files are plain Node modules with no project entry.
+  {
+    files: ["*.config.{js,mjs,ts}", ".*.js", "scripts/**"],
+    ...tseslint.configs.disableTypeChecked,
+  },
 
-export default eslintConfig;
+  prettier,
+]);

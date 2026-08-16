@@ -15,7 +15,6 @@
  *   shape and surface field-level errors back to the form.
  */
 
-import { NextResponse } from "next/server";
 import { z } from "zod";
 
 const FieldError = z.object({
@@ -32,23 +31,36 @@ export const ProblemDetails = z.object({
 });
 export type ProblemDetails = z.infer<typeof ProblemDetails>;
 
-/** Format a Zod safe-parse failure into a Problem Details 400 with
- *  one entry per issue. The form maps these back to inline field
- *  errors via RHF's `setError`. */
-export function zodError(result: z.ZodSafeParseError<unknown>): NextResponse<ProblemDetails> {
+/** A failed safe-parse, typed by what this function actually reads
+ *  rather than by which zod build produced it. The schemas are
+ *  zod/mini and this module is full zod; their error classes differ,
+ *  but `issues` is the only thing needed and it is the same shape in
+ *  both. Structural typing here beats forcing one build on the other. */
+export interface SafeParseFailure {
+  error: { issues: readonly { path: readonly PropertyKey[]; message: string }[] };
+}
+
+/** Format a failed safe-parse into a Problem Details 400 with one entry
+ *  per issue. The form maps these back to inline field errors. */
+export function zodError(result: SafeParseFailure): Response {
   const errors = result.error.issues.map((issue) => ({
     field: issue.path.length ? issue.path.join(".") : "(root)",
     message: issue.message,
   }));
 
-  return NextResponse.json(
-    {
+  return new Response(
+    JSON.stringify({
       type: "/errors/validation",
       title: "Validation Error",
       status: 400,
       detail: errors[0]?.message,
       errors,
+    }),
+    {
+      status: 400,
+      // RFC 9457 media type, not application/json — the shape is
+      // Problem Details and the content type should say so.
+      headers: { "Content-Type": "application/problem+json" },
     },
-    { status: 400 },
   );
 }

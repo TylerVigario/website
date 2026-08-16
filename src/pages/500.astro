@@ -1,0 +1,25 @@
+---
+import Base from "@/layouts/Base.astro";
+import Nav from "@/components/Nav.astro";
+import Footer from "@/components/Footer.astro";
+---
+
+<Base title="Something went wrong" description="An error occurred.">
+  <Nav />
+  <main id="main" class="mx-auto max-w-2xl px-6 pt-32 pb-24 text-center">
+    <p class="text-sm font-medium text-accent">500</p>
+    <h1 class="mt-2 text-3xl font-bold text-navy sm:text-4xl">Something went wrong</h1>
+    <p class="mt-4 text-muted">
+      That is on me, not you. It has been logged. If you were partway through a form, what you typed is still saved in your browser.
+    </p>
+    <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+      <a
+        href="/"
+        class="rounded-lg bg-accent px-6 py-3 font-semibold text-white transition-colors hover:bg-accent-bright"
+        >Back to the homepage</a
+      >
+      <a href="/contact" class="px-6 py-3 font-medium text-accent hover:underline">Get in touch</a>
+    </div>
+  </main>
+  <Footer />
+</Base>

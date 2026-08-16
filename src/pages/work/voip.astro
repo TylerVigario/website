@@ -1,0 +1,290 @@
+---
+import Base from "@/layouts/Base.astro";
+import Nav from "@/components/Nav.astro";
+import Footer from "@/components/Footer.astro";
+
+// Built from Astro.site so the canonical domain lives in one place.
+const site = Astro.site!.href.replace(/\/$/, "");
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "@id": `${site}/work/voip#article`,
+  headline: "POTS-to-VoIP Migration: fighting copper-line extortion and winning",
+  description:
+    "A telecom-advocacy and VoIP-migration case study — auditing a legacy POTS account, defeating an unauthorized contract via an FCC complaint, and migrating to VoIP.",
+  url: `${site}/work/voip`,
+  author: {
+    "@type": "ProfessionalService",
+    "@id": `${site}/#business`,
+    name: "Vigario Technology Solutions",
+  },
+  about: "POTS to VoIP migration and telecom carrier advocacy",
+};
+
+const stats = [
+  { value: "~$945", label: "monthly POTS bill, cut to under $50" },
+  { value: "$5,000", label: "unauthorized ETF, reduced to $0" },
+  { value: "15", label: "days to FCC resolution" },
+  { value: "$10k+", label: "estimated annual savings" },
+];
+
+const results = [
+  { label: "Monthly cost", before: "~$945", after: "~$30–50" },
+  { label: "Early termination fee", before: "~$5,000", after: "$0" },
+  { label: "Lines", before: "4 (2 unused)", after: "2 active" },
+];
+
+const services = [
+  {
+    title: "Telecom audit",
+    body: "A line-by-line review of what a business pays, what it actually uses, and what the same service costs on VoIP. Most legacy POTS accounts are paying 5–20x the modern rate for lines nobody picks up.",
+  },
+  {
+    title: "VoIP migration",
+    body: "The full transition off copper — provider selection, hardware, configuration, number porting, and testing. Existing numbers stay; the only thing customers notice is better call quality.",
+  },
+  {
+    title: "Carrier dispute & advocacy",
+    body: "When a carrier answers a port request with a surprise contract or an early-termination fee, VTS builds the timeline, identifies the violations, and files the FCC and California PUC complaints that make them back down.",
+  },
+  {
+    title: "Ongoing support",
+    body: "VoIP systems need occasional attention — new lines, auto-attendants, call-routing changes. Support comes from the person who set it up, not a 1-800 hold queue.",
+  },
+];
+---
+
+<Base title="POTS-to-VoIP Migration Case Study" description="How VTS helped a 47-year AT&T customer beat an unauthorized $5,000 contract, win an FCC complaint in 15 days, and migrate off copper POTS lines to VoIP — cutting a ~$945/month bill to under $50." jsonLd={jsonLd}>
+  <Nav />
+
+    <>
+      {/* Hero */}
+      <section class="pt-32 pb-16 lg:pb-20 lg:pt-36">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <p class="text-sm font-medium text-accent">Work / Case Study</p>
+            <h1 class="mt-4 text-3xl font-bold tracking-tight text-navy sm:text-4xl md:text-5xl">
+              POTS-to-VoIP Migration
+            </h1>
+            <p class="mt-4 max-w-2xl text-lg text-muted leading-relaxed">
+              How VTS helped a 47-year AT&amp;T customer beat an unauthorized $5,000 contract, win
+              an FCC complaint in 15 days, and escape overpriced copper lines &mdash; cutting a
+              ~$945/month bill to under $50.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section class="bg-surface py-12 lg:py-14">
+        <div class="mx-auto max-w-6xl px-6">
+          <div class="grid grid-cols-2 gap-6 lg:grid-cols-4">
+            {stats.map((s) => (
+              <div data-reveal>
+                <div class="text-center">
+                  <p class="text-3xl font-bold text-navy sm:text-4xl">{s.value}</p>
+                  <p class="mt-2 text-sm text-muted">{s.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* The problem */}
+      <section class="py-16 lg:py-20">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <div class="mx-auto max-w-3xl">
+              <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                The problem
+              </h2>
+              <div class="mt-6 space-y-4 text-muted leading-relaxed sm:text-lg">
+                <p>
+                  The major carriers &mdash; AT&amp;T, Verizon, Lumen, Frontier &mdash; are retiring
+                  their copper POTS networks, with AT&amp;T targeting nearly all of it by 2029. But
+                  before they pull the plug, they squeeze the businesses still connected: lines that
+                  billed $30&ndash;$60/month a few years ago now run $150&ndash;$400, and some
+                  per-line prices have climbed past $1,000.
+                </p>
+                <p>
+                  When a business tries to leave, the carrier answers the port request with a
+                  surprise contract and an early-termination fee &mdash; sometimes generated without
+                  the customer&apos;s knowledge or consent. The whole play depends on small
+                  businesses not knowing their rights, or not having the energy to fight back.
+                </p>
+                <p class="font-medium text-foreground">This one fought back.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* The engagement */}
+      <section class="bg-surface py-16 lg:py-20">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+              A 47-year AT&amp;T customer, squeezed &mdash; and the FCC complaint that ended it
+            </h2>
+          </div>
+
+          <div class="mt-8 grid gap-10 lg:grid-cols-5 lg:gap-16">
+            {/* Narrative */}
+            <div data-reveal class="lg:col-span-3">
+              <div class="space-y-5 text-muted leading-relaxed sm:text-lg">
+                <p>
+                  Bravo Farms &mdash; a family business in Traver, CA operating since 1979 &mdash;
+                  had been an AT&amp;T customer for 47 years, paying roughly 
+                  <span class="font-medium text-foreground">$945/month</span> for POTS lines,
+                  including lines that were no longer in use.
+                </p>
+                <p>
+                  After an audit, VTS recommended migrating to VoIP. On February 24, 2026 they
+                  canceled two unused lines; AT&amp;T&apos;s rep confirmed the cancellation by email
+                  with no mention of a contract or new terms. On March 1 a port request went in to
+                  move the remaining lines to VoIP.
+                </p>
+                <p>
+                  Two days later, AT&amp;T sent an automated email claiming a new one-year Business
+                  Service Agreement had been created &mdash; carrying a 
+                  <span class="font-medium text-foreground">~$5,000 early termination fee</span>
+                  . Bravo Farms never signed, agreed to, or consented to any such contract.
+                </p>
+                <p>
+                  VTS built the case: assembled the timeline, identified the violations, and filed
+                  an FCC complaint. Within 
+                  <span class="font-medium text-foreground">15 days</span>, AT&amp;T&apos;s
+                  Office of the President responded. The account was fully disconnected, no early
+                  termination fee was charged, and prorated credits were refunded &mdash; with
+                  AT&amp;T acknowledging that 
+                  <span class="font-medium text-foreground">
+                    &ldquo;renewals must be accepted by the account holder,&rdquo;
+                  </span> 
+                  confirming the unauthorized contract was invalid.
+                </p>
+              </div>
+            </div>
+
+            {/* Results */}
+            <div data-reveal="scale" class="lg:col-span-2">
+              <div class="rounded-2xl border border-border bg-surface-light p-6 sm:p-8">
+                <h3 class="text-lg font-semibold text-navy">Results</h3>
+                <div class="mt-6 space-y-5">
+                  {results.map((r) => (
+                    <div>
+                      <div class="text-sm font-medium text-muted">{r.label}</div>
+                      <div class="mt-1 flex items-center gap-3">
+                        <span class="text-lg text-muted line-through">{r.before}</span>
+                        <span aria-hidden="true" class="text-muted">
+                          &rarr;
+                        </span>
+                        <span class="text-xl font-bold text-accent">{r.after}</span>
+                      </div>
+                    </div>
+                  ))}
+                  <div>
+                    <div class="text-sm font-medium text-muted">FCC resolution</div>
+                    <div class="mt-1 text-xl font-bold text-accent">15 days</div>
+                  </div>
+                  <div class="border-t border-border pt-5">
+                    <div class="text-sm font-medium text-muted">Estimated annual savings</div>
+                    <div class="mt-1 text-2xl font-bold text-navy">$10,000+</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* What VTS does */}
+      <section class="py-16 lg:py-20">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <h2 class="text-center text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+              What the engagement covers
+            </h2>
+          </div>
+          <div class="mt-10 grid gap-6 sm:grid-cols-2">
+            {services.map((service) => (
+              <div data-reveal>
+                <div class="h-full rounded-xl border border-border bg-surface-light p-6">
+                  <h3 class="text-lg font-semibold text-navy">{service.title}</h3>
+                  <p class="mt-3 text-sm text-muted leading-relaxed">{service.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Why client-side */}
+      <section class="bg-surface py-16 lg:py-20">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <div class="mx-auto max-w-3xl">
+              <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                An advocate, not a reseller
+              </h2>
+              <div class="mt-6 space-y-4 text-muted leading-relaxed sm:text-lg">
+                <p>
+                  VTS takes no carrier commissions and resells nobody&apos;s service. That matters:
+                  the incentive is to cut the bill and win the dispute, not to steer a business onto
+                  whatever plan pays the referrer. The audit is free, the recommendation is
+                  independent, and the advocacy work &mdash; audits, carrier disputes, FCC and
+                  California PUC complaints &mdash; can be done remotely for businesses well beyond
+                  the Central Valley.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section class="py-16 lg:py-20">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <div class="mx-auto max-w-3xl text-center">
+              <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                Think your carrier is overcharging you?
+              </h2>
+              <p class="mt-4 text-lg text-muted">
+                A free telecom audit tells you exactly what you could be saving &mdash; and whether
+                anything on your account was signed without your say-so.
+              </p>
+              <div class="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                <a
+                  href="/pots-migration"
+                  class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-base font-semibold text-white transition-all hover:bg-accent-bright hover:shadow-lg hover:shadow-accent/15 sm:w-auto"
+                >
+                  Request a free audit
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    class="h-5 w-5"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </a>
+                <a
+                  href="/contact"
+                  class="inline-flex w-full items-center justify-center rounded-xl border border-border px-6 py-3.5 text-base font-semibold text-foreground transition-colors hover:border-accent/30 hover:bg-surface sm:w-auto"
+                >
+                  Get in touch
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  <Footer />
+</Base>

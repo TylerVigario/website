@@ -1,0 +1,115 @@
+---
+import Lightbox, { type Shot } from "@/components/Lightbox.astro";
+import type { ImageMetadata } from "astro";
+
+// Eager glob so every screenshot is a build-time import: Astro can then
+// resize it and emit a srcset, and a filename typo fails the build
+// instead of 404ing in production.
+const files = import.meta.glob<{ default: ImageMetadata }>(
+  "/src/assets/images/work/italesowell/*",
+  { eager: true },
+);
+const img = (file: string): ImageMetadata => {
+  const hit = files[`/src/assets/images/work/italesowell/${file}`];
+  if (!hit) throw new Error(`No screenshot named ${file} for italesowell`);
+  return hit.default;
+};
+
+const shots: Shot[] = [
+  {
+    src: img("now-showing.webp"),
+    alt: "The Now Showing section of iTaleSoWell: eight poster cards, each with cover art, rating, runtime and a one-line logline",
+    caption:
+      "Now Showing — the newest eight, each with its rating, runtime and the logline that has to sell it.",
+    sizes: "(min-width: 768px) 50vw, 100vw",
+  },
+  {
+    src: img("library.webp"),
+    alt: "The Library page: filter rail for showtime, length and genre beside a list of tales, each showing cover, metadata and its opening paragraph",
+    caption:
+      "The Library — filters live in a rail; every tale leads with its own first paragraph rather than a blurb.",
+    sizes: "(min-width: 768px) 50vw, 100vw",
+  },
+  {
+    src: img("reader.webp"),
+    alt: "A tale open in the reader: warm serif prose on near-black, a chapter heading, and a toolbar with scroll or page mode, chapters, text size and ePub download",
+    caption:
+      "The reader — scroll or page-turns, a chapter index, text size, and an ePub for every tale.",
+    sizes: "(min-width: 768px) 50vw, 100vw",
+  },
+  {
+    src: img("signup.webp"),
+    alt: "The Never Miss a Showing section: a single email field promising one short tale a week, with a one-click way out",
+    caption:
+      "The one conversion on the front page — an audience the author owns, rather than one a platform lends him.",
+    sizes: "(min-width: 768px) 50vw, 100vw",
+  },
+  {
+    src: img("mobile-reader.webp"),
+    alt: "A tale being read on a phone: serif prose at a comfortable measure with a compact sticky toolbar",
+    caption:
+      "Reading on a phone — a capped measure, a sticky toolbar, and a progress bar that survives a font change.",
+    sizes: "(min-width: 640px) 24rem, 100vw",
+  },
+  {
+    src: img("mobile-library.webp"),
+    alt: "The Library on a phone with the filter panel opened, showing showtime, length and genre chips with counts",
+    caption:
+      "The same filters on a phone — folded behind one control, so the first tale is half a screen away.",
+    sizes: "(min-width: 640px) 24rem, 100vw",
+  },
+  {
+    src: img("admin-overview.webp"),
+    alt: "The admin overview: a weekly reads figure with an eight-week sparkline, four channel cards with the author's own site marked as his, subscriber counts, and a ranked list of tales with stacked bars showing where each one was read",
+    caption:
+      "The overview ranks rather than totals, and reports movement in people — at these numbers a percentage would be theatre.",
+    sizes: "(min-width: 768px) 50vw, 100vw",
+  },
+  {
+    src: img("admin-tales.webp"),
+    alt: "The admin tales list: a filter rail with status and needs-work chips carrying counts, beside a table of tales showing status, rating, shelf, genre, runtime and reads",
+    caption:
+      "One list, no tabs. Each chip's number is what you would get by clicking it, so a dead end is greyed before it wastes a tap.",
+    sizes: "(min-width: 768px) 50vw, 100vw",
+  },
+  {
+    src: img("admin-editor.webp"),
+    alt: "The tale editor: a toolbar reading Chapter, Break, Scene, then bold, italic and underline, above serif manuscript text with a chapter heading and a scene divider",
+    caption:
+      "The editor speaks the writer's vocabulary — Chapter, Break, Scene — not a word processor's.",
+    sizes: "(min-width: 768px) 50vw, 100vw",
+  },
+  {
+    src: img("admin-taxonomy.webp"),
+    alt: "The taxonomy page: words grouped by genre, flavour, content warnings and collections, each showing how many tales use it and whether it is public or held",
+    caption:
+      "New words arrive held — usable the moment they are invented, invisible to readers until promoted.",
+    sizes: "(min-width: 768px) 50vw, 100vw",
+  },
+  {
+    src: img("admin-sends.webp"),
+    alt: "The sends tab: an automatic on-release send toggled on, a frequency cap of one per seven days, a delivery hour, and the record of a broadcast with delivered, clicked and bounced counts",
+    caption:
+      "Publishing a tale is the send. A frequency cap and a delivery hour keep an automatic list from behaving like a bot.",
+    sizes: "(min-width: 768px) 50vw, 100vw",
+  },
+  {
+    src: img("admin-editor-phone.webp"),
+    alt: "The same tale editor on a phone: the toolbar collapsed to single-character icons above the manuscript text",
+    caption:
+      "The same editor on the device he actually writes on — the toolbar collapses to icons rather than wrapping.",
+    sizes: "(min-width: 640px) 24rem, 100vw",
+  },
+];
+
+interface Props {
+  /** The page shows the gallery in slices, interleaved with prose. */
+  from?: number;
+  to?: number;
+  class?: string;
+  id?: string;
+}
+const { from = 0, to = shots.length, class: className, id = "gallery" } = Astro.props;
+---
+
+<Lightbox shots={shots} from={from} to={to} class={className} id={id} />

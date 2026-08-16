@@ -20,7 +20,7 @@ If you can, include:
 
 This is a public marketing site with two unauthenticated form endpoints (`/api/quote`, `/api/pots-audit`) that validate input with zod, persist to SQLite via parameterized `better-sqlite3` statements, and optionally send the operator a notification email. There is no user authentication, no sessions, and no API consumers other than the site's own forms. In rough priority order, security issues are:
 
-- **Injection** — SQL injection (the write paths use parameterized statements; novel patterns or any string-built / raw SQL helper warrant scrutiny), or HTML/template injection through a form field that reaches the rendered notification email (`src/emails/` via `@react-email/components`).
+- **Injection** — SQL injection (the write paths use parameterized statements; novel patterns or any string-built / raw SQL helper warrant scrutiny), or HTML injection through a form field that reaches the notification email. That surface changed and is now worth more scrutiny, not less: `src/emails/templates.ts` builds the message as HTML strings rather than through a component library, so every interpolation of submitter-supplied text goes through the `esc()` helper in that file. A new interpolation that skips it is an injection into an inbox.
 - **Stored or reflected XSS** — script execution via any user-entered field that is later rendered, in the browser or in the notification email an operator opens.
 - **Sensitive data leakage** — SMTP credentials, the Sentry DSN, or submitted PII (names, contacts, free-text details from the `quotes` table) exposed in logs, error responses, or git history. API errors follow RFC 9457 Problem Details and must not leak internals.
 - **Request-handling bypass** — a malformed request that skips zod validation, or reaches a code path that writes unvalidated data.
@@ -51,7 +51,7 @@ Only the latest released version on `main` is supported; older tags do not recei
 
 ## Scope
 
-In scope: the `TylerVigario/website` repository at the latest commit on `main`, and the deploy contract in [`docs/deployment.md`](docs/deployment.md).
+In scope: the `TylerVigario/website` repository at the latest commit on `main`.
 
 Out of scope: third-party dependencies (report upstream; a coordination report here is welcome if a dependency materially affects this site), the private prod-side admin tooling, and any deployment you don't operate.
 

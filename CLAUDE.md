@@ -10,153 +10,194 @@ See `README.md` for the feature showcase and design rationale.
 ## What this is
 
 Public marketing site for Vigario Technology Solutions (VTS), an
-independent IT consultancy. The reason the form pipeline exists at all
-is the `/pots-migration` landing page — a campaign target for
-businesses panicking about copper-POTS sunset rate hikes. The rest of
-the site (home, about, contact, /services/\*) is supporting surface.
+independent IT consultancy. It has two jobs: **brand presence** and
+**lead generation**. The case studies and service pages do the first;
+the forms do the second.
 
-Stack: Next 16 App Router, Tailwind v4, better-sqlite3, nodemailer +
-react-email for the optional submission-notification email (templates
-in `src/emails/`), `@sentry/nextjs` for error + perf
-monitoring (no-op when DSNs unset), react-hook-form + zodResolver
-for form validation. No auth, no API consumers other than the site's
-own forms.
+That ordering explains where the care goes. A form that loses what
+someone typed is a lead thrown away, and nothing upstream recovers it —
+which is why the never-erase invariant below is treated as a hard
+property of the code rather than a nicety. `/pots-migration` is one
+campaign landing page on that surface, not the reason the site exists.
+
+Stack: Astro 7 hybrid, Tailwind v4, better-sqlite3, nodemailer with
+plain-HTML templates in `src/emails/templates.ts`, zod for validation.
+No auth, no API consumers other than the site's own forms.
+
+**No UI framework, and that is load-bearing.** Nothing here needs one:
+the menu is `<details>`, the reveal is one CSS rule armed by a 500-byte
+script, the lightbox is `<dialog>` plus scroll-snap, and the forms post
+HTML. Most pages ship zero JavaScript, and `npm run check:bundles`
+asserts it locally and in CI. If
+something ever genuinely needs a framework, argue for it then — do not
+reintroduce one to solve a problem the platform already solves.
 
 License: **AGPL-3.0-or-later** for source code. Brand assets in
 `public/images/` (VTS logo, photos, marketing graphics) are All
 Rights Reserved — separate from the AGPL grant. The site's footer
 carries a "Source" link to discharge AGPL §13's network-interaction
 obligation; if you ever rename the GitHub repo or change the public
-URL, that link in [Footer.tsx](src/components/Footer.tsx) moves with
+URL, that link in [Footer.astro](src/components/Footer.astro) moves with
 it.
 
-## Deploy contract — there isn't one right now
+## Deploy contract — there isn't one yet
 
-**The RPM pipeline is retired.** The packaging tree, the release job,
-and `docs/deployment.md` were removed together. This repository builds
-and gates; it does not release, publish or deploy anything. `v1.10.0`
-is the last RPM release and the last tag cut by automation.
+This repository builds and gates; it does not release, publish or
+deploy anything. A release path is being built against the static shape
+the site is moving to. Until it exists, "how does this deploy" has the
+answer: it doesn't, yet — so don't reconstruct one from memory or from
+a sibling repo.
 
-Do not reconstruct any of it from memory or from a sibling repo. The
-site is moving to a static shape, and the release machinery is being
-rebuilt against that shape rather than restored. Until it exists,
-"how does this deploy" has the answer: it doesn't, yet.
+What is true about the app regardless of what ships it: `astro build`
+emits `dist/client/` (the static tree, which a web server serves
+directly) and `dist/server/entry.mjs` (the Node process, which exists
+only to answer `/api/*` and render the two pages that accept input).
+`npm start` runs that entrypoint.
 
-What survives, because it is about the app and not the artifact:
-[`server.ts`](server.ts) is the custom Next.js entrypoint — esbuild
-compiles it to `server.js` at the repo root via
-[`scripts/build-server.ts`](scripts/build-server.ts), and the postbuild
-step [`scripts/postbuild.ts`](scripts/postbuild.ts) real-boot smokes the
-bundle against a hermetic stub env (port bind, SIGTERM, assert exit 0).
-Both run under `npm run build`, which the gate exercises.
+`cliff.toml` and `CHANGELOG.md` are independent of the release
+mechanism — the conventional-commit convention outlives whatever
+consumes it.
 
-`cliff.toml` and `CHANGELOG.md` also survive — the conventional-commit
-convention outlives the pipeline that consumed it.
+## Serving contract
+
+What the web server must do. The repo knows this because the repo
+decides what gets emitted; whoever writes the vhost is implementing it.
+
+| Path | Handling |
+| --- | --- |
+| `/_astro/*` | From disk. `Cache-Control: public, max-age=31536000, immutable` — every filename is content-hashed (verified: 0 unhashed of 177), so a stale cache is impossible and revalidation is wasted. |
+| `/api/*` | Proxy to the Node process. |
+| `/contact`, `/pots-migration` | Proxy to Node — these are the only two pages with `prerender = false`, because they accept input. |
+| everything else | From disk out of `dist/client/`, falling back to the proxy so a new dynamic route does not 404 before the vhost is updated. |
+
+Two things make this worth writing down rather than leaving to whoever
+deploys next:
+
+**The immutable rule must move from `/_next/static/` to `/_astro/`.**
+Astro emits nothing under `/_next/`. A rule matching the old prefix is
+not a no-op — it silently drops caching on all 177 hashed assets,
+including the fonts and every image variant, on a site whose page
+weight is almost entirely images.
+
+**Proxying everything to Node is the failure mode to avoid.** It is
+what the Next-era config did and it was correct then, because Next
+served both halves. Here it costs the two properties the hybrid split
+exists to buy: static pages that never touch the Node process, and a
+Node crash that takes down form submission rather than the whole site.
+
+The live config on the current host does both of these wrong. It is
+also RPM-shipped and read-only, so it goes away with the release shape
+rather than being patched in place — see the deploy note above. Apache,
+TLS and DNS are the host's business, not this repo's; the table is the
+part this repo is entitled to assert.
 
 ## Core vocabulary
 
-- **Quote** — a "request a quote" submission from the main contact form. Schema in [`src/lib/api/quote.ts`](src/lib/api/quote.ts). Route handler at [`src/app/api/quote/route.ts`](src/app/api/quote/route.ts).
+- **Quote** — a "request a quote" submission from the main contact form. Schema in [`src/lib/api/quote.ts`](src/lib/api/quote.ts). Route handler at [`src/pages/api/quote.ts`](src/pages/api/quote.ts).
 - **POTS audit** — a "free phone-bill audit" submission from the `/pots-migration` landing page. Different schema ([`src/lib/api/pots-audit.ts`](src/lib/api/pots-audit.ts)), same destination row.
 - **`quotes` table** — single SQLite table that holds both kinds of submission. The `services` column distinguishes: a real services array for quote submissions, the literal string `"POTS Migration Audit"` for audit submissions. Schema is `CREATE TABLE IF NOT EXISTS` inside `getDb()` — no migrations.
 - **`required-env.json`** — the canonical list of required env-var names. Imported by [`src/lib/runtime-config.ts`](src/lib/runtime-config.ts) for app-startup validation. Whatever runs the app is responsible for getting these into `process.env`; the app validates them at boot. [`tests/required-env.test.ts`](tests/required-env.test.ts) asserts the shape on every CI run + pre-commit.
-- **Problem Details** — every API error response shape, per RFC 9457. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()` helper. Client (forms) parse via the exported `ProblemDetails` zod schema and map `errors[]` back to inline field errors via RHF `setError`. See "Form patterns" below.
+- **Problem Details** — every API error response shape, per RFC 9457. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()` helper. Client (forms) parse via the exported `ProblemDetails` zod schema and map `errors[]` back to inline field errors. See "Form patterns" below.
 
 ## Key paths
 
+Pages are files. There is no router config, and no `(main)` group —
+the URL is the path under `src/pages/`.
+
 ```text
 src/
-├── app/
-│   ├── (main)/                       # marketing pages: home, about, contact, /services/*
-│   ├── pots-migration/
-│   │   ├── page.tsx
-│   │   └── POTSLanding.tsx           # The big landing component — hero, case study, FAQ, form
-│   ├── api/
-│   │   ├── quote/route.ts            # POST: zod-validated, writes sqlite, optionally emails
-│   │   ├── pots-audit/route.ts       # POST: same shape, scoped to /pots-migration
-│   │   └── health/route.ts           # GET: opens db, SELECT 1 FROM sqlite_schema.
-│   ├── error.tsx                     # Segment-level error boundary — Sentry.captureException
-│   ├── global-error.tsx              # Top-of-tree error boundary — includes <html><body>
-│   └── not-found.tsx                 # 404 with brand styling
+├── pages/                            # ROUTES. One file, one URL.
+│   ├── index.astro  about.astro  contact.astro  services.astro
+│   ├── services/                     # linux, networking, security-cameras, windows
+│   ├── work/                         # case studies: italesowell, pipetree, voip
+│   ├── pots-migration.astro          # the campaign landing page
+│   ├── 404.astro  500.astro          # error pages, prerendered to static HTML
+│   ├── robots.txt.ts                 # generated from `site` in astro.config.mjs
+│   ├── manifest.webmanifest.ts       # generated, so icon paths cannot drift
+│   └── api/                          # the ONLY routes with prerender = false
+│       ├── quote.ts                  # POST: zod-validated, writes sqlite, optionally emails
+│       ├── pots-audit.ts             # POST: same destination row, different schema
+│       └── health.ts                 # GET: opens db, SELECT 1 FROM sqlite_schema
+├── components/                       # .astro, render to HTML at build time
+│   ├── QuoteForm.astro  PotsAuditForm.astro
+│   ├── Lightbox.astro                # <dialog> + scroll-snap viewer
+│   ├── POTSLanding.astro             # hero, case study, FAQ, form
+│   └── icons/                        # inline SVG, incl. icons/services/*
+├── layouts/Base.astro                # <head>, canonical, nav, footer
 ├── lib/
-│   ├── db.ts                         # better-sqlite3 singleton on globalThis.__sqlite__ (server.ts shutdown reads it)
-│   ├── runtime-config.ts             # validates required env at startup; fails fast before serving
+│   ├── db.ts                         # better-sqlite3 singleton
+│   ├── runtime-config.ts             # validates required env at startup; fails fast
 │   ├── required-env.json             # single canonical list
-│   ├── services.tsx                  # service catalog (titles, blurbs, icons)
-│   ├── api/
-│   │   ├── error.ts                  # ProblemDetails zod schema + zodError() helper (RFC 9457)
-│   │   ├── quote.ts                  # QuoteRequest zod schema (shared client + server)
-│   │   └── pots-audit.ts             # PotsAuditRequest zod schema (shared)
-│   └── email/mailer.ts               # nodemailer transport + react-email render; sendQuote/PotsAuditNotification (best-effort, Sentry-captured). Imported by the two POST routes.
-├── emails/                           # react-email templates: quote-request.tsx, pots-audit-request.tsx, components/layout.tsx (preview via `npm run email:dev`)
-├── components/
-│   ├── ContactForm.tsx               # The shared quote form
-│   ├── Nav.tsx, Footer.tsx, Hero.tsx, FadeIn.tsx, etc.
-├── instrumentation.ts                # Next runtime hook — Sentry init + runtime-config validation at startup
-├── instrumentation-client.ts         # Sentry browser init (replays-on-error, masked PII, extension-frame filter)
-├── sentry.server.config.ts           # Sentry node-runtime init
-└── sentry.edge.config.ts             # Sentry edge-runtime init (wired but no edge handlers yet)
-
-server.ts                             # custom entrypoint source (esbuild → server.js at repo root)
-scripts/
-├── build-server.ts                   # esbuild compile of server.ts; --check smoke after
-└── postbuild.ts                      # real-boot smoke (hermetic env, port bind, SIGTERM, exit-0)
+│   ├── services.ts  work.ts          # content catalogs
+│   ├── forms/
+│   │   ├── enhance.ts                # progressive enhancement; never erases input
+│   │   └── rules.ts                  # client rules mirroring the schemas
+│   ├── api/                          # error.ts (RFC 9457), quote.ts, pots-audit.ts
+│   └── email/mailer.ts               # nodemailer; best-effort, logged on failure
+├── emails/templates.ts               # HTML strings, escaped at every interpolation
+├── scripts/                          # browser-side: reveal.ts, lightbox.ts
+├── styles/global.css                 # @theme tokens + the reveal rules
+└── assets/                           # images processed by astro:assets
 
 tests/
-└── required-env.test.ts              # contract shape check on src/lib/required-env.json
+├── required-env.test.ts              # contract shape check
+└── form-rules.test.ts                # proves rules.ts and the zod schemas agree
 
-(no docs/ or packaging/ — both went with the RPM pipeline)
+(no docs/, packaging/, instrumentation.ts or sentry.*.config.ts — if a
+sibling repo or an old memory says otherwise, the tree above is right)
 ```
 
-## Form patterns (RHF + zod + Problem Details)
+## Form patterns (progressive enhancement + zod + Problem Details)
 
-Both forms ([`ContactForm.tsx`](src/components/ContactForm.tsx) and
-the inline form in
-[`POTSLanding.tsx`](src/app/pots-migration/POTSLanding.tsx)) use the
-same pattern:
+Both forms ([`QuoteForm.astro`](src/components/QuoteForm.astro) and
+[`PotsAuditForm.astro`](src/components/PotsAuditForm.astro)) are plain
+HTML `<form method="post">` that work with JavaScript disabled, then
+get enhanced by [`enhance.ts`](src/lib/forms/enhance.ts).
 
-- `useForm({ resolver: zodResolver(<Schema>), mode: "onTouched" })`. Default `reValidateMode: "onChange"` clears server-set errors as the user fixes the field.
-- Field-name guard is `Object.keys(<Schema>.shape) as (keyof <Schema>)[]` — never hard-code field lists; the guard auto-syncs with the schema.
-- On `!res.ok`, parse via the `ProblemDetails` zod schema. For each entry in `errors[]`, if `isFieldName(e.field)` is true, `setError(e.field, { type: "server", message: e.message })`. Falls back to `setError("root", ...)` for top-level (network, server, unparseable) failures. Both render with `role="alert"`.
-- **`isSubmitSuccessful` is the single source of truth for the success view.** Don't add a parallel `useState<boolean>` — `setError` keeps `isSubmitSuccessful` false after server-side failures, so the success view doesn't flash incorrectly.
-- **Native `<input type="checkbox">` for chip groups**, not custom buttons. `{...register("services")}` with the same name on every checkbox aggregates values into an array natively. Tailwind `peer-checked:` variants drive the visible chip styling. The hidden checkbox is keyboard- and screen-reader-native.
-- a11y baseline: `aria-required="true"` on required inputs, `aria-invalid` toggled dynamically, `aria-describedby="<id>-error"` linking input → `<p role="alert" id="<id>-error">`. The chip group is wrapped in `<fieldset><legend>` with `aria-describedby` for the group-level error.
-- Submit button spinner uses `motion-safe:animate-spin` for `prefers-reduced-motion` respect.
+**The rule that outranks the others: nothing ever erases what someone
+typed.** Not on a validation failure, not on a server error, not on a
+reload. There is exactly one assignment to `input.value` in the entire
+codebase — restoring a saved draft, guarded to fields that are empty.
+That is not a convention to uphold; it is the absence of a code path.
 
-Validation messages are user-facing on the zod schema itself
-(`"Please enter your name."` etc.), surfaced identically through both
-client-side (zodResolver inline) and server-side (Problem Details
-`errors[]` → `setError`) paths.
+- Fields validate on blur, then continuously once touched. Validating from the first keystroke tells someone their email is invalid while they are still typing the `@`.
+- Drafts persist to `localStorage` on input and survive a reload, a crash, or a closed tab. The data is the user's, kept on the user's machine, cleared only on a successful submit.
+- Errors render as sibling nodes next to the field. The form is never re-rendered, so the DOM the user is typing into is never replaced underneath them.
+- On `!res.ok` the response is parsed as Problem Details and each `errors[]` entry is matched to its field by name. Unmatched or top-level failures render in a form-level `role="alert"`.
+- Client rules live in [`rules.ts`](src/lib/forms/rules.ts), hand-written and deliberately more permissive than the schema, so the browser never rejects something the server would have accepted. [`tests/form-rules.test.ts`](tests/form-rules.test.ts) proves the two agree in both directions, including field-set equality — it already caught two fields missing from the POTS rules.
+- Validation is structural, not stylistic: a phone field rejects letters because a phone number has no letters, and an `extension` field exists so nobody has to smuggle one into a field that is not for it.
+- a11y baseline: `aria-required`, `aria-invalid` toggled dynamically, `aria-describedby` linking input → error node. Chip groups are `<fieldset><legend>` around native checkboxes sharing one `name`, so the browser aggregates them into an array with no script involved.
 
 ## Route handler pattern
 
 ```ts
-export async function POST(req: NextRequest) {
-  // .catch(() => null) so malformed JSON becomes 400 (Validation Error)
-  // not an unhandled throw → Sentry noise event.
-  const body: unknown = await req.json().catch(() => null);
+export const prerender = false; // the only opt-out on the site
+
+export const POST: APIRoute = async ({ request }) => {
+  // Accepts BOTH application/json (enhanced path) and form-urlencoded
+  // (the no-JS path). The second is why the endpoint exists: a form
+  // that only works with JavaScript silently swallows the one thing
+  // this site is for.
+  const body = await readBody(request);        // malformed → null → 400
   const parsed = QuoteRequest.safeParse(body);
-  if (!parsed.success) return zodError(parsed);
+  if (!parsed.success) return zodError(parsed); // RFC 9457
 
-  // Do the work. Genuine errors propagate to Next, which forwards them
-  // to Sentry via `onRequestError` in src/instrumentation.ts. NO top-
-  // level try/catch — wrapping would hide the error from Sentry.
-  // ...
+  // Do the work. Genuine errors propagate — no top-level try/catch.
 
-  // Email send retains its own try/catch (the row is already saved;
-  // SMTP failure is best-effort). mailer.ts Sentry-captures the
-  // failure with redacted context and rethrows; the route catches it
-  // and logs via console.error.
-}
+  // The email send keeps its own try/catch: the row is already saved,
+  // so SMTP being down must not turn a captured lead into a 500.
+  // A form-urlencoded submit redirects; a JSON submit gets JSON.
+};
 ```
 
 ## Commands
 
 ```bash
-npm run dev                       # Next dev server (no custom server)
-npm run dev:server                # tsx server.ts — exercises the custom entrypoint. NEEDS prior `npm run build` (server.ts hardcodes dev: false; app.prepare() reads .next/).
-npm run build                     # prebuild (build:server) → next build → postbuild real-boot smoke
-npm start                         # node server.js (after build)
-npm run typecheck                 # tsc --noEmit
+npm run dev                       # astro dev
+npm run preview                   # serve the built output
+npm run build                     # astro build → dist/client (static) + dist/server (the /api process)
+npm start                         # node dist/server/entry.mjs (after build)
+npm run typecheck                 # astro check — sees .astro templates; tsc alone does not
 npm test                          # vitest run (currently just required-env.test.ts)
 npm run lint                      # eslint (js) + markdownlint (md)
 npm run format                    # prettier --check
@@ -199,13 +240,14 @@ Don't introduce a permanent `develop` branch — the ceremony outweighs the bene
 ## Environment
 
 - **Dev**: Windows 11 + git-bash. Node via `fnm` — Bash sessions need `eval "$(fnm env --use-on-cd --shell bash)"` once before `npm`/`node` resolve. PowerShell tool also available.
-- **Prod**: still running `vigario-website-1.10.0`, installed from the retired RPM pipeline, until the host is redeployed in the new shape. Nothing in this repository can update it. Host-side questions (Apache, TLS, DNS, what is actually installed) belong to server-admin.
+- **Prod**: serving an older build, and nothing in this repository can update it — there is no release path yet. Don't reason about prod from what is in this tree; they are not the same code. Host-side questions (Apache, TLS, DNS, what is actually installed) belong to server-admin.
 
 ## Guardrails — things that break correctness if ignored
 
-- **`Sentry.close()` requires the default import.** [`server.ts`](server.ts) uses `import Sentry from "@sentry/nextjs"`, not `import * as Sentry from`. The namespace form silently lacks `Sentry.close` under the CJS-via-ESM-namespace shape `@sentry/nextjs` ships — a deploy with the wrong form skips the Sentry flush on every shutdown without erroring. Everywhere else (instrumentation, error boundaries, sentry.{server,edge}.config.ts) keeps namespace — those only call `init` / `captureException` / `captureRequestError`, which exist on both shapes.
 - **`SQLITE_PATH` must be absolute.** [`src/lib/runtime-config.ts`](src/lib/runtime-config.ts) rejects relative paths at startup. Don't default it; don't make it optional; don't fall back to cwd.
-- **Don't wrap route handlers in top-level try/catch.** Errors must propagate to Next so `onRequestError` (in [`src/instrumentation.ts`](src/instrumentation.ts)) forwards them to Sentry. The email-send `try/catch` inside the route is the only legitimate catch — the row is already saved by that point, the email is best-effort.
+- **Prettier does not format `.astro`, and that is a decision, not an oversight.** `prettier-plugin-astro` rewrites rendered HTML rather than only source — it injects whitespace inside elements, turning `<a>Services</a>` into `<a> Services </a>`. Measured here: 4 built pages changed on default settings, 8 on `htmlWhitespaceSensitivity: "strict"`. A formatter that alters output cannot be run unattended. `.astro` is in `.prettierignore`; those files are still linted by `eslint-plugin-astro` and typechecked by `astro check`. If you add the plugin, diff `dist/client` before and after and look at what moved.
+- **`HOST`, not `HOSTNAME`.** `@astrojs/node` reads `HOST` and `PORT`. `HOSTNAME` — which the Next-era env template documented — is read by nothing and fails silently. Unset, the server listens on `localhost:4321`.
+- **Don't wrap route handlers in top-level try/catch.** A blanket catch turns a real fault into a generic 500 and drops the stack, which is the difference between a fixable report and "the form is broken sometimes." Let errors propagate; the adapter logs them with the stack intact. The email-send `try/catch` is the one legitimate catch — the row is already saved by then, so SMTP being down must not fail a submission that actually succeeded.
 - **Don't add `output: "standalone"` back.** Next's static-trace machinery keeps tripping over custom server entrypoints + dynamic requires (v2.80.0–v2.83.0 in vis-daily-tracker were four consecutive bad releases). `next() + app.prepare()` works because the full Next module tree is present. If the static migration removes the custom server entirely this guardrail retires with it — until then it holds.
-- **Bump Node major across both pins together.** `.nvmrc` and `package.json#engines.node` must agree; CI reads `.nvmrc` directly via `node-version-file`, so there is no separate workflow pin. This used to be four pins — the RPM spec's `Requires: nodejs<N>` and the unit's `ExecStart=/usr/bin/node-<N>` were the other two, and they went with the packaging tree. The gate's "Verify Node major pins agree" step is now the whole of it.
-- **`better-sqlite3` is a native module.** Marked external in [`next.config.ts`](next.config.ts)'s `serverExternalPackages` and [`scripts/build-server.ts`](scripts/build-server.ts)'s esbuild externals. Since v13 it is built on the N-API, so the prebuilt binary published with the package is ABI-stable across Node majors — bumping Node no longer invalidates the binding, which it did up to v12. It still compiles from source during `npm ci` where no prebuilt matches the platform, so a toolchain is needed wherever that happens.
+- **Bump Node major across both pins together.** `.nvmrc` and `package.json#engines.node` must agree; CI reads `.nvmrc` directly via `node-version-file`, so there is no third pin. The gate's "Verify Node major pins agree" step enforces it.
+- **`better-sqlite3` is a native module.** Declared in [`astro.config.mjs`](astro.config.mjs)'s `vite.ssr.external` so the SSR build resolves it at runtime instead of trying to bundle it. Since v13 it is built on the N-API, so the prebuilt binary published with the package is ABI-stable across Node majors — bumping Node no longer invalidates the binding, which it did up to v12. It still compiles from source during `npm ci` where no prebuilt matches the platform, so a toolchain is needed wherever that happens.

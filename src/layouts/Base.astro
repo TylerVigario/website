@@ -1,0 +1,94 @@
+---
+// The single layout every page wraps in — the Astro equivalent of the
+// old src/app/layout.tsx. Anything that used to live in Next's exported
+// `metadata` object is a prop here, because Astro has no metadata API:
+// the page passes what it wants and this file writes the tags.
+import "@fontsource-variable/geist";
+import "@/styles/global.css";
+// The `?url` suffix asks Vite for the emitted, content-hashed path
+// rather than the file's bytes — so the preload below points at the
+// same asset the stylesheet resolves to and cannot drift from it.
+import geistLatin from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
+
+interface Props {
+  /** Page title. Rendered as "<title> | Vigario Technology Solutions"
+   * unless `bareTitle` is set, matching the old Next title template. */
+  title: string;
+  description: string;
+  /** Set on the home page, which carried the untemplated default title. */
+  bareTitle?: boolean;
+  /** Canonical override. Defaults to the current URL, which is what
+   * every page wants; only set it where two routes serve one page. */
+  canonical?: string;
+  /** schema.org structured data. Built in the page so it can reference
+   * page data, but serialised here so every page emits it the same way
+   * and nothing hardcodes the domain. */
+  jsonLd?: unknown;
+}
+
+const { title, description, bareTitle = false, canonical, jsonLd } = Astro.props;
+
+const fullTitle = bareTitle ? title : `${title} | Vigario Technology Solutions`;
+
+// Astro.site comes from `site` in astro.config.mjs. Building the URL
+// from it rather than hardcoding means the domain move to vigario.tech
+// is a one-line config change, not a grep.
+const canonicalURL = canonical ?? new URL(Astro.url.pathname, Astro.site).href;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#fafaf9" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    {/* Without this the font is a third-level discovery: the browser
+        must fetch the HTML, parse it, fetch the CSS, parse THAT, and
+        only then learn the font exists. Preloading collapses that to
+        two levels — the fetch starts alongside the CSS instead of
+        after it. Same bytes, one less round trip in series, which is
+        the difference that shows on a slow link.
+
+        Only the latin subset is preloaded. The others (cyrillic,
+        greek, vietnamese) are declared in the stylesheet with their
+        own unicode-range and are never fetched for English text —
+        preloading them would be pure waste. */}
+    <link rel="preload" href={geistLatin} as="font" type="font/woff2" crossorigin />
+    <link rel="canonical" href={canonicalURL} />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:site_name" content="Vigario Technology Solutions" />
+    <meta property="og:locale" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    {
+      jsonLd && (
+        <script
+          type="application/ld+json"
+          is:inline
+          set:html={JSON.stringify(jsonLd)}
+        />
+      )
+    }
+  </head>
+  <body class="font-sans antialiased overflow-x-hidden">
+    <a
+      href="#main"
+      class="sr-only focus-visible:not-sr-only focus-visible:fixed focus-visible:top-2 focus-visible:left-2 focus-visible:z-100 focus-visible:rounded-lg focus-visible:bg-accent focus-visible:px-4 focus-visible:py-3 focus-visible:text-white focus-visible:outline-none"
+    >
+      Skip to content
+    </a>
+    <slot />
+    <script>
+      import "@/scripts/reveal";
+    </script>
+  </body>
+</html>

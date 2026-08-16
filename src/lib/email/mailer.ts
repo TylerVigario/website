@@ -1,8 +1,5 @@
 import nodemailer from "nodemailer";
-import { render } from "@react-email/components";
-import * as Sentry from "@sentry/nextjs";
-import { QuoteRequestEmail } from "@/emails/quote-request";
-import { PotsAuditRequestEmail } from "@/emails/pots-audit-request";
+import { renderPotsAuditEmail, renderQuoteEmail } from "@/emails/templates";
 
 const NOTIFY_EMAIL = "tylervigario90@gmail.com";
 
@@ -34,7 +31,7 @@ interface SendOptions {
 /**
  * Low-level send. When SMTP isn't configured, logs the would-have-
  * been email to stdout instead — keeps dev flows usable without
- * setting up real credentials. Real send failures get Sentry-captured
+ * setting up real credentials. Real send failures are logged to
  * with redacted recipient + subject context and re-thrown so callers
  * can decide whether to swallow (best-effort) or surface (critical).
  */
@@ -63,7 +60,7 @@ export async function sendEmail(options: SendOptions): Promise<boolean> {
     console.log(`[Mailer] Sent email to ${options.to}: ${info.messageId}`);
     return true;
   } catch (err) {
-    Sentry.captureException(err, {
+    console.error(err, {
       tags: { area: "email" },
       extra: { to: options.to, subject: options.subject },
     });
@@ -103,7 +100,7 @@ export interface SendQuoteNotificationArgs {
  */
 export async function sendQuoteNotification(args: SendQuoteNotificationArgs): Promise<void> {
   const submittedAtFormatted = formatSubmittedAt();
-  const html = await render(QuoteRequestEmail({ ...args, submittedAtFormatted }));
+  const html = renderQuoteEmail({ ...args, submittedAtFormatted });
 
   const servicesStr = args.services.join(", ") || "(none selected)";
   const text = [
@@ -140,7 +137,7 @@ export async function sendPotsAuditNotification(
   args: SendPotsAuditNotificationArgs,
 ): Promise<void> {
   const submittedAtFormatted = formatSubmittedAt();
-  const html = await render(PotsAuditRequestEmail({ ...args, submittedAtFormatted }));
+  const html = renderPotsAuditEmail({ ...args, submittedAtFormatted });
 
   const text = [
     `Business: ${args.business}`,

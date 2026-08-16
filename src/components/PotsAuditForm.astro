@@ -1,0 +1,148 @@
+---
+// The audit form from the POTS landing page. Same machinery as
+// QuoteForm — one enhancement module, one never-erase guarantee, one
+// no-JS path — differing only in fields.
+interface Props {
+  values?: Record<string, string>;
+  errors?: Record<string, string>;
+  submitted?: boolean;
+}
+const { values = {}, errors = {}, submitted = false } = Astro.props;
+
+const billRanges = ["$100–$300", "$300–$500", "$500–$1,000", "$1,000+"];
+const str = (k: string) => values[k] ?? "";
+
+const inputClass =
+  "w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent aria-invalid:border-red-500";
+
+const fields = [
+  { id: "business", label: "Business name", hint: null },
+  { id: "name", label: "Your name", hint: null },
+  {
+    id: "contact",
+    label: "Phone or email",
+    hint: "Either is fine — whichever you'd rather I use.",
+  },
+] as const;
+---
+
+{
+  submitted ? (
+    <div role="status" class="rounded-lg border border-border bg-surface-light p-6">
+      <p class="font-medium text-foreground">Got it — I'll take a look.</p>
+      <p class="mt-1 text-sm text-muted">
+        I'll come back with what your lines actually cost and what they'd cost after. If it's
+        urgent, call <a href="tel:+15599001400" class="text-accent underline">(559) 900-1400</a>.
+      </p>
+    </div>
+  ) : (
+    <form method="post" action="/api/pots-audit" novalidate data-pots-form class="group">
+      <p
+        data-form-error
+        role="alert"
+        hidden={!errors["(root)"]}
+        class="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700"
+      >
+        {errors["(root)"] ?? ""}
+      </p>
+
+      {fields.map((f) => (
+        <div class="mb-4">
+          <label for={f.id} class="mb-1.5 block text-sm font-medium text-foreground">
+            {f.label}
+          </label>
+          {f.hint && (
+            <p id={`${f.id}-hint`} class="mb-1.5 text-sm text-muted">
+              {f.hint}
+            </p>
+          )}
+          <input
+            id={f.id}
+            name={f.id}
+            type="text"
+            value={str(f.id)}
+            aria-required="true"
+            aria-invalid={errors[f.id] ? "true" : undefined}
+            aria-describedby={errors[f.id] ? `${f.id}-error` : f.hint ? `${f.id}-hint` : undefined}
+            class={inputClass}
+          />
+          {errors[f.id] && (
+            <p id={`${f.id}-error`} role="alert" class="mt-1.5 text-sm text-red-600">
+              {errors[f.id]}
+            </p>
+          )}
+        </div>
+      ))}
+
+      <div class="mb-4">
+        <label for="bill" class="mb-1.5 block text-sm font-medium text-foreground">
+          Roughly what do the lines cost you monthly?
+        </label>
+        <p id="bill-hint" class="mb-1.5 text-sm text-muted">
+          A range is fine — I only need it to know where to start looking.
+        </p>
+        <select
+          id="bill"
+          name="bill"
+          aria-required="true"
+          aria-invalid={errors.bill ? "true" : undefined}
+          aria-describedby={errors.bill ? "bill-error" : "bill-hint"}
+          class={inputClass}
+        >
+          <option value="">Pick a range…</option>
+          {billRanges.map((r) => (
+            <option value={r} selected={str("bill") === r}>
+              {r}
+            </option>
+          ))}
+        </select>
+        {errors.bill && (
+          <p id="bill-error" role="alert" class="mt-1.5 text-sm text-red-600">
+            {errors.bill}
+          </p>
+        )}
+      </div>
+
+      <div class="mb-4">
+        <label for="details" class="mb-1.5 block text-sm font-medium text-foreground">
+          Anything else? <span class="font-normal text-muted">(optional)</span>
+        </label>
+        <textarea id="details" name="details" rows="3" class={inputClass}>
+          {str("details")}
+        </textarea>
+      </div>
+
+      <button
+        type="submit"
+        class="w-full rounded-lg bg-accent px-6 py-3 font-semibold text-white transition-colors hover:bg-accent-bright disabled:opacity-70"
+      >
+        <span class="group-data-[submitting]:hidden">Get my free audit</span>
+        <span class="hidden group-data-[submitting]:inline">Sending…</span>
+      </button>
+    </form>
+  )
+}
+
+<script>
+  import { potsAuditRules } from "@/lib/forms/rules";
+  import { enhance } from "@/lib/forms/enhance";
+
+  const form = document.querySelector<HTMLFormElement>("[data-pots-form]");
+  if (form) {
+    enhance({
+      form,
+      rules: potsAuditRules,
+      endpoint: "/api/pots-audit",
+      draftKey: "vts:pots-audit-draft",
+      onSuccess: () => {
+        const done = document.createElement("div");
+        done.setAttribute("role", "status");
+        done.className = "rounded-lg border border-border bg-surface-light p-6";
+        done.innerHTML =
+          "<p class=\"font-medium text-foreground\">Got it — I'll take a look.</p>" +
+          '<p class="mt-1 text-sm text-muted">I\'ll come back with what your lines actually cost.</p>';
+        form.replaceWith(done);
+      },
+    });
+  }
+</script>

@@ -1,0 +1,396 @@
+---
+import { Image } from "astro:assets";
+import imgHero0 from "@/assets/images/work/italesowell/hero.webp";
+import Base from "@/layouts/Base.astro";
+import Nav from "@/components/Nav.astro";
+import Footer from "@/components/Footer.astro";
+import ItalesowellScreenshots from "@/components/ItalesowellScreenshots.astro";
+
+// Built from Astro.site so the canonical domain lives in one place.
+const site = Astro.site!.href.replace(/\/$/, "");
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "https://italesowell.com/#website",
+  name: "iTaleSoWell",
+  description:
+    "Dark short fiction by Aniken D. Robinson, presented by a masked host. Twenty tales, each with cover art, a reader and a downloadable ePub.",
+  url: "https://italesowell.com",
+  inLanguage: "en",
+  author: {
+    "@type": "Person",
+    name: "Aniken D. Robinson",
+    alternateName: "iTaleSoWell",
+  },
+  creator: {
+    "@type": "ProfessionalService",
+    "@id": `${site}/#business`,
+    name: "Vigario Technology Solutions",
+  },
+};
+
+const stats = [
+  { value: "20", label: "tales, each with cover art and an ePub" },
+  { value: "21,353", label: "words — from 274 to 2,485 apiece" },
+  { value: "0", label: "words retyped — the site harvests them" },
+  { value: "4 min", label: "median read, timed from the prose itself" },
+];
+
+const ideas = [
+  {
+    title: "The host is the architecture",
+    body: "iTaleSoWell — a masked host with a crypt of tales — isn't a skin over a blog. He decides what the pages are called (Now Showing, The Library, Your Host), what a reader is doing when they arrive (taking a seat), and what a tale is when it opens (a feature). Give a writer a theme and you get decoration. Give them a character and you get an information architecture that writes itself.",
+  },
+  {
+    title: "A short story is sold by its first line",
+    body: "A wall of cover art is a novel-and-movie idiom, and it fails a thousand-word tale — the art can't carry what the prose can. So the library leads with each tale's actual opening paragraph, pulled from the story rather than written as a blurb. The poster grid is still there as a toggle, for when the art is the point.",
+  },
+  {
+    title: "Showtimes, not age gates",
+    body: 'The catalogue splits into an Early Show and a Late Show, read off the content rating each tale already carries. It\'s theatre language on purpose. The readers most likely to want the milder shelf are the ones a label like "kids" would condescend to — and a surface that declares itself child-directed invites a body of regulation nobody here needs.',
+  },
+];
+
+const stack = [
+  {
+    layer: "Site",
+    choice:
+      "Hand-written HTML, CSS and JavaScript — no framework, no build step, no dependencies to age out from under it",
+  },
+  {
+    layer: "Reading",
+    choice:
+      "Scroll or CSS-column page-turns, chapter index derived from the author's own headings, position stored as a fraction so it survives font changes and rotation",
+  },
+  {
+    layer: "Harvest",
+    choice:
+      "A Python job reads the author's Wattpad, builds the tale text, cover, ePub and reading time, and opens a pull request for the parts that need a person",
+  },
+  {
+    layer: "Media",
+    choice:
+      "Covers and ePubs served from a store outside the repository — binaries never enter git history, where they cannot be removed",
+  },
+  {
+    layer: "Deploy",
+    choice:
+      "A fast-forward git pull into the web root, served by Apache with brotli and immutable asset caching",
+  },
+  {
+    layer: "Mail",
+    choice:
+      "Double opt-in list on the author's own domain, sending through SES with DKIM alignment",
+  },
+];
+---
+
+<Base title="iTaleSoWell Case Study" description="How VTS built iTaleSoWell — a home for Aniken D. Robinson's dark short fiction. A masked host, twenty tales, an ePub for every one, and an audience the author owns." jsonLd={jsonLd}>
+  <Nav />
+
+    <>
+      {/* Hero */}
+      <section class="relative overflow-hidden pt-32 pb-16 lg:pb-20 lg:pt-36">
+        <div class="mx-auto max-w-6xl px-6">
+          <div class="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
+            <div data-reveal="up">
+              <p class="text-sm font-medium text-accent">Work / Case Study</p>
+              <h1 class="mt-4 text-3xl font-bold tracking-tight text-navy sm:text-4xl md:text-5xl">
+                iTaleSoWell
+              </h1>
+              <p class="mt-4 text-lg text-muted leading-relaxed">
+                A home for Aniken D. Robinson&apos;s dark short fiction, built and hosted by VTS. A
+                masked host presents the programme; twenty tales sit behind him with cover art, a
+                proper reader and a downloadable ePub apiece &mdash; and the reader who likes one
+                finally has a way to find the next.
+              </p>
+            </div>
+            <div data-reveal="scale">
+              <div class="relative overflow-hidden rounded-xl border border-border bg-surface-light shadow-2xl">
+                <Image
+                  src={imgHero0}
+                  alt="The iTaleSoWell landing page — a darkened cinema seen from the back row, a cursed reel playing on the screen, and the marquee below it"
+                  width={2400}
+                  height={1500}
+                  fetchpriority="high"
+                  sizes="(min-width: 1024px) 55vw, 100vw"
+                  class="w-full" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section class="bg-surface py-12 lg:py-14">
+        <div class="mx-auto max-w-6xl px-6">
+          <div class="grid gap-6 grid-cols-2 lg:grid-cols-4">
+            {stats.map((s) => (
+              <div data-reveal>
+                <div class="text-center">
+                  <p class="text-3xl font-bold text-navy sm:text-4xl">{s.value}</p>
+                  <p class="mt-2 text-sm text-muted">{s.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* The problem */}
+      <section class="py-16 lg:py-20">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <div class="mx-auto max-w-3xl">
+              <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                The problem
+              </h2>
+              <div class="mt-6 space-y-4 text-muted leading-relaxed sm:text-lg">
+                <p>
+                  Aniken D. Robinson writes dark short fiction, and writes it fast &mdash; a new
+                  tale most weeks, running from a two-minute dare you read in the dark to an
+                  eleven-minute deep-space slow burn. Under the name iTaleSoWell he had built a real
+                  body of work in a matter of months.
+                </p>
+                <p>
+                  It was scattered across five houses that don&apos;t talk to each other. Prose on
+                  Wattpad. A single on Kindle. Episodes on YouTube and TikTok. Behind-the-curtain
+                  posts on Instagram. Every one of those platforms owns the relationship with the
+                  reader, decides who sees the next thing, and can change its mind on a Tuesday. A
+                  reader who finished one tale and wanted another had nowhere obvious to go.
+                </p>
+                <p>
+                  What was missing wasn&apos;t marketing. It was an address of his own &mdash; one
+                  place that holds all of it, presents it the way he&apos;d present it, and turns a
+                  reader who liked something into a reader who comes back.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Three ideas */}
+      <section class="bg-surface py-16 lg:py-20">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <h2 class="text-center text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+              Three load-bearing ideas
+            </h2>
+          </div>
+          <div class="mt-10 grid gap-6 lg:grid-cols-3">
+            {ideas.map((idea) => (
+              <div data-reveal>
+                <div class="h-full rounded-xl border border-border bg-surface-light p-6">
+                  <h3 class="text-lg font-semibold text-navy">{idea.title}</h3>
+                  <p class="mt-3 text-sm text-muted leading-relaxed">{idea.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Screenshots */}
+      <section class="py-16 lg:py-20">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <h2 class="text-center text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+              The site
+            </h2>
+            <p class="mx-auto mt-4 max-w-2xl text-center text-muted sm:text-lg">
+              Cover art and prose are the author&apos;s own.
+            </p>
+          </div>
+          <ItalesowellScreenshots id="italesowell" from={0} to={4} class="mt-10 grid gap-6 md:grid-cols-2" />
+        </div>
+      </section>
+
+      {/* Reading */}
+      <section class="bg-surface py-16 lg:py-20">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <div class="mx-auto max-w-3xl">
+              <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                Written on a phone, read on a phone
+              </h2>
+              <div class="mt-6 space-y-4 text-muted leading-relaxed sm:text-lg">
+                <p>
+                  The author writes on an Android handset, and his readers arrive on phones. So the
+                  reader was built there first: a measure capped at about ninety characters so the
+                  eye doesn&apos;t lose its place on the return, a chapter index built from the
+                  headings he already types, and text size that sticks between visits. Reading
+                  position is stored as a fraction rather than a page number &mdash; the only form
+                  that survives changing the font, rotating the phone, or switching between
+                  scrolling and page-turns.
+                </p>
+                <p>
+                  Every tale carries a downloadable ePub, generated from the same prose the page
+                  shows. Nobody assembles them by hand, so there is no version of the site where the
+                  download and the page disagree.
+                </p>
+              </div>
+            </div>
+          </div>
+          <ItalesowellScreenshots id="italesowell"
+            from={4}
+            to={6}
+            class="mx-auto mt-10 grid max-w-3xl gap-6 sm:grid-cols-2"
+          />
+        </div>
+      </section>
+
+      {/* Back of house */}
+      <section class="py-16 lg:py-20">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <div class="mx-auto max-w-3xl">
+              <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                The half the reader never sees
+              </h2>
+              <div class="mt-6 space-y-4 text-muted leading-relaxed sm:text-lg">
+                <p>
+                  A storefront is the easy half. The harder half is the room behind it, where the
+                  author files a tale, names what it is, and decides who hears about it &mdash;
+                  because that is the part he touches every week for years.
+                </p>
+                <p>
+                  It is built for the numbers he actually has. The overview <em>ranks</em>, rather
+                  than totals, because &ldquo;which of my tales is working&rdquo; is real
+                  information at a hundred reads and the hundred is not, and it reports movement in
+                  people rather than percent, because at this size &ldquo;up fifty percent&rdquo;
+                  means two readers. His own site sits beside the platforms as one channel among
+                  four &mdash; the one marked as his.
+                </p>
+                <p>
+                  Vocabulary works the way writers do. A new tag arrives <em>held</em>: usable the
+                  moment he invents it mid-sentence, invisible to readers until he promotes it.
+                  Forcing an author to stop and administer a taxonomy gets the taxonomy abandoned;
+                  publishing every passing word as a public category gets it filled with noise. Held
+                  is neither.
+                </p>
+                <p>
+                  And the list runs itself without behaving like a bot. Publishing a tale 
+                  <em>is the send</em>, so there is no second thing to remember, but it is capped at
+                  one message a week and delivered at a civil hour, on the principle that a tale
+                  published at three in the morning should not email anyone at three in the morning.
+                  Bounces and complaints suppress themselves against the thresholds the mail
+                  provider actually enforces.
+                </p>
+                <p>
+                  Two people sign in, and they are not equals. Approving a piece of artwork is the
+                  author&apos;s alone; the developer can keep house but cannot bless the work. Even
+                  the notification badges respect it &mdash; a count of decisions waiting on Aniken
+                  never appears on my screen, because a nag about work you are not permitted to do
+                  is just noise.
+                </p>
+              </div>
+              <p class="mt-6 text-sm text-muted/80 italic leading-relaxed">
+                The back office is shown with sample data at realistic volume &mdash; a dashboard
+                has to be designed against the numbers it will hold, not against an empty state.
+              </p>
+            </div>
+          </div>
+          <ItalesowellScreenshots id="italesowell" from={6} to={12} class="mt-10 grid gap-6 md:grid-cols-2" />
+        </div>
+      </section>
+
+      {/* Architecture */}
+      <section class="bg-surface py-16 lg:py-20">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <div class="mx-auto max-w-3xl">
+              <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                Small enough to outlive its dependencies
+              </h2>
+              <p class="mt-6 text-muted leading-relaxed sm:text-lg">
+                A site for an author&apos;s life&apos;s work should still open in ten years. This
+                one is hand-written HTML, CSS and JavaScript with no framework and no build step
+                &mdash; there is nothing in it to rot. What automation exists sits outside the site:
+                a job that reads the author&apos;s Wattpad and builds the mechanical parts of a new
+                tale, and a deploy that is one fast-forward pull.
+              </p>
+            </div>
+          </div>
+          <div class="mx-auto mt-10 max-w-3xl">
+            <div data-reveal>
+              <div class="overflow-hidden rounded-xl border border-border bg-surface-light">
+                {stack.map((row) => (
+                  <div
+                    class="flex flex-col gap-1 border-t border-border p-4 first:border-t-0 sm:flex-row sm:gap-6"
+                  >
+                    <p class="w-28 shrink-0 text-sm font-semibold text-navy">{row.layer}</p>
+                    <p class="text-sm text-muted leading-relaxed">{row.choice}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* What stays the author's */}
+      <section class="py-16 lg:py-20">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <div class="mx-auto max-w-3xl">
+              <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                Automate the mechanical, never the voice
+              </h2>
+              <div class="mt-6 space-y-4 text-muted leading-relaxed sm:text-lg">
+                <p>
+                  When a new tale appears, the pipeline does the parts with a right answer: the
+                  text, the cover, the ePub, the reading time computed from the word count. It then
+                  stops and asks. The content rating, the logline on the poster, and the host&apos;s
+                  sign-off after the last line are the author&apos;s &mdash; they are judgements
+                  about his own work, and a machine guessing at them would be worse than a machine
+                  not trying.
+                </p>
+                <p>
+                  The same line runs through the mailing list. It is double opt-in on his own
+                  domain, there is no way to add an address by hand, and every message carries a
+                  one-click way out. An audience nobody can throttle, built one person at a time, is
+                  the only asset in this business that compounds.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section class="bg-surface py-16 lg:py-20">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <div class="mx-auto max-w-3xl text-center">
+              <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                A place of your own beats a page on someone else&apos;s
+              </h2>
+              <p class="mt-4 text-lg text-muted">
+                If you make something and it lives scattered across platforms that own your
+                audience, the fix is an address you control. Let&apos;s talk about what yours should
+                be.
+              </p>
+              <div class="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                <a
+                  href="/contact"
+                  class="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-base font-semibold text-white transition-all hover:bg-accent-bright hover:shadow-lg hover:shadow-accent/15"
+                >
+                  Get in touch
+                </a>
+                <a
+                  href="https://italesowell.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center justify-center gap-2 rounded-xl border border-border px-6 py-3.5 text-base font-semibold text-navy transition-colors hover:border-accent hover:text-accent"
+                >
+                  Visit iTaleSoWell
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  <Footer />
+</Base>

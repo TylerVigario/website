@@ -34,7 +34,9 @@ export const caseStudies: CaseStudy[] = [
     year: "2026",
     status: "Live",
     lastModified: "2026-08-04",
-    preview: "/images/work/italesowell/hero.webp",
+    // Path relative to src/assets/images, resolved to a build-time
+    // import by the page so Astro can size it. Not a public URL.
+    preview: "work/italesowell/hero.webp",
   },
   {
     slug: "pipetree",
@@ -47,7 +49,7 @@ export const caseStudies: CaseStudy[] = [
     year: "2026",
     status: "In production",
     lastModified: "2026-07-17",
-    preview: "/images/work/pipetree/addresses-full.webp",
+    preview: "work/pipetree/addresses-full.webp",
   },
   {
     slug: "voip",
@@ -61,7 +63,7 @@ export const caseStudies: CaseStudy[] = [
     status: "Client engagement",
     lastModified: "2026-07-22",
     outcome: {
-      logo: "/images/work/voip/bravo-farms-logo.png",
+      logo: "work/voip/bravo-farms-logo.png",
       logoAlt: "Bravo Farms",
       before: "$945/mo",
       after: "under $50/mo",

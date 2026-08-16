@@ -1,18 +1,30 @@
 # Dependencies
 node_modules/
 
-# Build outputs
-.next/
-out/
-build/
+# Build output
 dist/
 
-# Generated files
-next-env.d.ts
+# Astro's generated types
+.astro/
+
+# Generated
 package-lock.json
 
-# Markdown is handled by markdownlint-cli2
+# Markdown is handled by markdownlint-cli2, not prettier
 *.md
+
+# .astro is deliberately NOT formatted by prettier.
+#
+# prettier-plugin-astro rewrites RENDERED HTML, not just source: it
+# injects whitespace inside elements, so `<a>Services</a>` becomes
+# `<a> Services </a>`. Measured on this repo, that changed 4 built
+# pages on default settings and 8 on htmlWhitespaceSensitivity:strict.
+# A formatter that alters output cannot be run unattended, and a
+# whitespace diff across 60 files is not something anyone reviews.
+#
+# These files are still checked — eslint-plugin-astro lints them and
+# `astro check` typechecks their frontmatter and templates.
+*.astro
 
 # Data
 data/

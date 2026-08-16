@@ -1,0 +1,159 @@
+---
+import { services as serviceCatalog } from "@/lib/services";
+
+// The endpoint re-renders this component with `values` and `errors`
+// populated when JavaScript is off and the POST fails validation, so
+// nothing the user typed is lost on that path either.
+interface Props {
+  values?: Record<string, string | string[]>;
+  errors?: Record<string, string>;
+  submitted?: boolean;
+}
+const { values = {}, errors = {}, submitted = false } = Astro.props;
+
+const serviceOptions = serviceCatalog.map((s) => s.title);
+const str = (k: string) => (typeof values[k] === "string" ? values[k] : "");
+const picked = Array.isArray(values.services) ? values.services : [];
+
+const inputClass =
+  "w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent aria-invalid:border-red-500";
+---
+
+{
+  submitted ? (
+    <div role="status" class="rounded-lg border border-border bg-surface-light p-6">
+      <p class="font-medium text-foreground">Thanks — that's through.</p>
+      <p class="mt-1 text-sm text-muted">
+        I'll get back to you shortly. If it's urgent, call
+        <a href="tel:+15599001400" class="text-accent underline">(559) 900-1400</a>.
+      </p>
+    </div>
+  ) : (
+    <form method="post" action="/api/quote" novalidate data-quote-form class="group">
+      <p
+        data-form-error
+        role="alert"
+        hidden={!errors["(root)"]}
+        class="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700"
+      >
+        {errors["(root)"] ?? ""}
+      </p>
+
+      <div class="mb-4">
+        <label for="name" class="mb-1.5 block text-sm font-medium text-foreground">Name</label>
+        <input
+          id="name"
+          name="name"
+          type="text"
+          value={str("name")}
+          aria-required="true"
+          aria-invalid={errors.name ? "true" : undefined}
+          aria-describedby={errors.name ? "name-error" : undefined}
+          class={inputClass}
+        />
+        {errors.name && (
+          <p id="name-error" role="alert" class="mt-1.5 text-sm text-red-600">
+            {errors.name}
+          </p>
+        )}
+      </div>
+
+      <div class="mb-4">
+        <label for="contact" class="mb-1.5 block text-sm font-medium text-foreground">
+          Phone or email
+        </label>
+        {/* The constraint is stated here, before it can be failed. */}
+        <p id="contact-hint" class="mb-1.5 text-sm text-muted">
+          Either is fine — whichever you'd rather I use.
+        </p>
+        <input
+          id="contact"
+          name="contact"
+          type="text"
+          value={str("contact")}
+          aria-required="true"
+          aria-describedby={errors.contact ? "contact-error" : "contact-hint"}
+          aria-invalid={errors.contact ? "true" : undefined}
+          class={inputClass}
+        />
+        {errors.contact && (
+          <p id="contact-error" role="alert" class="mt-1.5 text-sm text-red-600">
+            {errors.contact}
+          </p>
+        )}
+      </div>
+
+      <fieldset class="mb-4">
+        <legend class="mb-1.5 block text-sm font-medium text-foreground">
+          What do you need help with?
+        </legend>
+        <p id="services-hint" class="mb-2 text-sm text-muted">
+          Pick at least one. More than one is fine.
+        </p>
+        <div class="flex flex-wrap gap-2">
+          {serviceOptions.map((service) => (
+            <label class="cursor-pointer">
+              <input
+                type="checkbox"
+                name="services"
+                value={service}
+                checked={picked.includes(service)}
+                class="peer sr-only"
+              />
+              <span class="inline-block rounded-full border border-border px-4 py-2 text-sm transition-colors peer-checked:border-accent peer-checked:bg-accent-soft peer-checked:text-accent peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent">
+                {service}
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      {errors.services && (
+        <p id="services-error" role="alert" class="mt-1.5 text-sm text-red-600">
+          {errors.services}
+        </p>
+      )}
+
+      <div class="mb-4">
+        <label for="details" class="mb-1.5 block text-sm font-medium text-foreground">
+          Anything else? <span class="font-normal text-muted">(optional)</span>
+        </label>
+        <textarea id="details" name="details" rows="4" class={inputClass}>{str("details")}</textarea>
+      </div>
+
+      <button
+        type="submit"
+        class="w-full rounded-lg bg-accent px-6 py-3 font-semibold text-white transition-colors hover:bg-accent-bright disabled:opacity-70 group-data-[submitting]:cursor-progress"
+      >
+        <span class="group-data-[submitting]:hidden">Send it over</span>
+        <span class="hidden group-data-[submitting]:inline">Sending…</span>
+      </button>
+    </form>
+  )
+}
+
+<script>
+  import { quoteRules } from "@/lib/forms/rules";
+  import { enhance } from "@/lib/forms/enhance";
+
+  const form = document.querySelector<HTMLFormElement>("[data-quote-form]");
+  if (form) {
+    enhance({
+      form,
+      rules: quoteRules,
+      endpoint: "/api/quote",
+      arrayFields: ["services"],
+      draftKey: "vts:quote-draft",
+      onSuccess: () => {
+        // Replace the form with the confirmation rather than navigating,
+        // so nothing else on the page is disturbed.
+        const done = document.createElement("div");
+        done.setAttribute("role", "status");
+        done.className = "rounded-lg border border-border bg-surface-light p-6";
+        done.innerHTML =
+          '<p class="font-medium text-foreground">Thanks — that\'s through.</p>' +
+          '<p class="mt-1 text-sm text-muted">I\'ll get back to you shortly.</p>';
+        form.replaceWith(done);
+      },
+    });
+  }
+</script>

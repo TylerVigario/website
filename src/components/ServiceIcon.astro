@@ -1,0 +1,16 @@
+---
+// One entry point for the six service icons, keyed by the catalog's
+// slug. Astro resolves the glob at build time, so only icons actually
+// referenced are emitted and an unknown slug fails the build rather
+// than rendering nothing.
+interface Props { slug: string }
+const { slug } = Astro.props;
+const icons = import.meta.glob<{ default: (props: Record<string, unknown>) => unknown }>(
+  "./icons/services/*.astro",
+  { eager: true },
+);
+const entry = icons[`./icons/services/${slug}.astro`];
+if (!entry) throw new Error(`No service icon for slug "${slug}"`);
+const Icon = entry.default;
+---
+<Icon />

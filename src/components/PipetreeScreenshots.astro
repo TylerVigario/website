@@ -1,0 +1,72 @@
+---
+import Lightbox, { type Shot } from "@/components/Lightbox.astro";
+import type { ImageMetadata } from "astro";
+
+// Eager glob so every screenshot is a build-time import: Astro can then
+// resize it and emit a srcset, and a filename typo fails the build
+// instead of 404ing in production.
+const files = import.meta.glob<{ default: ImageMetadata }>(
+  "/src/assets/images/work/pipetree/*",
+  { eager: true },
+);
+const img = (file: string): ImageMetadata => {
+  const hit = files[`/src/assets/images/work/pipetree/${file}`];
+  if (!hit) throw new Error(`No screenshot named ${file} for pipetree`);
+  return hit.default;
+};
+
+const shots: Shot[] = [
+  {
+    src: img("project-mainline.webp"),
+    alt: "Pipetree project Mainline tab: segments-clear progress bar, diagnostic filter chips, and mainline segment rows flagged as blocked on PM review",
+    caption:
+      "The Mainline tab — segment completeness at a glance, with diagnostic tags a PM clears inline.",
+    sizes: "(min-width: 768px) 50vw, 100vw",
+  },
+  {
+    src: img("project-addresses.webp"),
+    alt: "Pipetree project Addresses tab: per-address completion stats and diagnostics like unlinked laterals and branches that did not reach a terminal",
+    caption:
+      "The Addresses tab — every address gets its own topology and completeness diagnostics, filterable by issue.",
+    sizes: "(min-width: 768px) 50vw, 100vw",
+  },
+  {
+    src: img("submission-editor.webp"),
+    alt: "Pipetree submission view: a daily crew submission with a mainline inspection, its tap list at footages, and typed lateral inspection entries",
+    caption:
+      "A daily submission — a mainline run with its taps at footage, and the typed lateral entries that hang off it.",
+    sizes: "(min-width: 768px) 50vw, 100vw",
+  },
+  {
+    src: img("project-overview.webp"),
+    alt: "Pipetree project Overview tab: project pace metrics, completion percentage, and per-operator footage contributions",
+    caption: "The Overview tab — project pace, completion, and per-operator contributions.",
+    sizes: "(min-width: 768px) 50vw, 100vw",
+  },
+  {
+    src: img("mobile-draft-form.webp"),
+    alt: "Pipetree mainline inspection entry form on a phone: from and to access points, direction, distance, pass/review/fail result, and notes",
+    caption:
+      "A mainline run entered from the truck — typed fields, suggestions over gates, auto-saved as a draft every two seconds.",
+    sizes: "(min-width: 640px) 24rem, 100vw",
+  },
+  {
+    src: img("mobile-entry-picker.webp"),
+    alt: "Pipetree Add Entry picker on a phone: searchable entry kinds grouped into inspections and requests, each with a type badge",
+    caption:
+      "Add Entry on a phone — every entry kind the trade actually files, grouped and searchable.",
+    sizes: "(min-width: 640px) 24rem, 100vw",
+  },
+];
+
+interface Props {
+  /** The page shows the gallery in slices, interleaved with prose. */
+  from?: number;
+  to?: number;
+  class?: string;
+  id?: string;
+}
+const { from = 0, to = shots.length, class: className, id = "gallery" } = Astro.props;
+---
+
+<Lightbox shots={shots} from={from} to={to} class={className} id={id} />

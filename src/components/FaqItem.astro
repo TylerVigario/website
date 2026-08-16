@@ -1,0 +1,19 @@
+---
+// <details> rather than the React accordion: it opens with JavaScript
+// disabled, is keyboard operable, and announces its own expanded state
+// without aria bookkeeping.
+interface Props { q: string; a: string }
+const { q, a } = Astro.props;
+---
+<details class="group border-b border-border">
+  <summary
+    class="flex cursor-pointer list-none items-center justify-between gap-4 py-4 text-left font-medium text-foreground [&::-webkit-details-marker]:hidden"
+  >
+    {q}
+    <span
+      class="shrink-0 text-accent transition-transform group-open:rotate-45"
+      aria-hidden="true">+</span
+    >
+  </summary>
+  <p class="pb-4 leading-relaxed text-muted">{a}</p>
+</details>

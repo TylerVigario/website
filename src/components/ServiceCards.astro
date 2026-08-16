@@ -1,0 +1,30 @@
+---
+import ServiceIcon from "@/components/ServiceIcon.astro";
+import type { ServiceItem } from "@/lib/services";
+
+// Was a client component running an IntersectionObserver that added
+// .visible to each card on a 100ms stagger. The reveal is CSS now, so
+// this is markup.
+interface Props {
+  services: ServiceItem[];
+}
+const { services } = Astro.props;
+---
+
+<div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+  {
+    services.map((s) => (
+      <a
+        href={`/contact?service=${encodeURIComponent(s.title)}`}
+        data-reveal="up"
+        class="group rounded-2xl border border-border bg-surface-light p-6 transition-all hover:-translate-y-1 hover:border-accent/30 hover:shadow-lg sm:p-8"
+      >
+        <div class="mb-5 inline-flex rounded-xl bg-accent-soft p-3 text-accent">
+          <ServiceIcon slug={s.slug} />
+        </div>
+        <h3 class="mb-2 text-lg font-semibold text-foreground">{s.title}</h3>
+        <p class="text-sm leading-relaxed text-muted">{s.desc}</p>
+      </a>
+    ))
+  }
+</div>

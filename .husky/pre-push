@@ -16,9 +16,9 @@
 #
 # Bypass for one push: git push --no-verify. Don't make a habit of it.
 #
-# Unlike pipetree, this hook does NOT also run typecheck/test — the
-# website keeps those in .husky/pre-commit (per-commit). This hook is
-# only the branch-name convention check.
+# Per-commit hooks stay fast (lint-staged, typecheck, test). The build
+# and the bundle assertion run once per push instead — see the bottom
+# of this file.
 
 valid='^(feat|fix|refactor|perf|ci|build|docs|test|chore|revert|integration)/[a-z0-9]+(-[a-z0-9]+)*$'
 
@@ -55,3 +55,11 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     exit 1
   fi
 done
+
+# Everything above validates the ref name. What follows validates the
+# tree: build the site and assert it still ships no framework runtime.
+# The build takes ~1.5s, so this costs less than discovering it in CI.
+#
+# Bypass with --no-verify when you are pushing a known-broken WIP branch.
+node --run build
+node --run check:bundles

@@ -1,0 +1,222 @@
+---
+/**
+ * Image viewer: native <dialog> shell, CSS scroll-snap carousel, and a
+ * hand-written pinch-zoom. No carousel library.
+ *
+ * WHAT THE PLATFORM DOES, measured across the 28 browsers this site
+ * targets (the browserslist in package.json) — every one is 28/28:
+ *
+ *   <dialog>              top layer, focus trap, ESC, background inertness
+ *   scroll-snap           swipe between images, with native momentum
+ *   scroll-behavior       smooth movement for the arrow buttons
+ *   IntersectionObserver  which slide is showing, for the counter
+ *   Pointer Events        the zoom gesture
+ *
+ * Globally those sit at 95.6–96.1%, each better supported than the CSS
+ * Tailwind v4 already emits (nesting is 90.66% and ships today), so none
+ * of this costs the site any reach.
+ *
+ * WHAT THE PLATFORM DOES NOT DO. `touch-action: pinch-zoom` is not
+ * usable: caniuse reports desktop Safari as no-support and iOS Safari as
+ * partial in every version, so delegating zoom to the browser would fail
+ * precisely on Apple devices. The zoom is therefore implemented on
+ * Pointer Events, which are supported 28/28.
+ */
+import { Image } from "astro:assets";
+import type { ImageMetadata } from "astro";
+
+/** `src` is an imported image, not a URL string. That is what lets Astro
+ *  resize it, emit a srcset and hash the filename — and it carries its
+ *  own intrinsic width/height, so those stop being hand-maintained
+ *  numbers that can drift from the file. */
+export interface Shot {
+  src: ImageMetadata;
+  /** Describes the image for assistive tech. */
+  alt: string;
+  /** Authored caption shown under the image in the viewer. Distinct
+   *  from alt: alt says what the picture IS, the caption says what it
+   *  is showing you and why. Falls back to alt where none was written. */
+  caption?: string;
+  sizes?: string;
+}
+
+interface Props {
+  /** EVERY shot, not the slice shown. The grid renders a range; the
+   * viewer must cycle the whole gallery. */
+  shots: Shot[];
+  from?: number;
+  to?: number;
+  id?: string;
+  class?: string;
+}
+
+const {
+  shots,
+  from = 0,
+  to = shots.length,
+  id = "gallery",
+  class: className = "grid gap-4 sm:grid-cols-2",
+} = Astro.props;
+
+const visible = shots.slice(from, to);
+// Only the first slice emits the dialog; later slices point their grids
+// at it, so a page carries one viewer rather than one per slice.
+const ownsDialog = from === 0;
+---
+
+{/* Anchors to the image itself, not buttons. With no JavaScript, or in
+    a browser without <dialog>, clicking still does the useful thing: it
+    opens the full-size image. The viewer is an enhancement layered on a
+    link that already works, not the only way in. */}
+<div class={className} data-lightbox={id}>
+  {
+    visible.map((shot, i) => (
+      <a
+        href={shot.src.src}
+        class="group block cursor-zoom-in overflow-hidden rounded-lg border border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+        data-index={from + i}
+        aria-label={`View larger: ${shot.alt}`}
+      >
+        {/* widths are the sizes actually rendered: a two-column grid
+            at common breakpoints, not the 2400px original. */}
+        <Image
+          src={shot.src}
+          alt={shot.alt}
+          widths={[320, 480, 640, 960]}
+          sizes={shot.sizes ?? "(min-width: 640px) 50vw, 100vw"}
+          loading="lazy"
+          decoding="async"
+          class="h-auto w-full transition-transform duration-300 group-hover:scale-[1.02]"
+        />
+      </a>
+    ))
+  }
+</div>
+
+{
+  ownsDialog && (
+    <dialog
+      data-lightbox-dialog={id}
+      class="fixed inset-0 m-0 h-auto max-h-none w-auto max-w-none border-0 bg-transparent p-0 backdrop:bg-black/90"
+    >
+      <div class="relative flex h-full w-full flex-col">
+        <button
+          type="button"
+          data-close
+          class="absolute top-[max(0.75rem,env(safe-area-inset-top))] right-[max(0.75rem,env(safe-area-inset-right))] z-20 flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-2xl text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+          aria-label="Close"
+        >
+          &times;
+        </button>
+
+        <button
+          type="button"
+          data-prev
+          class="absolute top-1/2 left-[max(0.5rem,env(safe-area-inset-left))] z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white disabled:pointer-events-none disabled:opacity-25"
+          aria-label="Previous image"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            class="h-6 w-6"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          data-next
+          class="absolute top-1/2 right-[max(0.5rem,env(safe-area-inset-right))] z-20 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white disabled:pointer-events-none disabled:opacity-25"
+          aria-label="Next image"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            class="h-6 w-6"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        {/* The carousel IS the scroller. scroll-snap supplies swipe with
+            native momentum and snapping; no JavaScript drives movement. */}
+        <div
+          data-track
+          class="flex h-full w-full snap-x snap-mandatory scroll-smooth overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {shots.map((shot, i) => (
+            <div
+              data-slide={i}
+              class="flex h-full w-full shrink-0 snap-center snap-always flex-col items-center justify-center gap-3 p-4 pb-32"
+            >
+              {/* touch-action: pan-x hands the horizontal axis to the scroller (so
+                  swiping between images stays native) while reserving vertical
+                  for the dismiss gesture. Without it the scroll container
+                  claims the drag, fires pointercancel, and the handler below
+                  never sees a pointermove. */}
+              <div
+                data-zoom
+                class="flex min-h-0 flex-1 touch-pan-x items-center overflow-hidden"
+              >
+                <Image
+                  src={shot.src}
+                  alt={shot.alt}
+                  widths={[640, 1024, 1600, 2400]}
+                  sizes="100vw"
+                  loading="lazy"
+                  draggable="false"
+                  class="max-h-full max-w-full origin-center object-contain select-none"
+                />
+              </div>
+              <p class="max-w-2xl shrink-0 text-center text-sm text-white/90">{shot.caption ?? shot.alt}</p>
+            </div>
+          ))}
+        </div>
+
+        <p
+          data-counter
+          aria-live="polite"
+          class="absolute top-[max(0.75rem,env(safe-area-inset-top))] left-[max(0.75rem,env(safe-area-inset-left))] z-20 rounded-full bg-black/50 px-3 py-1 text-sm tabular-nums text-white"
+        />
+
+        {/* Thumbnail strip. Orientation in a long gallery: which image
+            you are on, how many remain, and direct access to any of them
+            without swiping through the ones between. Itself a scroller,
+            so it works on a narrow screen. */}
+        <div
+          data-thumbs
+          class="absolute right-0 bottom-0 left-0 z-20 flex gap-2 overflow-x-auto bg-gradient-to-t from-black/70 to-transparent px-3 pt-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {shots.map((shot, i) => (
+            <button
+              type="button"
+              data-thumb={i}
+              aria-label={`Go to image ${i + 1}: ${shot.alt}`}
+              class="h-12 w-16 shrink-0 overflow-hidden rounded border-2 border-transparent opacity-50 transition aria-[current=true]:border-white aria-[current=true]:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+            >
+              <Image
+                src={shot.src}
+                alt=""
+                widths={[128]}
+                sizes="64px"
+                loading="lazy"
+                class="h-full w-full object-cover"
+              />
+            </button>
+          ))}
+        </div>
+      </div>
+    </dialog>
+  )
+}
+
+<script>
+  import { mountLightbox } from "@/scripts/lightbox";
+  mountLightbox();
+</script>

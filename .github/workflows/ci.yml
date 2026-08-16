@@ -38,9 +38,9 @@ jobs:
         # .nvmrc and package.json#engines.node must declare the same
         # Node major. CI reads .nvmrc directly (node-version-file in the
         # setup composite + the release job), so there's no separate
-        # workflow pin. These were two of four pins; the other two lived
-        # in the RPM spec and systemd unit and went with them, so this
-        # check is now the whole of it.
+        # workflow pin. These were two of four pins once; the RPM spec
+        # and systemd unit held the others and went with the packaging
+        # tree, so this check is now the whole of it.
         run: |
           NVMRC_MAJOR=$(sed -E 's/^[^0-9]*([0-9]+).*/\1/' .nvmrc)
           ENGINES_MAJOR=$(jq -r '.engines.node' package.json | grep -oE '[0-9]+' | head -1)
@@ -66,24 +66,28 @@ jobs:
       - run: npm run lint
       - run: npm run format
       - run: npm test
-      - name: Cache Next build
-        # Persist Next's incremental build cache across gate runs.
-        # `next build` writes per-route/module artifacts under
-        # `.next/cache`; a warm cache shaves wall-clock off the build.
-        # Key rotates when deps or source change; restore-keys let a
-        # stale cache still seed the next build's incremental layer.
+      - name: Cache Astro build
+        # Astro's content and build caches live under .astro/. A warm
+        # cache shaves wall-clock; the key rotates when deps or source
+        # change, and restore-keys let a stale cache still seed it.
         uses: actions/cache@v5
         with:
-          path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**/*.[jt]s', 'src/**/*.[jt]sx', 'next.config.ts') }}
+          path: .astro
+          key: astro-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'astro.config.mjs') }}
           restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
-            nextjs-${{ runner.os }}-
+            astro-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            astro-${{ runner.os }}-
       - name: Validate build
-        # The full production build, including the postbuild real-boot
-        # smoke against the compiled server.js. Nothing downstream
-        # consumes it yet — it proves the tree builds, which is the whole
-        # claim until a release shape replaces the retired one.
+        # `astro build` prerenders every page and compiles the server
+        # entry. No secrets are needed: the build reads no credentials,
+        # and the two runtime env vars (SQLITE_PATH, SMTP_*) are only
+        # read when the server actually starts.
         run: npm run build
-        env:
-          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+
+      - name: The site ships no framework runtime
+        # Identical logic to `npm run check:bundles`, because it IS that
+        # script. It previously lived inline here and nowhere else, so it
+        # could only fail after a push — and a stale shell fragment left
+        # below the heredoc meant it would have failed unconditionally
+        # under `set -u` the first time it ran.
+        run: npm run check:bundles
