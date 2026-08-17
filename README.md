@@ -135,10 +135,12 @@ tylervigario.com.
 ## License
 
 Source code: **AGPL-3.0-or-later** — see [LICENSE](LICENSE) for the
-verbatim license text. If you run a modified version of this code on
-a network-accessible server, AGPL §13 obligates you to offer the
-modified source to users interacting with it (the footer's "Source"
-link is how this site discharges that obligation for its own users).
+verbatim license text. The repo is private and the source has not been
+offered, so the license currently binds no one. It is kept deliberately
+rather than loosened: if this is ever published, anyone who modifies it
+and runs it on a network-accessible server is obligated by §13 to offer
+their modified source to their users. That obligation runs to forkers,
+never to the author.
 
 **Brand assets are excluded from the AGPL grant.** Everything under
 `public/images/` — the VTS logo, any client photos, headshots,

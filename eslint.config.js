@@ -35,7 +35,7 @@ export default defineConfig([
 
   // Config files are plain Node modules with no project entry.
   {
-    files: ["*.config.{js,mjs,ts}", ".*.js", "scripts/**"],
+    files: ["*.{js,mjs}", ".*.js", "scripts/**"],
     ...tseslint.configs.disableTypeChecked,
   },
 

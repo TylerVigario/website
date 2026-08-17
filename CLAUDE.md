@@ -32,13 +32,20 @@ asserts it locally and in CI. If
 something ever genuinely needs a framework, argue for it then — do not
 reintroduce one to solve a problem the platform already solves.
 
-License: **AGPL-3.0-or-later** for source code. Brand assets in
-`public/images/` (VTS logo, photos, marketing graphics) are All
-Rights Reserved — separate from the AGPL grant. The site's footer
-carries a "Source" link to discharge AGPL §13's network-interaction
-obligation; if you ever rename the GitHub repo or change the public
-URL, that link in [Footer.astro](src/components/Footer.astro) moves with
+License: **AGPL-3.0-or-later**, and the choice is deliberate rather
+than decorative. The repo is private and nothing has been published, so
+today the license binds nobody and obliges Tyler nothing — §13 aims at
+someone who modifies the Program and redeploys it, and the copyright
+holder needs no permission from himself. It sits there armed: if the
+source is ever offered, a forker who modifies and runs it must offer
+their source in turn. That is the reason to keep AGPL and not weaken
 it.
+
+Publishing is therefore a business decision, not a compliance one. The
+footer's "Source" link is gone while the repo is private (it 404'd for
+every visitor); it returns if and when the source is offered. Brand
+assets in `public/images/` (VTS logo, photos, marketing graphics) are
+All Rights Reserved either way — separate from the AGPL grant.
 
 ## Deploy contract — there isn't one yet
 

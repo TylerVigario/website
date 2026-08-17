@@ -6,6 +6,7 @@
 # point, which is how build artefacts reached history; gitignore does
 # not apply to an already-tracked path, so they had to be git rm --cached.
 /dist
+/dist-release
 /.astro
 
 # Environment. Values are secrets; the example is the contract.

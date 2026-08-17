@@ -97,13 +97,12 @@ const year = new Date().getFullYear();
           rel="noopener noreferrer"
           class="underline transition-colors hover:text-foreground">AGPL-3.0-or-later</a
         >
-        {" · "}
-        <a
-          href="https://github.com/TylerVigario/website"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="underline transition-colors hover:text-foreground">Source</a
-        >
+        {/* No "Source" link while the repo is private — it 404'd for
+            every visitor. The AGPL notice above still stands, and is
+            deliberate: the license is armed so that IF the source is
+            ever offered, anyone who modifies and redeploys it is bound
+            to offer theirs. Publishing is a separate decision; the link
+            comes back with it. */}
       </p>
     </div>
   </div>

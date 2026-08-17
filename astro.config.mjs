@@ -3,6 +3,7 @@ import { defineConfig } from "astro/config";
 import node from "@astrojs/node";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
+import { RUNTIME_EXTERNALS } from "./runtime-externals.mjs";
 
 // Hybrid, not static and not server. `output: "static"` with an adapter
 // present means every page prerenders to HTML at build time unless it
@@ -35,9 +36,10 @@ export default defineConfig({
   integrations: [sitemap()],
   vite: {
     plugins: [tailwindcss()],
-    // better-sqlite3 is a native addon and cannot be bundled. Astro's
-    // SSR build must resolve it from node_modules at runtime, the same
-    // reason it was listed in Next's serverExternalPackages.
-    ssr: { external: ["better-sqlite3"] },
+    // noExternal bundles every dependency into the server output, so
+    // the deployed artifact needs no node_modules beyond the native
+    // addon that cannot be bundled. See runtime-externals.mjs — that
+    // list is shared with the release script so the two cannot drift.
+    ssr: { external: RUNTIME_EXTERNALS, noExternal: true },
   },
 });

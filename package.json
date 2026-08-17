@@ -23,6 +23,7 @@
     "lint:md:fix": "markdownlint-cli2 --fix",
     "prepare": "husky",
     "preview": "astro preview",
+    "release": "node scripts/make-release.mjs",
     "start": "node ./dist/server/entry.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
