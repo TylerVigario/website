@@ -12,9 +12,9 @@
  * The comparison runs in BOTH directions. Changed files and missing
  * files are the obvious half; the half that matters more is files
  * present on disk that the manifest never listed. Nothing legitimate
- * writes into a release tree — the database lives in /var/lib, outside
- * it — so "zero unexpected files" is a clean assertion with no
- * exclusions to argue about.
+ * writes into a release tree, so "zero unexpected files" is a clean
+ * assertion — provided mutable state (the database, logs) is kept
+ * outside the tree, which is the deployment's job, not this script's.
  *
  * If GitHub cannot be reached it falls back to the manifest inside the
  * retained tarball, so a GitHub outage degrades the check instead of
