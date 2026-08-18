@@ -32,18 +32,26 @@
  * Anything non-zero is worth waking up for; 3 says "I could not really
  * check" rather than "everything is fine".
  *
+ * This tool knows about an ARTIFACT, not about a machine. Where a
+ * release is installed, what runs it, and which repository publishes it
+ * are all facts about a deployment, so they are arguments — there is no
+ * default install path and no baked-in repository, because guessing
+ * either would be this script asserting a deployment shape it has no
+ * business having an opinion about.
+ *
  * Usage:
- *   node verify-install.mjs                      # /opt/vigario-website/current
- *   node verify-install.mjs --root /path/to/tree
- *   node verify-install.mjs --version 1.2.3      # override what RELEASE claims
+ *   node verify-install.mjs --root <dir> --repo <owner/name>
+ *   node verify-install.mjs --root <dir> --repo <owner/name> --version 1.2.3
+ *   node verify-install.mjs --root <dir> --repo <owner/name> --tarball <path>
+ *
+ * --version overrides what the tree's RELEASE file claims.
+ * --tarball is the fallback archive used when GitHub is unreachable.
  */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-
-const REPO = "TylerVigario/website";
 
 /** The comparison, kept pure so it can be tested without a network or a
  *  filesystem. Both directions: what changed, what vanished, and what
@@ -80,7 +88,17 @@ if (!isCli) {
     return i === -1 ? d : process.argv[i + 1];
   };
 
-  const root = path.resolve(arg("root", "/opt/vigario-website/current"));
+  const rootArg = arg("root");
+  const REPO = arg("repo");
+  if (!rootArg || !REPO) {
+    console.error("usage: verify-install.mjs --root <install dir> --repo <owner/name>");
+    console.error("       [--version X.Y.Z] [--tarball <path to retained artifact>]");
+    console.error("");
+    console.error("Both are deployment facts, so neither is guessed. A default would");
+    console.error("make this script assert where a release lives, which is not its call.");
+    process.exit(2);
+  }
+  const root = path.resolve(rootArg);
   // The manifest is the one file in the tree that cannot appear in its
   // own listing, so it is excluded from the unexpected-file check rather
   // than being reported as an intruder on every run.
@@ -133,7 +151,15 @@ if (!isCli) {
     // Fall back to the copy inside the retained tarball rather than the
     // loose MANIFEST.sha256 in the tree: forging that one means repacking
     // an archive, not editing a text file sitting next to its accuser.
-    const tarball = arg("tarball", path.join(path.dirname(root), "releases", `${version}.tar.gz`));
+    // No default path: how retained artifacts are laid out is the
+    // deployment's business. Without --tarball there is simply no
+    // fallback, and the run fails loudly rather than guessing.
+    const tarball = arg("tarball");
+    if (!tarball) {
+      console.error(`FAIL  cannot verify ${tag}: GitHub unreachable (${why})`);
+      console.error(`      and no --tarball given to fall back to.`);
+      process.exit(2);
+    }
     try {
       published = execFileSync(
         "tar",
