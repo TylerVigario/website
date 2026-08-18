@@ -16,9 +16,21 @@
  * it — so "zero unexpected files" is a clean assertion with no
  * exclusions to argue about.
  *
- * If GitHub cannot be reached, the answer is UNVERIFIED, not OK. A
- * check that passes when it could not actually check is worse than no
- * check, because it produces confidence rather than an alarm.
+ * If GitHub cannot be reached it falls back to the manifest inside the
+ * retained tarball, so a GitHub outage degrades the check instead of
+ * blocking it. That fallback is strictly weaker — the tarball sits on
+ * the same disk as the tree it vouches for, and anyone who can edit a
+ * file can repack an archive — so it is never silent: it shouts in the
+ * log and exits non-zero specifically so the alert fires.
+ *
+ * Exit codes, which are the alerting contract:
+ *   0  verified against GitHub, tree matches
+ *   1  MISMATCH — the tree is not what was published
+ *   2  fatal — cannot run the check at all
+ *   3  DEGRADED — GitHub unreachable, matched the local tarball instead
+ *
+ * Anything non-zero is worth waking up for; 3 says "I could not really
+ * check" rather than "everything is fine".
  *
  * Usage:
  *   node verify-install.mjs                      # /opt/vigario-website/current
@@ -97,6 +109,8 @@ if (!isCli) {
   console.log(`  claims:    ${tag}`);
 
   let published;
+  let degraded = false;
+  let why = "";
   try {
     published = execFileSync(
       "gh",
@@ -113,13 +127,35 @@ if (!isCli) {
       ],
       { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
     );
+    console.log(`  source:    GitHub release ${tag} (authoritative)`);
   } catch (e) {
-    const why = (e.stderr || e.message || "").trim().split("\n")[0];
-    console.error(`UNVERIFIED  could not fetch the manifest for ${tag} from ${REPO}`);
-    console.error(`            ${why}`);
-    console.error(`            This is not a pass. Either the release does not exist,`);
-    console.error(`            or this host cannot reach GitHub.`);
-    process.exit(3);
+    why = (e.stderr || e.message || "").trim().split("\n")[0];
+    // Fall back to the copy inside the retained tarball rather than the
+    // loose MANIFEST.sha256 in the tree: forging that one means repacking
+    // an archive, not editing a text file sitting next to its accuser.
+    const tarball = arg("tarball", path.join(path.dirname(root), "releases", `${version}.tar.gz`));
+    try {
+      published = execFileSync(
+        "tar",
+        ["-xzOf", tarball, `vigario-website-${version}/MANIFEST.sha256`],
+        { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+      );
+      degraded = true;
+      console.error("");
+      console.error("  #########################################################");
+      console.error("  #  DEGRADED - could not reach the authoritative source  #");
+      console.error("  #########################################################");
+      console.error(`  GitHub said: ${why}`);
+      console.error(`  Falling back to the manifest inside ${tarball}.`);
+      console.error("  That archive sits on the same disk as the tree it vouches");
+      console.error("  for, so this proves the install is INTERNALLY consistent,");
+      console.error("  not that it matches what was actually published.");
+      console.error("");
+    } catch {
+      console.error(`FAIL  cannot verify ${tag}: GitHub unreachable (${why})`);
+      console.error(`      and no local tarball at ${tarball} to fall back to.`);
+      process.exit(2);
+    }
   }
 
   const expected = parseManifest(published);
@@ -155,9 +191,19 @@ if (!isCli) {
     report("MODIFIED", changed);
     report("MISSING", missing);
     report("UNEXPECTED — present on disk, not in the published release", unexpected);
-    console.error(`\nFAIL  ${root} does not match ${tag} as published.`);
+    console.error(
+      `\nMISMATCH  ${root} does not match ${tag}` +
+        (degraded
+          ? " (compared against the LOCAL tarball - GitHub was unreachable)"
+          : " as published"),
+    );
     process.exit(1);
   }
 
-  console.log(`\nOK  ${root} matches ${tag} byte for byte.`);
+  if (degraded) {
+    console.error(`\nDEGRADED  ${root} matches the local tarball for ${tag}.`);
+    console.error(`          NOT confirmed against GitHub. Reason: ${why}`);
+    process.exit(3);
+  }
+  console.log(`\nOK  ${root} matches ${tag} byte for byte, as published.`);
 }
