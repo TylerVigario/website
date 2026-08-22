@@ -16,6 +16,25 @@ because the release job writes the branch and nothing had ever said the branch w
 protected. The payload is committed now so that a change to protection is a change to
 the repository, reviewable like any other.
 
+`tags.json` protects every tag. `deletion` and `non_fast_forward` look like the
+whole of it and are not: advancing a tag to a descendant commit is a fast-forward,
+so neither rule objects, and one version quietly names two sets of bits. `update`
+is what closes that — it refuses any move of a ref that already exists while still
+admitting one that does not, making tags create-once.
+
+The failure it prevents is silent on the side that suffers it. Advance a tag and
+whoever fetches next gets the new content, while whoever already holds the name is
+refused the update and never learns there was one. Two people at the same version,
+holding different bits, neither told.
+
+It carries no bypass actor, and that is deliberate. A bypass is scoped to a ruleset
+rather than to a rule, so any actor listed here would be past `update` and
+`deletion` as readily as anything else — an exemption from the only property this
+ruleset exists to provide. A release creates tags and never moves them, so it needs
+nothing withheld here.
+
+`creation` is deliberately absent: anyone may name a version, nobody may change one.
+
 The file is the source of truth. Apply it, do not hand-configure:
 
 ```bash
