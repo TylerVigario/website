@@ -56,6 +56,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { pathToFileURL } from "node:url";
 
 /** The comparison, kept pure so it can be tested without a network or a
@@ -108,6 +109,7 @@ if (!isCli) {
   // own listing, so it is excluded from the unexpected-file check rather
   // than being reported as an intruder on every run.
   const SELF = "MANIFEST.sha256";
+  const manifestTmp = path.join(os.tmpdir(), `manifest-${process.pid}.sha256`);
 
   function fail(msg, code = 2) {
     console.error(`FAIL  ${msg}`);
@@ -150,7 +152,27 @@ if (!isCli) {
       ],
       { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
     );
-    console.log(`  source:    GitHub release ${tag} (authoritative)`);
+    // The manifest is the authority this whole check rests on, so its
+    // origin is established before it is used — not trusted because it
+    // arrived from the right hostname. Fetch to a file, verify the
+    // attestation, then read it.
+    fs.writeFileSync(manifestTmp, published);
+    try {
+      execFileSync("gh", ["attestation", "verify", manifestTmp, "--repo", REPO], {
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      console.log(`  source:    GitHub release ${tag}, attestation verified`);
+    } catch (e) {
+      const why = (e.stderr || e.message || "").trim().split("\n")[0];
+      console.error(
+        `FAIL  the manifest for ${tag} downloaded, but its attestation did not verify.`,
+      );
+      console.error(`      ${why}`);
+      console.error(`      Refusing to compare against a manifest whose origin is unproven.`);
+      process.exit(1);
+    } finally {
+      fs.rmSync(manifestTmp, { force: true });
+    }
   } catch (e) {
     why = (e.stderr || e.message || "").trim().split("\n")[0];
     // Fall back to the copy inside the retained tarball rather than the
