@@ -117,19 +117,61 @@ jobs:
         if: steps.decide.outputs.release == 'true'
         run: npm run ci
 
-      - name: Commit and tag
-        if: steps.decide.outputs.release == 'true'
+      - name: Ask the forge to write the release commit
+        id: commit
+        # NOT `git commit && git push`. A push sends an object already built,
+        # so it arrives unsigned no matter which token carried it — that is
+        # why every chore(release) commit in this repository's history is
+        # unsigned. createCommitOnBranch has GitHub construct the object and
+        # sign it with its own key, which costs nothing and is the only way a
+        # release commit satisfies the signing rule.
+        #
+        # expectedHeadOid makes it a compare-and-swap: if anything landed on
+        # main since this job read it, the mutation fails rather than
+        # clobbering.
         env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           TAG: ${{ steps.decide.outputs.tag }}
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json CHANGELOG.md
-          git commit -m "chore(release): $TAG [skip ci]"
-          git tag -a "$TAG" -m "Release $TAG"
-          git push origin main
-          git push origin "$TAG"
+          head=$(git rev-parse HEAD)
+          jq -n \
+            --arg repo "$GITHUB_REPOSITORY" \
+            --arg head "$head" \
+            --arg msg "chore(release): $TAG [skip ci]" \
+            --arg pkg "$(base64 -w0 package.json)" \
+            --arg lock "$(base64 -w0 package-lock.json)" \
+            --arg log "$(base64 -w0 CHANGELOG.md)" \
+            '{query:"mutation($input:CreateCommitOnBranchInput!){createCommitOnBranch(input:$input){commit{oid}}}",
+              variables:{input:{
+                branch:{repositoryNameWithOwner:$repo,branchName:"main"},
+                expectedHeadOid:$head,
+                message:{headline:$msg},
+                fileChanges:{additions:[
+                  {path:"package.json",contents:$pkg},
+                  {path:"package-lock.json",contents:$lock},
+                  {path:"CHANGELOG.md",contents:$log}]}}}}' > /tmp/mutation.json
+          oid=$(gh api graphql --input /tmp/mutation.json --jq '.data.createCommitOnBranch.commit.oid')
+          [ -n "$oid" ] || { echo "::error::createCommitOnBranch returned no oid"; exit 1; }
+          echo "release commit: $oid"
+          echo "oid=$oid" >> "$GITHUB_OUTPUT"
+
+      - name: Tag it
+        # After the commit exists, never before. Publication is the step that
+        # cannot be taken back; a tag announcing a release that failed to
+        # publish leaves the repository asserting something untrue.
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TAG: ${{ steps.decide.outputs.tag }}
+          OID: ${{ steps.commit.outputs.oid }}
+        run: |
+          set -euo pipefail
+          obj=$(gh api "repos/$GITHUB_REPOSITORY/git/tags" \
+            -f tag="$TAG" -f message="Release $TAG" -f object="$OID" -f type=commit \
+            --jq .sha)
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/tags/$TAG" -f sha="$obj" >/dev/null
+          echo "tagged $TAG -> $OID"
 
       - name: Build the artifact
         if: steps.decide.outputs.release == 'true'
