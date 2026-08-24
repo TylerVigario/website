@@ -33,7 +33,7 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Verify Node major pins agree
         # .nvmrc and package.json#engines.node must declare the same
         # Node major. CI reads .nvmrc directly (node-version-file in the
@@ -70,7 +70,7 @@ jobs:
         # Astro's content and build caches live under .astro/. A warm
         # cache shaves wall-clock; the key rotates when deps or source
         # change, and restore-keys let a stale cache still seed it.
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: .astro
           key: astro-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'astro.config.mjs') }}

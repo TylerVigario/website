@@ -30,12 +30,12 @@ jobs:
     name: Validate PR title
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           # Shallow is fine — commitlint only reads the piped string,
           # not git history.
           fetch-depth: 1
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
       # `--ignore-scripts` skips the husky `prepare` step (and any
