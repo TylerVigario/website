@@ -2,6 +2,11 @@
  * Answers one question: is the installed site still exactly what was
  * built and published?
  *
+ * The manifest is fetched from the GitHub release every run, and it is
+ * attested at publication alongside the tarball — so it can be checked
+ * with `gh attestation verify` rather than trusted because it arrived
+ * over TLS from the right hostname.
+ *
  * The manifest is fetched from the GitHub release every run. Nothing on
  * the host is trusted to answer this, because anything on the host is
  * exactly as suspect as the files it would be vouching for — a manifest

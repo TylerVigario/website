@@ -186,7 +186,15 @@ jobs:
         if: steps.decide.outputs.release == 'true'
         uses: actions/attest-build-provenance@v3
         with:
-          subject-path: dist-release/vigario-website-${{ steps.decide.outputs.version }}.tar.gz
+          # BOTH assets. The manifest is the authoritative copy a host
+          # compares its installed tree against, so leaving it unattested
+          # would mean the root of that check is trusted only because it
+          # came from GitHub over TLS — swappable by anyone who can write
+          # a release asset, and verify-install would compare against the
+          # forgery without complaint.
+          subject-path: |
+            dist-release/vigario-website-${{ steps.decide.outputs.version }}.tar.gz
+            dist-release/vigario-website-${{ steps.decide.outputs.version }}.MANIFEST.sha256
 
       - name: Publish
         if: steps.decide.outputs.release == 'true'
