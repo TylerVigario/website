@@ -16,6 +16,20 @@ because the release job writes the branch and nothing had ever said the branch w
 protected. The payload is committed now so that a change to protection is a change to
 the repository, reviewable like any other.
 
+`main.json` now requires two status checks: `Gate` and `Validate PR title`.
+Those strings are job *names*, not workflow filenames, and a required context
+naming no job wedges the branch on an answer that never comes — every check
+green and nothing mergeable. They were taken from what GitHub actually reports
+on a pull request, not from the YAML, because `Validate PR title` only runs on
+`pull_request` and never appears on a push to `main`.
+
+`strict_required_status_checks_policy` is on, so a branch must be up to date
+with `main` before it merges — the checks that passed are the checks for the
+code that lands.
+
+To change either: relax the rule, merge the change, tighten it again, then read
+the applied state back.
+
 `tags.json` protects every tag. `deletion` and `non_fast_forward` look like the
 whole of it and are not: advancing a tag to a descendant commit is a fast-forward,
 so neither rule objects, and one version quietly names two sets of bits. `update`
