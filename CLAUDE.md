@@ -210,6 +210,7 @@ npm run lint                      # eslint (js) + markdownlint (md)
 npm run format                    # prettier --check
 npm run format:fix                # prettier --write
 npm run ci                        # lint + typecheck + format + test (gate umbrella)
+npm run lint:actions              # actionlint over .github/workflows
 npm run clean                     # rm .next, server.js, .eslintcache, node_modules/.cache
 ```
 
@@ -252,6 +253,8 @@ Don't introduce a permanent `develop` branch — the ceremony outweighs the bene
 ## Guardrails — things that break correctness if ignored
 
 - **`SQLITE_PATH` must be absolute.** [`src/lib/runtime-config.ts`](src/lib/runtime-config.ts) rejects relative paths at startup. Don't default it; don't make it optional; don't fall back to cwd.
+- **Editing a workflow means running `npm run lint:actions` before pushing.** It is not installed by npm — a Go binary, found on PATH or in `~/.local/bin` — so it reports SKIPPED rather than failing when a developer does not have it, and CI stays authoritative. That leniency is for developers who never touch `.github/`; it is not cover for the person editing the workflow. Discovering a shellcheck complaint by pushing is a round trip that was avoidable.
+
 - **Prettier does not format `.astro`, and that is a decision, not an oversight.** `prettier-plugin-astro` rewrites rendered HTML rather than only source — it injects whitespace inside elements, turning `<a>Services</a>` into `<a> Services </a>`. Measured here: 4 built pages changed on default settings, 8 on `htmlWhitespaceSensitivity: "strict"`. A formatter that alters output cannot be run unattended. `.astro` is in `.prettierignore`; those files are still linted by `eslint-plugin-astro` and typechecked by `astro check`. If you add the plugin, diff `dist/client` before and after and look at what moved.
 - **`HOST`, not `HOSTNAME`.** `@astrojs/node` reads `HOST` and `PORT`. `HOSTNAME` — which the Next-era env template documented — is read by nothing and fails silently. Unset, the server listens on `localhost:4321`.
 - **Don't wrap route handlers in top-level try/catch.** A blanket catch turns a real fault into a generic 500 and drops the stack, which is the difference between a fixable report and "the form is broken sometimes." Let errors propagate; the adapter logs them with the stack intact. The email-send `try/catch` is the one legitimate catch — the row is already saved by then, so SMTP being down must not fail a submission that actually succeeded.

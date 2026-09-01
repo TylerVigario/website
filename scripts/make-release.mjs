@@ -29,6 +29,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { createHash } from "node:crypto";
 import { RUNTIME_EXTERNALS } from "../runtime-externals.mjs";
 
 function arg(name, fallback) {
@@ -150,6 +151,52 @@ fs.writeFileSync(
     "",
   ].join("\n"),
 );
+
+// Per-file manifest. This is what makes "is the installed site still
+// what was built" answerable at any time, rather than only at download.
+//
+// An attestation covers the tarball's digest, which proves the download
+// was genuine and says nothing about the extracted tree afterwards —
+// and the extracted tree is what actually serves. Drift there (a
+// half-finished deploy, corruption, a dropped-in file) is invisible to
+// a whole-archive checksum.
+//
+// The manifest is written into the artifact AND published beside it as
+// its own release asset. The release copy is the authoritative one:
+// anything on the host is exactly as suspect as the files it would be
+// vouching for, so verification compares the installed tree against
+// GitHub, never against another local file.
+//
+// sha256sum's own format, so `sha256sum -c` works on it directly.
+function manifestLines(dir, base = dir) {
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .flatMap((e) => {
+      const full = path.join(dir, e.name);
+      // Symlinks are not followed: hashing through one would record the
+      // target's bytes under the link's name and silently pass if the
+      // link were later repointed.
+      if (e.isSymbolicLink()) return [];
+      if (e.isDirectory()) return manifestLines(full, base);
+      if (!e.isFile()) return [];
+      const rel = path.relative(base, full).split(path.sep).join("/");
+      const hash = createHash("sha256").update(fs.readFileSync(full)).digest("hex");
+      return [`${hash}  ${rel}`];
+    })
+    .sort();
+}
+
+const lines = manifestLines(staging);
+// Sorted, so the manifest is byte-identical for identical trees and a
+// diff between two versions is readable.
+const manifest = lines.join("\n") + "\n";
+// Inside the archive only. A copy published beside the tarball would be
+// a second thing that can differ from the first, and "they disagree" is
+// a state something then has to resolve — which is an invitation to
+// re-fetch. The tarball's attestation already covers this file, so a
+// separate copy adds no proof, only a way to be wrong.
+fs.writeFileSync(path.join(staging, "MANIFEST.sha256"), manifest);
+console.log(`  manifest: ${lines.length} files`);
 
 const tarball = path.join(outDir, `${name}.tar.gz`);
 fs.rmSync(tarball, { force: true });
