@@ -190,8 +190,12 @@ const lines = manifestLines(staging);
 // Sorted, so the manifest is byte-identical for identical trees and a
 // diff between two versions is readable.
 const manifest = lines.join("\n") + "\n";
+// Inside the archive only. A copy published beside the tarball would be
+// a second thing that can differ from the first, and "they disagree" is
+// a state something then has to resolve — which is an invitation to
+// re-fetch. The tarball's attestation already covers this file, so a
+// separate copy adds no proof, only a way to be wrong.
 fs.writeFileSync(path.join(staging, "MANIFEST.sha256"), manifest);
-fs.writeFileSync(path.join(outDir, `${name}.MANIFEST.sha256`), manifest);
 console.log(`  manifest: ${lines.length} files`);
 
 const tarball = path.join(outDir, `${name}.tar.gz`);
@@ -201,5 +205,4 @@ run("tar", ["-czf", tarball, "-C", outDir, name]);
 const size = fs.statSync(tarball).size;
 console.log(`\n  ${tarball}`);
 console.log(`  ${(size / 1024 / 1024).toFixed(1)} MB`);
-console.log(`  ${path.join(outDir, `${name}.MANIFEST.sha256`)}`);
 console.log(`  entrypoint: dist/server/entry.mjs`);

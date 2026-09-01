@@ -186,15 +186,11 @@ jobs:
         if: steps.decide.outputs.release == 'true'
         uses: actions/attest-build-provenance@v3
         with:
-          # BOTH assets. The manifest is the authoritative copy a host
-          # compares its installed tree against, so leaving it unattested
-          # would mean the root of that check is trusted only because it
-          # came from GitHub over TLS — swappable by anyone who can write
-          # a release asset, and verify-install would compare against the
-          # forgery without complaint.
-          subject-path: |
-            dist-release/vigario-website-${{ steps.decide.outputs.version }}.tar.gz
-            dist-release/vigario-website-${{ steps.decide.outputs.version }}.MANIFEST.sha256
+          # One artifact, one attestation. MANIFEST.sha256 lives inside
+          # the tarball, so this signature already covers it — publishing
+          # a second copy beside it would add no proof and one more thing
+          # that could disagree.
+          subject-path: dist-release/vigario-website-${{ steps.decide.outputs.version }}.tar.gz
 
       - name: Publish
         if: steps.decide.outputs.release == 'true'
@@ -204,12 +200,7 @@ jobs:
           VERSION: ${{ steps.decide.outputs.version }}
         run: |
           set -euo pipefail
-          # The manifest is published as its own asset, not only as a
-          # file inside the tarball. The host compares its installed tree
-          # against THIS copy — nothing on the host gets a vote in
-          # deciding whether the host is correct.
           gh release create "$TAG" \
             "dist-release/vigario-website-${VERSION}.tar.gz" \
-            "dist-release/vigario-website-${VERSION}.MANIFEST.sha256" \
             --title "$TAG" \
             --notes "$(npx --yes git-cliff@2 --config cliff.toml --latest --strip all)"

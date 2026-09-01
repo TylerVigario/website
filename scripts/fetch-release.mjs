@@ -6,14 +6,16 @@
  * itself been proven — otherwise the check is only as good as whoever
  * could write the file it checks against.
  *
- *   1. download the tarball and the manifest from the release
- *   2. verify the attestation on BOTH — Sigstore, keyless, bound to the
- *      workflow, repo and commit that built them
+ *   1. download the tarball from the release
+ *   2. verify its attestation — Sigstore, keyless, bound to the
+ *      workflow, repo and commit that built it
  *   3. decompress, only now
- *   4. cross-check the manifest inside the archive against the published
- *      one; they are produced together and must be identical, so a
- *      difference means one of them was replaced after the fact
- *   5. hash every extracted file against the manifest
+ *   4. hash every extracted file against the manifest inside it
+ *
+ * There is one artifact and one signature over it. The manifest ships
+ * inside the tarball, so that signature already covers it; a copy
+ * published alongside would prove nothing extra and would introduce a
+ * state — the two disagreeing — that something then has to resolve.
  *
  * It knows about an ARTIFACT, not a machine. --dest is required and it
  * neither chooses install paths nor touches anything outside them; where
@@ -53,35 +55,26 @@ const run = (cmd, args, opts = {}) =>
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "release-"));
 const version = tag.replace(/^v/, "");
 const tarName = `vigario-website-${version}.tar.gz`;
-const manName = `vigario-website-${version}.MANIFEST.sha256`;
 
 // ---- 1. download -----------------------------------------------------
 console.log(`  1. downloading ${tag} from ${repo}`);
 try {
-  run("gh", ["release", "download", tag, "--repo", repo, "--dir", work, "--pattern", "*"]);
+  run("gh", ["release", "download", tag, "--repo", repo, "--dir", work, "--pattern", tarName]);
 } catch (e) {
   die(1, `could not download release ${tag}: ${(e.stderr || e.message).trim().split("\n")[0]}`);
 }
 const tarball = path.join(work, tarName);
-const manifestFile = path.join(work, manName);
-for (const f of [tarball, manifestFile]) {
-  if (!fs.existsSync(f)) die(1, `release ${tag} is missing ${path.basename(f)}`);
-}
+if (!fs.existsSync(tarball)) die(1, `release ${tag} is missing ${tarName}`);
 
 // ---- 2. attestation, before anything is opened -----------------------
 // An archive that has not been proven is untrusted input, and untrusted
 // input is not something to decompress first and ask about later.
-console.log("  2. verifying attestations");
-for (const f of [tarball, manifestFile]) {
-  try {
-    run("gh", ["attestation", "verify", f, "--repo", repo]);
-    console.log(`     ok  ${path.basename(f)}`);
-  } catch (e) {
-    die(
-      2,
-      `attestation failed for ${path.basename(f)} — ${(e.stderr || e.message).trim().split("\n")[0]}`,
-    );
-  }
+console.log("  2. verifying attestation");
+try {
+  run("gh", ["attestation", "verify", tarball, "--repo", repo]);
+  console.log(`     ok  ${tarName}`);
+} catch (e) {
+  die(2, `attestation failed for ${tarName} — ${(e.stderr || e.message).trim().split("\n")[0]}`);
 }
 
 // ---- 3. decompress ---------------------------------------------------
@@ -93,20 +86,13 @@ try {
   die(3, `extraction failed: ${(e.stderr || e.message).trim().split("\n")[0]}`);
 }
 
-// ---- 4. the two manifests must agree ---------------------------------
-// Both are attested, so a mismatch cannot mean tampering with one of
-// them alone — it means the release was assembled from two different
-// builds, which is its own reason to refuse.
-console.log("  4. cross-checking the embedded manifest against the published one");
+// ---- 4. every file, against the manifest the archive carries ---------
+// That manifest is covered by the signature verified in step 2, so it
+// needs no separate proof of its own.
+console.log("  4. hashing the extracted tree");
 const embedded = path.join(dest, "MANIFEST.sha256");
 if (!fs.existsSync(embedded)) die(4, "the archive contains no MANIFEST.sha256");
-const pubText = fs.readFileSync(manifestFile, "utf8");
-if (fs.readFileSync(embedded, "utf8") !== pubText) {
-  die(4, "the manifest inside the archive differs from the one published beside it");
-}
-
-// ---- 5. every file, against the manifest -----------------------------
-console.log("  5. hashing the extracted tree");
+const pubText = fs.readFileSync(embedded, "utf8");
 const expected = new Map();
 for (const line of pubText.split("\n")) {
   const m = /^([0-9a-f]{64})\s+(.+)$/.exec(line.trim());
@@ -149,7 +135,7 @@ if (changed.length || missing.length || extra.length) {
     for (const f of list.slice(0, 25)) console.error(`    ${f}`);
     if (list.length > 25) console.error(`    … and ${list.length - 25} more`);
   }
-  die(5, `the extracted tree does not match the manifest`);
+  die(4, `the extracted tree does not match the manifest`);
 }
 
 if (!process.argv.includes("--keep")) fs.rmSync(work, { recursive: true, force: true });

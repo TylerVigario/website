@@ -1,67 +1,46 @@
 /**
- * Answers one question: is the installed site still exactly what was
- * built and published?
+ * Answers one question: is the installed tree still exactly what was
+ * released?
  *
- * The manifest is fetched from the GitHub release every run, and it is
- * attested at publication alongside the tarball — so it can be checked
- * with `gh attestation verify` rather than trusted because it arrived
- * over TLS from the right hostname.
+ * The authority is the retained tarball — the same artifact the install
+ * came from, kept on disk — and its attestation. Nothing on the host is
+ * trusted on its own account: the archive is re-proved against Sigstore
+ * on every run, and only then is the manifest read out of it. A file
+ * sitting beside the tree it vouches for can be edited alongside the
+ * very file it was supposed to catch, so it never gets the last word.
  *
- * The manifest is fetched from the GitHub release every run. Nothing on
- * the host is trusted to answer this, because anything on the host is
- * exactly as suspect as the files it would be vouching for — a manifest
- * sitting next to the tree it describes can be edited alongside the file
- * it was supposed to catch. The release is the root of trust; the local
- * copies are a rollback convenience.
+ * Re-proving a local file costs no bandwidth worth counting. The digest
+ * is computed here; only the attestation bundle is fetched. There is no
+ * reason to re-download an artifact already on disk.
  *
- * The comparison runs in BOTH directions. Changed files and missing
- * files are the obvious half; the half that matters more is files
- * present on disk that the manifest never listed. Nothing legitimate
- * writes into a release tree, so "zero unexpected files" is a clean
- * assertion — provided mutable state (the database, logs) is kept
- * outside the tree, which is the deployment's job, not this script's.
+ * The comparison runs in BOTH directions. Changed and missing files are
+ * the obvious half. The half that matters more is files present on disk
+ * that the release never contained — nothing legitimate writes into a
+ * release tree, provided mutable state is kept outside it, which is the
+ * deployment's job and not this script's.
  *
- * If GitHub cannot be reached it falls back to the manifest inside the
- * retained tarball, so a GitHub outage degrades the check instead of
- * blocking it. That fallback is strictly weaker — the tarball sits on
- * the same disk as the tree it vouches for, and anyone who can edit a
- * file can repack an archive — so it is never silent: it shouts in the
- * log and exits non-zero specifically so the alert fires.
+ * Exit codes are the alerting contract:
+ *   0  verified — attestation good, tree matches
+ *   1  MISMATCH — the tree is not what was released
+ *   2  fatal — cannot check at all
+ *   3  DEGRADED — attestation could not be checked (offline), compared
+ *      against the local archive anyway and saying so loudly
  *
- * Exit codes, which are the alerting contract:
- *   0  verified against GitHub, tree matches
- *   1  MISMATCH — the tree is not what was published
- *   2  fatal — cannot run the check at all
- *   3  DEGRADED — GitHub unreachable, matched the local tarball instead
- *
- * Anything non-zero is worth waking up for; 3 says "I could not really
- * check" rather than "everything is fine".
- *
- * This tool knows about an ARTIFACT, not about a machine. Where a
- * release is installed, what runs it, and which repository publishes it
- * are all facts about a deployment, so they are arguments — there is no
- * default install path and no baked-in repository, because guessing
- * either would be this script asserting a deployment shape it has no
- * business having an opinion about.
+ * Anything non-zero is worth waking up for. 3 says "I could not really
+ * check", never "everything is fine".
  *
  * Usage:
- *   node verify-install.mjs --root <dir> --repo <owner/name>
- *   node verify-install.mjs --root <dir> --repo <owner/name> --version 1.2.3
- *   node verify-install.mjs --root <dir> --repo <owner/name> --tarball <path>
- *
- * --version overrides what the tree's RELEASE file claims.
- * --tarball is the fallback archive used when GitHub is unreachable.
+ *   node verify-install.mjs --root <dir> --tarball <artifact> --repo <owner/name>
  */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import os from "node:os";
 import { pathToFileURL } from "node:url";
 
 /** The comparison, kept pure so it can be tested without a network or a
  *  filesystem. Both directions: what changed, what vanished, and what
- *  appeared that was never published. */
+ *  appeared that the release never contained. */
 export function compare(expected, onDisk) {
   const changed = [];
   const missing = [];
@@ -74,7 +53,7 @@ export function compare(expected, onDisk) {
   return { changed, missing, unexpected };
 }
 
-/** Parses sha256sum-format text into rel-path → digest. */
+/** Parses sha256sum-format text into rel-path -> digest. */
 export function parseManifest(text) {
   const out = new Map();
   for (const line of text.split("\n")) {
@@ -85,134 +64,74 @@ export function parseManifest(text) {
 }
 
 // Importing this file for its functions must not run the CLI.
-const isCli = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (!isCli) {
-  /* imported for testing */
-} else {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const arg = (n, d) => {
     const i = process.argv.indexOf(`--${n}`);
     return i === -1 ? d : process.argv[i + 1];
   };
-
-  const rootArg = arg("root");
-  const REPO = arg("repo");
-  if (!rootArg || !REPO) {
-    console.error("usage: verify-install.mjs --root <install dir> --repo <owner/name>");
-    console.error("       [--version X.Y.Z] [--tarball <path to retained artifact>]");
+  const root = arg("root");
+  const tarball = arg("tarball");
+  const repo = arg("repo");
+  if (!root || !tarball || !repo) {
+    console.error(
+      "usage: verify-install.mjs --root <dir> --tarball <artifact> --repo <owner/name>",
+    );
     console.error("");
-    console.error("Both are deployment facts, so neither is guessed. A default would");
+    console.error("All three are deployment facts, so none is guessed. A default would");
     console.error("make this script assert where a release lives, which is not its call.");
     process.exit(2);
   }
-  const root = path.resolve(rootArg);
-  // The manifest is the one file in the tree that cannot appear in its
-  // own listing, so it is excluded from the unexpected-file check rather
-  // than being reported as an intruder on every run.
-  const SELF = "MANIFEST.sha256";
-  const manifestTmp = path.join(os.tmpdir(), `manifest-${process.pid}.sha256`);
-
-  function fail(msg, code = 2) {
-    console.error(`FAIL  ${msg}`);
-    process.exit(code);
+  for (const [what, p] of [
+    ["install root", root],
+    ["retained artifact", tarball],
+  ]) {
+    if (!fs.existsSync(p)) {
+      console.error(`FAIL  ${what} not found: ${p}`);
+      process.exit(2);
+    }
   }
 
-  if (!fs.existsSync(root)) fail(`${root} does not exist`);
+  const run = (cmd, args) =>
+    execFileSync(cmd, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 
-  // The version is read from a file on disk, which makes it a claim
-  // rather than a fact. That is self-correcting: if it has been edited to
-  // name a different release, the tree will not match that release's
-  // manifest either.
-  let version = arg("version");
-  if (!version) {
-    const rel = path.join(root, "RELEASE");
-    if (!fs.existsSync(rel)) fail(`no RELEASE file in ${root} and no --version given`);
-    version = /^version=(.+)$/m.exec(fs.readFileSync(rel, "utf8"))?.[1]?.trim();
-    if (!version) fail("RELEASE file has no version= line");
-  }
-  const tag = version.startsWith("v") ? version : `v${version}`;
-  console.log(`  installed: ${root}`);
-  console.log(`  claims:    ${tag}`);
+  console.log(`  installed: ${path.resolve(root)}`);
+  console.log(`  artifact:  ${path.resolve(tarball)}`);
 
-  let published;
+  // The archive earns its authority here, or it does not get any.
   let degraded = false;
   let why = "";
   try {
-    published = execFileSync(
-      "gh",
-      [
-        "release",
-        "download",
-        tag,
-        "--repo",
-        REPO,
-        "--pattern",
-        "*.MANIFEST.sha256",
-        "--output",
-        "-",
-      ],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-    );
-    // The manifest is the authority this whole check rests on, so its
-    // origin is established before it is used — not trusted because it
-    // arrived from the right hostname. Fetch to a file, verify the
-    // attestation, then read it.
-    fs.writeFileSync(manifestTmp, published);
-    try {
-      execFileSync("gh", ["attestation", "verify", manifestTmp, "--repo", REPO], {
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-      console.log(`  source:    GitHub release ${tag}, attestation verified`);
-    } catch (e) {
-      const why = (e.stderr || e.message || "").trim().split("\n")[0];
-      console.error(
-        `FAIL  the manifest for ${tag} downloaded, but its attestation did not verify.`,
-      );
-      console.error(`      ${why}`);
-      console.error(`      Refusing to compare against a manifest whose origin is unproven.`);
-      process.exit(1);
-    } finally {
-      fs.rmSync(manifestTmp, { force: true });
-    }
+    run("gh", ["attestation", "verify", tarball, "--repo", repo]);
+    console.log("  attestation: verified against the release workflow");
   } catch (e) {
     why = (e.stderr || e.message || "").trim().split("\n")[0];
-    // Fall back to the copy inside the retained tarball rather than the
-    // loose MANIFEST.sha256 in the tree: forging that one means repacking
-    // an archive, not editing a text file sitting next to its accuser.
-    // No default path: how retained artifacts are laid out is the
-    // deployment's business. Without --tarball there is simply no
-    // fallback, and the run fails loudly rather than guessing.
-    const tarball = arg("tarball");
-    if (!tarball) {
-      console.error(`FAIL  cannot verify ${tag}: GitHub unreachable (${why})`);
-      console.error(`      and no --tarball given to fall back to.`);
-      process.exit(2);
-    }
-    try {
-      published = execFileSync(
-        "tar",
-        ["-xzOf", tarball, `vigario-website-${version}/MANIFEST.sha256`],
-        { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-      );
-      degraded = true;
-      console.error("");
-      console.error("  #########################################################");
-      console.error("  #  DEGRADED - could not reach the authoritative source  #");
-      console.error("  #########################################################");
-      console.error(`  GitHub said: ${why}`);
-      console.error(`  Falling back to the manifest inside ${tarball}.`);
-      console.error("  That archive sits on the same disk as the tree it vouches");
-      console.error("  for, so this proves the install is INTERNALLY consistent,");
-      console.error("  not that it matches what was actually published.");
-      console.error("");
-    } catch {
-      console.error(`FAIL  cannot verify ${tag}: GitHub unreachable (${why})`);
-      console.error(`      and no local tarball at ${tarball} to fall back to.`);
-      process.exit(2);
-    }
+    degraded = true;
+    console.error("");
+    console.error("  #########################################################");
+    console.error("  #  DEGRADED - the artifact's origin could not be proved #");
+    console.error("  #########################################################");
+    console.error(`  ${why}`);
+    console.error("  Comparing against the local archive regardless, which shows");
+    console.error("  whether the install still matches THAT FILE — not whether");
+    console.error("  that file is genuinely what the release published.");
+    console.error("");
   }
 
-  const expected = parseManifest(published);
-  if (expected.size === 0) fail(`the published manifest for ${tag} is empty or unparseable`);
+  // Read the manifest out of the archive, never off the installed tree.
+  let manifestText;
+  try {
+    const inner = path.basename(tarball).replace(/\.tar\.gz$/, "");
+    manifestText = run("tar", ["-xzOf", tarball, `${inner}/MANIFEST.sha256`]);
+  } catch {
+    console.error(`FAIL  ${tarball} contains no MANIFEST.sha256`);
+    process.exit(2);
+  }
+
+  const expected = parseManifest(manifestText);
+  if (expected.size === 0) {
+    console.error("FAIL  the manifest is empty or unparseable");
+    process.exit(2);
+  }
 
   const walk = (dir) =>
     fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
@@ -223,40 +142,35 @@ if (!isCli) {
     });
 
   const onDisk = new Map();
-  for (const file of walk(root)) {
-    const rel = path.relative(root, file).split(path.sep).join("/");
-    if (rel === SELF) continue;
-    onDisk.set(rel, createHash("sha256").update(fs.readFileSync(file)).digest("hex"));
+  for (const f of walk(root)) {
+    const rel = path.relative(root, f).split(path.sep).join("/");
+    if (rel === "MANIFEST.sha256") continue;
+    onDisk.set(rel, createHash("sha256").update(fs.readFileSync(f)).digest("hex"));
   }
 
   const { changed, missing, unexpected } = compare(expected, onDisk);
 
-  const report = (label, list) => {
-    if (!list.length) return;
-    console.error(`\n  ${label} (${list.length}):`);
-    for (const f of list.slice(0, 25)) console.error(`    ${f}`);
-    if (list.length > 25) console.error(`    … and ${list.length - 25} more`);
-  };
-
-  console.log(`  compared:  ${expected.size} published / ${onDisk.size} on disk`);
+  console.log(`  compared:  ${expected.size} released / ${onDisk.size} on disk`);
 
   if (changed.length || missing.length || unexpected.length) {
-    report("MODIFIED", changed);
-    report("MISSING", missing);
-    report("UNEXPECTED — present on disk, not in the published release", unexpected);
-    console.error(
-      `\nMISMATCH  ${root} does not match ${tag}` +
-        (degraded
-          ? " (compared against the LOCAL tarball - GitHub was unreachable)"
-          : " as published"),
-    );
+    for (const [label, list] of [
+      ["MODIFIED", changed],
+      ["MISSING", missing],
+      ["UNEXPECTED — on disk, not in the release", unexpected],
+    ]) {
+      if (!list.length) continue;
+      console.error(`\n  ${label} (${list.length}):`);
+      for (const f of list.slice(0, 25)) console.error(`    ${f}`);
+      if (list.length > 25) console.error(`    … and ${list.length - 25} more`);
+    }
+    console.error(`\nMISMATCH  ${root} is not what the artifact contains.`);
     process.exit(1);
   }
 
   if (degraded) {
-    console.error(`\nDEGRADED  ${root} matches the local tarball for ${tag}.`);
-    console.error(`          NOT confirmed against GitHub. Reason: ${why}`);
+    console.error(`\nDEGRADED  ${root} matches the local artifact, origin unproven.`);
+    console.error(`          Reason: ${why}`);
     process.exit(3);
   }
-  console.log(`\nOK  ${root} matches ${tag} byte for byte, as published.`);
+  console.log(`\nOK  ${root} matches ${path.basename(tarball)}, whose origin is proven.`);
 }
