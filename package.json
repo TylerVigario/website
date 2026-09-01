@@ -36,7 +36,7 @@
     "@astrojs/sitemap": "^3.7.3",
     "@fontsource-variable/geist": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
-    "astro": "^7.2.4",
+    "astro": "^7.2.9",
     "better-sqlite3": "^13.0.3",
     "nodemailer": "^9.0.5",
     "zod": "^4.4.3"
