@@ -134,23 +134,17 @@ tylervigario.com.
 
 ## License
 
-Source code: **AGPL-3.0-or-later** — see [LICENSE](LICENSE) for the
-verbatim license text. The repo is private and the source has not been
-offered, so the license currently binds no one. It is kept deliberately
-rather than loosened: if this is ever published, anyone who modifies it
-and runs it on a network-accessible server is obligated by §13 to offer
-their modified source to their users. That obligation runs to forkers,
-never to the author.
+The software is **AGPL-3.0-or-later** — see [LICENSE](LICENSE) for the
+verbatim text. Fork it, change it, run it; if you modify it and serve it
+over a network, §13 obliges you to offer your users your modified source
+in turn. That obligation runs to forkers, never to the author.
 
-**Brand assets are excluded from the AGPL grant.** Everything under
-`public/images/` — the VTS logo, any client photos, headshots,
-graphics produced for marketing — is © Vigario Technology Solutions
-and All Rights Reserved. Fork the code freely, but the visual
-identity stays mine. A fork meant for serious use should replace
-those assets.
+**Two things are reserved and not granted under it:** the brand and
+imagery in `src/assets/images/` (logo, hero, every client screenshot),
+and the written content — the case studies, service descriptions and
+landing copy. Those are © Vigario Technology Solutions, All Rights
+Reserved.
 
-Marketing copy in the site (case studies, service descriptions, the
-POTS landing prose) is technically code-adjacent (`.astro` markup) and
-therefore covered by AGPL, but the same spirit applies: it's a
-record of my business and my client's story, not a content template.
-Lift the structure, not the content.
+The line is drawn precisely in [LICENSE-NOTICE.md](LICENSE-NOTICE.md),
+path by path, so nobody has to infer it. The short version: the
+machinery is yours to take, the account of real client work is not.

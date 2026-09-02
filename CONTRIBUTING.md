@@ -4,7 +4,7 @@ Thanks for the interest. A few things up front:
 
 - This is the marketing site for Vigario Technology Solutions — a small project driven by one maintainer. Issues and pull requests are welcome, but priorities and direction are set by what the business needs next. Bug reports and security issues get faster attention than adjacent feature work.
 - The **source code** is licensed [AGPL-3.0-or-later](LICENSE). By submitting a contribution you agree to license it under the same terms — no CLA, no copyright assignment.
-- The **brand assets** under `public/images/` (logo, photos, marketing graphics) are All Rights Reserved and **not** part of the AGPL grant. Don't submit changes to them; a fork meant for your own use should replace them.
+- The **brand imagery** under `src/assets/images/` (logo, hero, client screenshots) and the **written content** (case studies, service descriptions, landing copy) are All Rights Reserved and **not** part of the AGPL grant — see [LICENSE-NOTICE.md](LICENSE-NOTICE.md) for the boundary path by path. Don't submit changes to either; a fork meant for your own use supplies its own.
 - There's no team handle, Slack, or Discord. The conversation lives in GitHub issues and pull requests.
 
 ## Reporting a bug
