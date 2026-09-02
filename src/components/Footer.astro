@@ -97,12 +97,19 @@ const year = new Date().getFullYear();
           rel="noopener noreferrer"
           class="underline transition-colors hover:text-foreground">AGPL-3.0-or-later</a
         >
-        {/* No "Source" link while the repo is private — it 404'd for
-            every visitor. The AGPL notice above still stands, and is
-            deliberate: the license is armed so that IF the source is
-            ever offered, anyone who modifies and redeploys it is bound
-            to offer theirs. Publishing is a separate decision; the link
-            comes back with it. */}
+        {" \u00b7 "}
+        {/* Offering the source is what makes the AGPL notice above mean
+            something: the network-use clause binds whoever modifies this
+            and serves it, and can only bind them if they can get it. If
+            the repository is renamed or moved, this link moves with it —
+            a dead link here is worse than none, because it claims an
+            offer that is not being kept. */}
+        <a
+          href="https://github.com/TylerVigario/website"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="underline transition-colors hover:text-foreground">Source</a
+        >
       </p>
     </div>
   </div>

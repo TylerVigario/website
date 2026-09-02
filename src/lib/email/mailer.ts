@@ -1,7 +1,22 @@
 import nodemailer from "nodemailer";
 import { renderPotsAuditEmail, renderQuoteEmail } from "@/emails/templates";
 
-const NOTIFY_EMAIL = "tylervigario90@gmail.com";
+// Where submission notifications go. Derived, never hardcoded: a
+// personal address compiled into source is one that ships to anyone who
+// reads the repository, and it is deployment config rather than
+// application behaviour — the same class as SMTP_HOST beside it.
+//
+// Defaults to the authenticated SMTP account, which is the sane
+// self-notification target: mail sent through your own relay, back to
+// you. NOTIFY_EMAIL overrides it when the recipient is not the sender —
+// a role alias, or an inbox someone else watches.
+//
+// Not in required-env.json on purpose. Notifications are best-effort by
+// design, gated on SMTP_USER + SMTP_PASS, and a submission is saved and
+// answered whether or not any of this is set. Requiring it at boot
+// would make a broken mail relay refuse to start a site whose forms
+// work fine without one.
+const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || process.env.SMTP_USER || "";
 
 // SMTP config gates on USER+PASS (Gmail-style auth) rather than HOST
 // alone — the Gmail relay we use requires authentication. Vis-daily-
