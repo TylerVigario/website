@@ -1,22 +1,25 @@
 /**
  * Runtime config validation.
  *
- * Called once at server startup via `src/instrumentation.ts`. Throws
- * if any required env var is missing or malformed — failing the
- * server before it serves a single request.
+ * Called as `src/lib/db.ts` loads, which is the earliest point the app
+ * can refuse to run with bad configuration. Throws if any required env
+ * var is missing or malformed.
  *
- * Why not validate at module load? `next build` loads every API
- * route module to collect page data; an import-time throw would
- * force CI to provide runtime values that have no build-time use.
- * Instrumentation runs at server startup but NOT during build, so
- * the build is config-free and runtime stays fail-fast.
+ * It was previously called from Next's `src/instrumentation.ts`, and
+ * that comment survived the file: the Astro migration deleted the hook
+ * and nothing replaced the call, so the check sat here uninvoked while
+ * the documentation still promised it.
+ *
+ * Module load was avoided under Next because `next build` executed
+ * every API route module to collect page data, and an import-time throw
+ * would have forced CI to supply runtime values with no build-time use.
+ * `astro build` does not — the /api routes are `prerender = false` and
+ * nothing runs them until a request arrives. Verified by building with
+ * SQLITE_PATH unset.
  *
  * Single source for the required-var names: `./required-env.json`.
- * docs/deployment.md cites this path as the canonical list the
- * production environment must source — keeping the runtime check and
- * the deploy contract pointed at the same file means they can't
- * drift. Adding a required var = add to the JSON, add a format
- * validator below.
+ * Adding a required var means adding it there and, if it has a shape
+ * worth enforcing, a format validator below.
  */
 
 import path from "node:path";
