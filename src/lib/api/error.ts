@@ -48,19 +48,22 @@ export function zodError(result: SafeParseFailure): Response {
     message: issue.message,
   }));
 
-  return new Response(
-    JSON.stringify({
-      type: "/errors/validation",
-      title: "Validation Error",
-      status: 400,
-      detail: errors[0]?.message,
-      errors,
-    }),
-    {
-      status: 400,
-      // RFC 9457 media type, not application/json — the shape is
-      // Problem Details and the content type should say so.
-      headers: { "Content-Type": "application/problem+json" },
-    },
-  );
+  // Typed, not merely shaped like it: the schema below is the single
+  // declaration of this contract, and annotating the body here makes a
+  // drift between the two a compile error rather than a surprise for
+  // whoever is parsing the response.
+  const body: ProblemDetails = {
+    type: "/errors/validation",
+    title: "Validation Error",
+    status: 400,
+    detail: errors[0]?.message,
+    errors,
+  };
+
+  return new Response(JSON.stringify(body), {
+    status: 400,
+    // RFC 9457 media type, not application/json — the shape is
+    // Problem Details and the content type should say so.
+    headers: { "Content-Type": "application/problem+json" },
+  });
 }

@@ -50,7 +50,10 @@ interface SendOptions {
  * with redacted recipient + subject context and re-thrown so callers
  * can decide whether to swallow (best-effort) or surface (critical).
  */
-export async function sendEmail(options: SendOptions): Promise<boolean> {
+// Not exported: the two notification helpers below are the whole
+// public surface of this module, and an exported low-level sender
+// invites a caller that bypasses them.
+async function sendEmail(options: SendOptions): Promise<boolean> {
   if (!transporter) {
     console.log(`[Mailer] SMTP not configured — would send:`);
     console.log(`  To: ${options.to}`);
