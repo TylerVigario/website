@@ -120,7 +120,7 @@ src/
 │   ├── 404.astro  500.astro          # error pages, prerendered to static HTML
 │   ├── robots.txt.ts                 # generated from `site` in astro.config.mjs
 │   ├── manifest.webmanifest.ts       # generated, so icon paths cannot drift
-│   └── api/                          # the ONLY routes with prerender = false
+│   └── api/                          # prerender = false, like contact + pots-migration
 │       ├── quote.ts                  # POST: zod-validated, writes sqlite, optionally emails
 │       ├── pots-audit.ts             # POST: same destination row, different schema
 │       └── health.ts                 # GET: opens db, SELECT 1 FROM sqlite_schema
@@ -166,6 +166,14 @@ reload. There is exactly one assignment to `input.value` in the entire
 codebase — restoring a saved draft, guarded to fields that are empty.
 That is not a convention to uphold; it is the absence of a code path.
 
+[`tests/never-erase.test.ts`](tests/never-erase.test.ts) enforces it
+structurally rather than trusting anyone to remember: exactly one
+`.value =` in the tree, in the restore, guarded on an empty field; no
+`form.reset()`; and `innerHTML` only on elements just created, never on
+one queried out of the live document. Each guard was verified to fail
+when violated. A behavioural test proves the paths it exercises — this
+proves no other path exists.
+
 - Fields validate on blur, then continuously once touched. Validating from the first keystroke tells someone their email is invalid while they are still typing the `@`.
 - Drafts persist to `localStorage` on input and survive a reload, a crash, or a closed tab. The data is the user's, kept on the user's machine, cleared only on a successful submit.
 - Errors render as sibling nodes next to the field. The form is never re-rendered, so the DOM the user is typing into is never replaced underneath them.
@@ -177,7 +185,7 @@ That is not a convention to uphold; it is the absence of a code path.
 ## Route handler pattern
 
 ```ts
-export const prerender = false; // the only opt-out on the site
+export const prerender = false; // one of five: the 3 api routes + the 2 input pages
 
 export const POST: APIRoute = async ({ request }) => {
   // Accepts BOTH application/json (enhanced path) and form-urlencoded
