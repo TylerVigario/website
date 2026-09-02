@@ -64,6 +64,22 @@ nothing withheld here.
 
 `creation` is deliberately absent: anyone may name a version, nobody may change one.
 
+The payload is written to **round-trip**: applying it and reading it back
+yields the same rules, so any difference between this file and applied state
+is real drift rather than noise. Two fields exist only for that reason.
+
+`dismissal_restriction` is omitted. Its default-valued form
+(`{enabled: false, allowed_actors: []}`) is not stored on a repository owned
+by a user account — GitHub drops it even when sent verbatim — so keeping it
+here would make every comparison report a difference that cannot be resolved.
+
+`require_extra_approval_for_unattributed_changes` is present because GitHub
+sets it whether or not the payload asks. A field the forge adds on its own has
+to be in the file, or the file is permanently one field behind.
+
+A comparison that always reports a difference is a comparison people stop
+running.
+
 The file is the source of truth. Apply it, do not hand-configure:
 
 ```bash
