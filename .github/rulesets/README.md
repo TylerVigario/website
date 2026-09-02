@@ -16,6 +16,21 @@ because the release job writes the branch and nothing had ever said the branch w
 protected. The payload is committed now so that a change to protection is a change to
 the repository, reviewable like any other.
 
+`main.json` names one bypass actor: the `website-release` App (id 4810355),
+owned by this account and installed on this repository alone. It replaces the
+App of the same name that belonged to the previous organisation — an App
+belongs to its owner, so the old one could never attach here, and a bypass
+entry naming an actor the forge cannot resolve fails the *entire* payload
+rather than just that entry. That is why the required-status-checks rule sat
+committed and unenforced.
+
+The exemption exists for one reason: a release records itself, which means
+writing the default branch, which nothing else may do. Its blast radius is the
+App's own permissions, and those are `contents: write` and `metadata: read` —
+verified against the App's own credential, not read off a form. Notably absent
+is `workflows`, so an identity that bypasses branch protection still cannot
+rewrite the workflows that gate this repository.
+
 `main.json` now requires two status checks: `Gate` and `Validate PR title`.
 Those strings are job *names*, not workflow filenames, and a required context
 naming no job wedges the branch on an answer that never comes — every check
