@@ -22,7 +22,27 @@ const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || process.env.SMTP_USER || "";
 // alone — the Gmail relay we use requires authentication. Vis-daily-
 // tracker's mailer uses an unauthenticated internal relay (host-only
 // gate); the shape is the same, the predicate is different.
-const SMTP_CONFIGURED = Boolean(process.env.SMTP_USER && process.env.SMTP_PASS);
+// Three states, not two. Both set is on; neither set is deliberately
+// off; exactly one set is a mistake that must not look like the second.
+//
+// A typo in a variable name, or a secret that did not propagate, leaves
+// the transporter null and the send logging "would send" to stdout —
+// identical to having chosen not to configure mail. The submission is
+// still saved and still answered, so nothing is lost from the visitor's
+// side, but nobody is told a lead arrived and nothing says why.
+const SMTP_USER_SET = Boolean(process.env.SMTP_USER);
+const SMTP_PASS_SET = Boolean(process.env.SMTP_PASS);
+const SMTP_CONFIGURED = SMTP_USER_SET && SMTP_PASS_SET;
+
+if (SMTP_USER_SET !== SMTP_PASS_SET) {
+  const set = SMTP_USER_SET ? "SMTP_USER" : "SMTP_PASS";
+  const missing = SMTP_USER_SET ? "SMTP_PASS" : "SMTP_USER";
+  console.error(
+    `[Mailer] MISCONFIGURED: ${set} is set but ${missing} is not, so notification ` +
+      `email is OFF. Submissions are still saved and answered, but no one is told ` +
+      `they arrived. Set ${missing}, or unset ${set} if mail is meant to be off.`,
+  );
+}
 
 const transporter = SMTP_CONFIGURED
   ? nodemailer.createTransport({

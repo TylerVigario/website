@@ -15,27 +15,35 @@
  *   shape and surface field-level errors back to the form.
  */
 
-import { z } from "zod";
+/** One field-level validation issue, as it appears in `errors[]`. */
+interface FieldError {
+  field: string;
+  message: string;
+}
 
-const FieldError = z.object({
-  field: z.string(),
-  message: z.string(),
-});
-
-export const ProblemDetails = z.object({
-  type: z.string(),
-  title: z.string(),
-  status: z.number().int(),
-  detail: z.string().optional(),
-  errors: z.array(FieldError).optional(),
-});
-export type ProblemDetails = z.infer<typeof ProblemDetails>;
+/**
+ * The response shape, declared once.
+ *
+ * A plain type rather than a zod schema: nothing validates a Problem
+ * Details response at runtime. The server constructs it — annotating the
+ * body below is what makes a drift a compile error — and the client
+ * reads it by hand, deliberately, to keep zod out of a browser bundle
+ * that is otherwise about 2 KB. A schema whose only use is being
+ * `z.infer`'d is a runtime object earning nothing.
+ */
+export interface ProblemDetails {
+  type: string;
+  title: string;
+  status: number;
+  detail?: string;
+  errors?: FieldError[];
+}
 
 /** A failed safe-parse, typed by what this function actually reads
- *  rather than by which zod build produced it. The schemas are
- *  zod/mini and this module is full zod; their error classes differ,
- *  but `issues` is the only thing needed and it is the same shape in
- *  both. Structural typing here beats forcing one build on the other. */
+ *  rather than by which zod build produced it. The request schemas are
+ *  zod/mini and this module now imports no zod at all; `issues` is the
+ *  only thing needed here and its shape is the same across builds.
+ *  Structural typing keeps this module free of the dependency entirely. */
 export interface SafeParseFailure {
   error: { issues: readonly { path: readonly PropertyKey[]; message: string }[] };
 }
