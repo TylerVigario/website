@@ -102,7 +102,6 @@ part this repo is entitled to assert.
 - **Quote** — a "request a quote" submission from the main contact form. Schema in [`src/lib/api/quote.ts`](src/lib/api/quote.ts). Route handler at [`src/pages/api/quote.ts`](src/pages/api/quote.ts).
 - **POTS audit** — a "free phone-bill audit" submission from the `/pots-migration` landing page. Different schema ([`src/lib/api/pots-audit.ts`](src/lib/api/pots-audit.ts)), same destination row.
 - **`quotes` table** — single SQLite table that holds both kinds of submission. The `services` column distinguishes: a real services array for quote submissions, the literal string `"POTS Migration Audit"` for audit submissions. Schema is `CREATE TABLE IF NOT EXISTS` inside `getDb()` — no migrations.
-- **`required-env.json`** — the canonical list of required env-var names. Imported by [`src/lib/runtime-config.ts`](src/lib/runtime-config.ts) for app-startup validation. Whatever runs the app is responsible for getting these into `process.env`; the app validates them at boot. [`tests/required-env.test.ts`](tests/required-env.test.ts) asserts the shape on every CI run + pre-commit.
 - **Problem Details** — every API error response shape, per RFC 9457. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()`, whose response body is annotated with the `ProblemDetails` type so a change to the shape fails the build. The client does **not** import that schema: [`enhance.ts`](src/lib/forms/enhance.ts) reads the shape by hand, because validating it in the browser would pull zod into a bundle that is otherwise ~2 KB in order to re-check a response this server just produced. See "Form patterns" below.
 
 ## Key paths
@@ -132,8 +131,6 @@ src/
 ├── layouts/Base.astro                # <head>, canonical, nav, footer
 ├── lib/
 │   ├── db.ts                         # better-sqlite3 singleton
-│   ├── runtime-config.ts             # validates required env at startup; fails fast
-│   ├── required-env.json             # single canonical list
 │   ├── services.ts  work.ts          # content catalogs
 │   ├── forms/
 │   │   ├── enhance.ts                # progressive enhancement; never erases input
@@ -146,7 +143,6 @@ src/
 └── assets/                           # images processed by astro:assets
 
 tests/
-├── required-env.test.ts              # contract shape check
 └── form-rules.test.ts                # proves rules.ts and the zod schemas agree
 
 (no docs/, packaging/, instrumentation.ts or sentry.*.config.ts — if a
@@ -212,7 +208,7 @@ npm run preview                   # serve the built output
 npm run build                     # astro build → dist/client (static) + dist/server (the /api process)
 npm start                         # node dist/server/entry.mjs (after build)
 npm run typecheck                 # astro check — sees .astro templates; tsc alone does not
-npm test                          # vitest run (currently just required-env.test.ts)
+npm test                          # vitest run
 npm run lint                      # eslint (js) + markdownlint (md)
 npm run format                    # prettier --check
 npm run format:fix                # prettier --write
@@ -259,7 +255,9 @@ Don't introduce a permanent `develop` branch — the ceremony outweighs the bene
 
 ## Guardrails — things that break correctness if ignored
 
-- **`SQLITE_PATH` must be absolute.** [`src/lib/runtime-config.ts`](src/lib/runtime-config.ts) rejects a missing or relative value, and is called as [`db.ts`](src/lib/db.ts) loads — the first request that touches the database, not process start. `/api/health` opens the database, so it trips there, which is why a deploy checks that endpoint rather than assuming a listening port means a working app. Static pages keep serving; only the dynamic half fails. Don't default it, don't make it optional, don't fall back to cwd.
+- **`SQLITE_PATH` must be absolute.** [`getDbPath()`](src/lib/db.ts) rejects a missing or relative value when the first request opens the database. `/api/health` opens it, so a deploy checks that endpoint rather than treating a listening port as a working app; static pages keep serving either way. Don't default it, don't make it optional, don't fall back to cwd.
+
+  This was a `runtime-config.ts` module, a `required-env.json` list and a shape test — 99 lines guarding one `path.isAbsolute` call, sized for the five env vars the Next era had. It also spent weeks calling nothing at all, because the caller lived in Next's deleted `instrumentation.ts`. The rule is worth keeping; the framework around it was not.
 
   It ran nowhere at all between the Astro migration and 2026-09-02: the call lived in Next's `instrumentation.ts`, that file was deleted, nothing replaced it, and the docs kept promising the check for weeks. If you move the call, prove it still fires by booting with the variable unset.
 - **Editing a workflow means running `npm run lint:actions` before pushing.** It is not installed by npm — a Go binary, found on PATH or in `~/.local/bin` — so it reports SKIPPED rather than failing when a developer does not have it, and CI stays authoritative. That leniency is for developers who never touch `.github/`; it is not cover for the person editing the workflow. Discovering a shellcheck complaint by pushing is a round trip that was avoidable.

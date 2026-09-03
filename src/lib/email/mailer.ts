@@ -11,7 +11,7 @@ import { renderPotsAuditEmail, renderQuoteEmail } from "@/emails/templates";
 // you. NOTIFY_EMAIL overrides it when the recipient is not the sender —
 // a role alias, or an inbox someone else watches.
 //
-// Not in required-env.json on purpose. Notifications are best-effort by
+// Deliberately not a required variable. Notifications are best-effort by
 // design, gated on SMTP_USER + SMTP_PASS, and a submission is saved and
 // answered whether or not any of this is set. Requiring it at boot
 // would make a broken mail relay refuse to start a site whose forms
