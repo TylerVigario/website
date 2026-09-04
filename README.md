@@ -110,8 +110,12 @@ same commits.
   when an old deploy wrote `data/quotes.db` inside a release dir that
   got nuked on the next swap.
 - **Health check is `/api/health`**, not `/`. The homepage rendering
-  200 only means the static tree is being served; `/api/health`
-  actually opens the db.
+  200 only means the static tree is being served — those are files and
+  would keep serving with the process dead. Health runs four checks
+  (open, read, schema, write-probe) and returns 503 with which one
+  failed. The write probe is the point: a full disk, a read-only
+  remount or a permissions change leaves SELECT working while every
+  submission fails.
 - **Type-aware ESLint** (`recommendedTypeChecked`) is on. `req.json()`
   is `any`. Parse through a zod schema in `src/lib/api/`.
 - **Tests run via vitest** — `npm test` (one-shot) or `npm run test:watch`.

@@ -122,7 +122,7 @@ src/
 │   └── api/                          # prerender = false, like contact + pots-migration
 │       ├── quote.ts                  # POST: zod-validated, writes sqlite, optionally emails
 │       ├── pots-audit.ts             # POST: same destination row, different schema
-│       └── health.ts                 # GET: opens db, SELECT 1 FROM sqlite_schema
+│       └── health.ts                 # GET: open/read/schema/write-probe → 200 or 503
 ├── components/                       # .astro, render to HTML at build time
 │   ├── QuoteForm.astro  PotsAuditForm.astro
 │   ├── Lightbox.astro                # <dialog> + scroll-snap viewer
