@@ -1,22 +1,34 @@
 import Database from "better-sqlite3";
+import path from "node:path";
 
-// SQLITE_PATH is validated at server startup by src/lib/runtime-config.ts
-// (presence + absolute path). By the time getDb() runs, the var is
-// guaranteed set — but we still throw rather than `!` because module
-// bundling order can let imports run before instrumentation.register().
 function getDbPath(): string {
   const p = process.env.SQLITE_PATH;
   if (!p) {
     throw new Error("SQLITE_PATH is not set. Copy .env.example to .env.local for development.");
   }
+  // Relative paths resolve against the process working directory, which
+  // the app does not control — the same configuration would mean a
+  // different file depending on how the service was started. Caught here
+  // rather than at import time so a failure names the variable instead
+  // of surfacing later as a database error.
+  if (!path.isAbsolute(p)) {
+    throw new Error(
+      `SQLITE_PATH must be an absolute path (got "${p}"). Relative paths depend on the process working directory and break under systemd.`,
+    );
+  }
   return p;
 }
 
-// Singleton stored on globalThis so server.js's shutdown handler can
-// find and close it before exit (forces the WAL checkpoint and
-// surfaces close failures via the [shutdown] log lines, instead of
-// relying on process death). Same pattern vis-daily-tracker uses for
-// its Prisma client.
+// Singleton on globalThis rather than a module-level const: the SSR
+// bundle can be evaluated more than once, and a second Database handle
+// on the same file is a second connection with its own WAL view.
+//
+// It used to be reachable here so the Next-era server.js could close it
+// on shutdown and force a WAL checkpoint. That entrypoint is gone and
+// @astrojs/node installs no such hook, so nothing closes it now —
+// better-sqlite3's WAL survives an uncleaned exit, so this costs
+// durability nothing, but it does mean process death is the only
+// close.
 const g = globalThis as unknown as { __sqlite__?: Database.Database };
 
 export function getDb() {

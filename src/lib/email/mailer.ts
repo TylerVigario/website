@@ -11,7 +11,7 @@ import { renderPotsAuditEmail, renderQuoteEmail } from "@/emails/templates";
 // you. NOTIFY_EMAIL overrides it when the recipient is not the sender —
 // a role alias, or an inbox someone else watches.
 //
-// Not in required-env.json on purpose. Notifications are best-effort by
+// Deliberately not a required variable. Notifications are best-effort by
 // design, gated on SMTP_USER + SMTP_PASS, and a submission is saved and
 // answered whether or not any of this is set. Requiring it at boot
 // would make a broken mail relay refuse to start a site whose forms
@@ -22,7 +22,27 @@ const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || process.env.SMTP_USER || "";
 // alone — the Gmail relay we use requires authentication. Vis-daily-
 // tracker's mailer uses an unauthenticated internal relay (host-only
 // gate); the shape is the same, the predicate is different.
-const SMTP_CONFIGURED = Boolean(process.env.SMTP_USER && process.env.SMTP_PASS);
+// Three states, not two. Both set is on; neither set is deliberately
+// off; exactly one set is a mistake that must not look like the second.
+//
+// A typo in a variable name, or a secret that did not propagate, leaves
+// the transporter null and the send logging "would send" to stdout —
+// identical to having chosen not to configure mail. The submission is
+// still saved and still answered, so nothing is lost from the visitor's
+// side, but nobody is told a lead arrived and nothing says why.
+const SMTP_USER_SET = Boolean(process.env.SMTP_USER);
+const SMTP_PASS_SET = Boolean(process.env.SMTP_PASS);
+const SMTP_CONFIGURED = SMTP_USER_SET && SMTP_PASS_SET;
+
+if (SMTP_USER_SET !== SMTP_PASS_SET) {
+  const set = SMTP_USER_SET ? "SMTP_USER" : "SMTP_PASS";
+  const missing = SMTP_USER_SET ? "SMTP_PASS" : "SMTP_USER";
+  console.error(
+    `[Mailer] MISCONFIGURED: ${set} is set but ${missing} is not, so notification ` +
+      `email is OFF. Submissions are still saved and answered, but no one is told ` +
+      `they arrived. Set ${missing}, or unset ${set} if mail is meant to be off.`,
+  );
+}
 
 const transporter = SMTP_CONFIGURED
   ? nodemailer.createTransport({
@@ -50,7 +70,10 @@ interface SendOptions {
  * with redacted recipient + subject context and re-thrown so callers
  * can decide whether to swallow (best-effort) or surface (critical).
  */
-export async function sendEmail(options: SendOptions): Promise<boolean> {
+// Not exported: the two notification helpers below are the whole
+// public surface of this module, and an exported low-level sender
+// invites a caller that bypasses them.
+async function sendEmail(options: SendOptions): Promise<boolean> {
   if (!transporter) {
     console.log(`[Mailer] SMTP not configured — would send:`);
     console.log(`  To: ${options.to}`);

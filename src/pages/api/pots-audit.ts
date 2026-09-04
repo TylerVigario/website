@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { getDb } from "@/lib/db";
-import { PotsAuditRequest } from "@/lib/api/pots-audit";
+import { POTS_AUDIT_MARKER, PotsAuditRequest } from "@/lib/api/pots-audit";
 import { zodError } from "@/lib/api/error";
 import { sendPotsAuditNotification } from "@/lib/email/mailer";
 
@@ -47,7 +47,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   db.prepare("INSERT INTO quotes (name, contact, services, details) VALUES (?, ?, ?, ?)").run(
     name,
     contact,
-    "POTS Migration Audit",
+    POTS_AUDIT_MARKER,
     [`Business: ${business}`, `Monthly bill: ${bill}`, details].filter(Boolean).join("\n"),
   );
 

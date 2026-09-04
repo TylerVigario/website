@@ -19,24 +19,34 @@ updates:
       prefix: chore
       include: scope
     groups:
-      # One PR per ecosystem-ish cluster rather than per package: a Next
-      # bump that needs a matching eslint-config bump should be reviewed
-      # and gated together, not as two PRs that are each red alone.
-      next:
+      # One PR per cluster rather than per package: an astro bump that
+      # needs a matching adapter bump should be reviewed and gated
+      # together, not as two PRs that are each red alone.
+      #
+      # This previously grouped next / @next/* / react, none of which
+      # have existed since the Astro rebuild — so those groups matched
+      # nothing, and the packages that do exist arrived one PR each.
+      astro:
         patterns:
-          - next
-          - "@next/*"
-          - eslint-config-next
-      react:
-        patterns:
-          - react
-          - react-dom
-          - "@types/react"
-          - "@types/react-dom"
+          - astro
+          - "@astrojs/*"
       dev-tooling:
         dependency-type: development
         patterns:
           - "*"
+    ignore:
+      # Held deliberately, and Dependabot re-raises both weekly without
+      # this. Remove an entry when its blocker clears.
+      #
+      # typescript-eslint declares a peer of >=4.8.4 <6.1.0, so
+      # TypeScript 7 has no supported lint path yet.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      # @types/node tracks the runtime, and .nvmrc plus engines.node both
+      # pin Node 24. Types ahead of the runtime describe APIs that are
+      # not there.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /

@@ -32,7 +32,7 @@ npm run dev
 ```
 
 `SQLITE_PATH` must be an absolute path — relative paths are rejected at
-startup by [src/lib/runtime-config.ts](src/lib/runtime-config.ts) (they
+the first database open by [getDbPath()](src/lib/db.ts) (they
 break under systemd, and the dev/prod fail-fast surface should match).
 
 `npm run preview` serves the built output, and `npm start` runs the
@@ -57,8 +57,6 @@ src/pages/                     # ROUTES — one file, one URL. No router config.
   api/health                   # GET: opens db, SELECT 1 FROM sqlite_schema
 src/lib/
   db.ts                        # better-sqlite3 singleton on globalThis
-  runtime-config.ts            # validates required env at startup; fails fast before serving
-  required-env.json            # single source of truth for required-env names
   api/                         # zod: QuoteRequest, PotsAuditRequest, ProblemDetails (RFC 9457)
   forms/enhance.ts             # progressive enhancement. Never erases what you typed.
   forms/rules.ts               # client-side rules, proven equivalent to the schemas by a test
@@ -108,7 +106,7 @@ same commits.
   source where no prebuilt matches the platform, which needs a
   toolchain wherever `npm ci` runs.
 - **SQLITE_PATH must be absolute**. App throws at startup via
-  runtime-config if unset or relative. No cwd fallback — that bit me
+  getDbPath() if unset or relative. No cwd fallback — that bit me
   when an old deploy wrote `data/quotes.db` inside a release dir that
   got nuked on the next swap.
 - **Health check is `/api/health`**, not `/`. The homepage rendering
@@ -117,8 +115,7 @@ same commits.
 - **Type-aware ESLint** (`recommendedTypeChecked`) is on. `req.json()`
   is `any`. Parse through a zod schema in `src/lib/api/`.
 - **Tests run via vitest** — `npm test` (one-shot) or `npm run test:watch`.
-  Two suites: `required-env.test.ts` checks the shape of
-  `src/lib/required-env.json`, and `form-rules.test.ts` proves the
+  `form-rules.test.ts` proves the
   hand-written client validation agrees with the zod schemas the server
   enforces — same verdict and same wording, checked both ways. The
   pre-commit hook and the CI gate both run them.

@@ -13,3 +13,16 @@ export const PotsAuditRequest = z.object({
   details: z.optional(z.string().check(z.trim())),
 });
 export type PotsAuditRequest = z.infer<typeof PotsAuditRequest>;
+
+/**
+ * The literal written into `services` for an audit submission.
+ *
+ * Both forms land in one table and this string is the only thing telling
+ * the two kinds of row apart. Changing or mistyping it does not fail
+ * anything — it silently makes audits indistinguishable from quotes,
+ * for every row written afterwards and with nothing to detect it later.
+ *
+ * Exported so the route and the test that guards it read the same
+ * constant rather than two copies of a string.
+ */
+export const POTS_AUDIT_MARKER = "POTS Migration Audit";

@@ -102,8 +102,7 @@ part this repo is entitled to assert.
 - **Quote** — a "request a quote" submission from the main contact form. Schema in [`src/lib/api/quote.ts`](src/lib/api/quote.ts). Route handler at [`src/pages/api/quote.ts`](src/pages/api/quote.ts).
 - **POTS audit** — a "free phone-bill audit" submission from the `/pots-migration` landing page. Different schema ([`src/lib/api/pots-audit.ts`](src/lib/api/pots-audit.ts)), same destination row.
 - **`quotes` table** — single SQLite table that holds both kinds of submission. The `services` column distinguishes: a real services array for quote submissions, the literal string `"POTS Migration Audit"` for audit submissions. Schema is `CREATE TABLE IF NOT EXISTS` inside `getDb()` — no migrations.
-- **`required-env.json`** — the canonical list of required env-var names. Imported by [`src/lib/runtime-config.ts`](src/lib/runtime-config.ts) for app-startup validation. Whatever runs the app is responsible for getting these into `process.env`; the app validates them at boot. [`tests/required-env.test.ts`](tests/required-env.test.ts) asserts the shape on every CI run + pre-commit.
-- **Problem Details** — every API error response shape, per RFC 9457. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()` helper. Client (forms) parse via the exported `ProblemDetails` zod schema and map `errors[]` back to inline field errors. See "Form patterns" below.
+- **Problem Details** — every API error response shape, per RFC 9457. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()`, whose response body is annotated with the `ProblemDetails` type so a change to the shape fails the build. The client does **not** import that schema: [`enhance.ts`](src/lib/forms/enhance.ts) reads the shape by hand, because validating it in the browser would pull zod into a bundle that is otherwise ~2 KB in order to re-check a response this server just produced. See "Form patterns" below.
 
 ## Key paths
 
@@ -120,7 +119,7 @@ src/
 │   ├── 404.astro  500.astro          # error pages, prerendered to static HTML
 │   ├── robots.txt.ts                 # generated from `site` in astro.config.mjs
 │   ├── manifest.webmanifest.ts       # generated, so icon paths cannot drift
-│   └── api/                          # the ONLY routes with prerender = false
+│   └── api/                          # prerender = false, like contact + pots-migration
 │       ├── quote.ts                  # POST: zod-validated, writes sqlite, optionally emails
 │       ├── pots-audit.ts             # POST: same destination row, different schema
 │       └── health.ts                 # GET: opens db, SELECT 1 FROM sqlite_schema
@@ -132,8 +131,6 @@ src/
 ├── layouts/Base.astro                # <head>, canonical, nav, footer
 ├── lib/
 │   ├── db.ts                         # better-sqlite3 singleton
-│   ├── runtime-config.ts             # validates required env at startup; fails fast
-│   ├── required-env.json             # single canonical list
 │   ├── services.ts  work.ts          # content catalogs
 │   ├── forms/
 │   │   ├── enhance.ts                # progressive enhancement; never erases input
@@ -146,7 +143,6 @@ src/
 └── assets/                           # images processed by astro:assets
 
 tests/
-├── required-env.test.ts              # contract shape check
 └── form-rules.test.ts                # proves rules.ts and the zod schemas agree
 
 (no docs/, packaging/, instrumentation.ts or sentry.*.config.ts — if a
@@ -166,6 +162,14 @@ reload. There is exactly one assignment to `input.value` in the entire
 codebase — restoring a saved draft, guarded to fields that are empty.
 That is not a convention to uphold; it is the absence of a code path.
 
+[`tests/never-erase.test.ts`](tests/never-erase.test.ts) enforces it
+structurally rather than trusting anyone to remember: exactly one
+`.value =` in the tree, in the restore, guarded on an empty field; no
+`form.reset()`; and `innerHTML` only on elements just created, never on
+one queried out of the live document. Each guard was verified to fail
+when violated. A behavioural test proves the paths it exercises — this
+proves no other path exists.
+
 - Fields validate on blur, then continuously once touched. Validating from the first keystroke tells someone their email is invalid while they are still typing the `@`.
 - Drafts persist to `localStorage` on input and survive a reload, a crash, or a closed tab. The data is the user's, kept on the user's machine, cleared only on a successful submit.
 - Errors render as sibling nodes next to the field. The form is never re-rendered, so the DOM the user is typing into is never replaced underneath them.
@@ -177,7 +181,7 @@ That is not a convention to uphold; it is the absence of a code path.
 ## Route handler pattern
 
 ```ts
-export const prerender = false; // the only opt-out on the site
+export const prerender = false; // one of five: the 3 api routes + the 2 input pages
 
 export const POST: APIRoute = async ({ request }) => {
   // Accepts BOTH application/json (enhanced path) and form-urlencoded
@@ -204,7 +208,7 @@ npm run preview                   # serve the built output
 npm run build                     # astro build → dist/client (static) + dist/server (the /api process)
 npm start                         # node dist/server/entry.mjs (after build)
 npm run typecheck                 # astro check — sees .astro templates; tsc alone does not
-npm test                          # vitest run (currently just required-env.test.ts)
+npm test                          # vitest run
 npm run lint                      # eslint (js) + markdownlint (md)
 npm run format                    # prettier --check
 npm run format:fix                # prettier --write
@@ -251,7 +255,11 @@ Don't introduce a permanent `develop` branch — the ceremony outweighs the bene
 
 ## Guardrails — things that break correctness if ignored
 
-- **`SQLITE_PATH` must be absolute.** [`src/lib/runtime-config.ts`](src/lib/runtime-config.ts) rejects relative paths at startup. Don't default it; don't make it optional; don't fall back to cwd.
+- **`SQLITE_PATH` must be absolute.** [`getDbPath()`](src/lib/db.ts) rejects a missing or relative value when the first request opens the database. `/api/health` opens it, so a deploy checks that endpoint rather than treating a listening port as a working app; static pages keep serving either way. Don't default it, don't make it optional, don't fall back to cwd.
+
+  This was a `runtime-config.ts` module, a `required-env.json` list and a shape test — 99 lines guarding one `path.isAbsolute` call, sized for the five env vars the Next era had. It also spent weeks calling nothing at all, because the caller lived in Next's deleted `instrumentation.ts`. The rule is worth keeping; the framework around it was not.
+
+  It ran nowhere at all between the Astro migration and 2026-09-02: the call lived in Next's `instrumentation.ts`, that file was deleted, nothing replaced it, and the docs kept promising the check for weeks. If you move the call, prove it still fires by booting with the variable unset.
 - **Editing a workflow means running `npm run lint:actions` before pushing.** It is not installed by npm — a Go binary, found on PATH or in `~/.local/bin` — so it reports SKIPPED rather than failing when a developer does not have it, and CI stays authoritative. That leniency is for developers who never touch `.github/`; it is not cover for the person editing the workflow. Discovering a shellcheck complaint by pushing is a round trip that was avoidable.
 
 - **Prettier does not format `.astro`, and that is a decision, not an oversight.** `prettier-plugin-astro` rewrites rendered HTML rather than only source — it injects whitespace inside elements, turning `<a>Services</a>` into `<a> Services </a>`. Measured here: 4 built pages changed on default settings, 8 on `htmlWhitespaceSensitivity: "strict"`. A formatter that alters output cannot be run unattended. `.astro` is in `.prettierignore`; those files are still linted by `eslint-plugin-astro` and typechecked by `astro check`. If you add the plugin, diff `dist/client` before and after and look at what moved.
