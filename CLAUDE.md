@@ -162,13 +162,20 @@ reload. There is exactly one assignment to `input.value` in the entire
 codebase — restoring a saved draft, guarded to fields that are empty.
 That is not a convention to uphold; it is the absence of a code path.
 
-[`tests/never-erase.test.ts`](tests/never-erase.test.ts) enforces it
-structurally rather than trusting anyone to remember: exactly one
-`.value =` in the tree, in the restore, guarded on an empty field; no
-`form.reset()`; and `innerHTML` only on elements just created, never on
-one queried out of the live document. Each guard was verified to fail
-when violated. A behavioural test proves the paths it exercises — this
-proves no other path exists.
+Two suites hold it, from opposite ends.
+[`never-erase.test.ts`](tests/never-erase.test.ts) is structural and
+proves no destructive path exists: exactly one `.value =` in the tree,
+in the restore, guarded on an empty field; no `form.reset()`;
+`innerHTML` only on elements just created.
+[`draft-persistence.test.ts`](tests/draft-persistence.test.ts) is
+behavioural and proves the constructive half actually works — a draft
+saves, comes back into a form built from scratch, restores checkbox
+groups, refuses to overwrite live input, and shrugs off corrupt JSON.
+
+That split matters: losing input by erasing it and losing it by never
+saving it cost the same, but only the first is loud. Every guard in
+both was verified by breaking the behaviour and watching the right test
+fail.
 
 - Fields validate on blur, then continuously once touched. Validating from the first keystroke tells someone their email is invalid while they are still typing the `@`.
 - Drafts persist to `localStorage` on input and survive a reload, a crash, or a closed tab. The data is the user's, kept on the user's machine, cleared only on a successful submit.
