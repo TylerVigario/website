@@ -48,19 +48,19 @@ jobs:
     steps:
       - name: Mint a token for the release App
         id: app-token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           # git-cliff walks back to the previous tag. A shallow clone
           # computes the wrong version silently rather than failing.
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -184,7 +184,7 @@ jobs:
         # the local gate against a release asset that did not come from
         # here.
         if: steps.decide.outputs.release == 'true'
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           # One artifact, one attestation. MANIFEST.sha256 lives inside
           # the tarball, so this signature already covers it — publishing

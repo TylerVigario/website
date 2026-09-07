@@ -15,7 +15,7 @@ description: >-
 runs:
   using: composite
   steps:
-    - uses: actions/setup-node@v6
+    - uses: actions/setup-node@v7
       with:
         # .nvmrc IS the pin. Reading it here means the composite needs
         # no node-version input — that would just be another place to
@@ -36,7 +36,7 @@ runs:
         HASH=$(jq -S '{dependencies,devDependencies,optionalDependencies,peerDependencies}' package.json | sha256sum | cut -c1-16)
         echo "key=npm-${{ runner.os }}-node${NODE_MAJOR}-${HASH}" >> "$GITHUB_OUTPUT"
 
-    - uses: actions/cache@v5
+    - uses: actions/cache@v6
       with:
         path: ~/.npm
         key: ${{ steps.cache-key.outputs.key }}
