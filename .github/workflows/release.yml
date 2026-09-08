@@ -210,3 +210,5 @@ jobs:
             "dist-release/vigario-website-${VERSION}.tar.gz" \
             --title "$TAG" \
             --notes "$(npx --yes git-cliff@2 --config cliff.toml --latest --strip all)"
+
+# probe: trivial comment, valid file
