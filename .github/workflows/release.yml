@@ -135,22 +135,28 @@ jobs:
         run: |
           set -euo pipefail
           head=$(git rev-parse HEAD)
+          # --rawfile, not --arg "$(base64 ...)". A single argv entry is
+          # capped at 128 KB on Linux and package-lock.json base64s to
+          # roughly 460 KB, which fails as "jq: Argument list too long"
+          # — the first real release died here. jq reads the files
+          # itself and encodes them with @base64 below, so nothing large
+          # crosses the command line.
           jq -n \
             --arg repo "$GITHUB_REPOSITORY" \
             --arg head "$head" \
             --arg msg "chore(release): $TAG [skip ci]" \
-            --arg pkg "$(base64 -w0 package.json)" \
-            --arg lock "$(base64 -w0 package-lock.json)" \
-            --arg log "$(base64 -w0 CHANGELOG.md)" \
+            --rawfile pkg package.json \
+            --rawfile lock package-lock.json \
+            --rawfile log CHANGELOG.md \
             '{query:"mutation($input:CreateCommitOnBranchInput!){createCommitOnBranch(input:$input){commit{oid}}}",
               variables:{input:{
                 branch:{repositoryNameWithOwner:$repo,branchName:"main"},
                 expectedHeadOid:$head,
                 message:{headline:$msg},
                 fileChanges:{additions:[
-                  {path:"package.json",contents:$pkg},
-                  {path:"package-lock.json",contents:$lock},
-                  {path:"CHANGELOG.md",contents:$log}]}}}}' > /tmp/mutation.json
+                  {path:"package.json",contents:($pkg|@base64)},
+                  {path:"package-lock.json",contents:($lock|@base64)},
+                  {path:"CHANGELOG.md",contents:($log|@base64)}]}}}}' > /tmp/mutation.json
           oid=$(gh api graphql --input /tmp/mutation.json --jq '.data.createCommitOnBranch.commit.oid')
           [ -n "$oid" ] || { echo "::error::createCommitOnBranch returned no oid"; exit 1; }
           echo "release commit: $oid"
