@@ -61,5 +61,11 @@ done
 # The build takes ~1.5s, so this costs less than discovering it in CI.
 #
 # Bypass with --no-verify when you are pushing a known-broken WIP branch.
+# Cheap, and previously only in CI — so a mismatched Node pin or a
+# broken workflow could only be discovered by pushing. Both are
+# sub-second; the build below is what actually costs time here.
+node --run check:pins
+node --run lint:actions
+
 node --run build
 node --run check:bundles

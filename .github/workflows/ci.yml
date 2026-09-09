@@ -41,14 +41,11 @@ jobs:
         # workflow pin. These were two of four pins once; the RPM spec
         # and systemd unit held the others and went with the packaging
         # tree, so this check is now the whole of it.
-        run: |
-          NVMRC_MAJOR=$(sed -E 's/^[^0-9]*([0-9]+).*/\1/' .nvmrc)
-          ENGINES_MAJOR=$(jq -r '.engines.node' package.json | grep -oE '[0-9]+' | head -1)
-          echo "Node major check: .nvmrc=$NVMRC_MAJOR  engines.node=$ENGINES_MAJOR"
-          if [ "$NVMRC_MAJOR" != "$ENGINES_MAJOR" ]; then
-            echo "::error::Node major mismatch — bump .nvmrc and package.json engines.node together."
-            exit 1
-          fi
+        #
+        # It is a script rather than inline bash so the pre-push hook runs
+        # the identical comparison. Inline, the check existed only on the
+        # far side of a push.
+        run: node scripts/check-node-pins.mjs
       - name: Run actionlint
         # Lints workflow YAML (bad ${{ }} expressions, deprecated action
         # refs, shell-syntax errors in run: blocks) before the heavier
@@ -91,3 +88,35 @@ jobs:
         # below the heredoc meant it would have failed unconditionally
         # under `set -u` the first time it ran.
         run: npm run check:bundles
+
+      - name: The dev server boots
+        # Everything above tests the BUILT output. Nothing tested the
+        # thing developers actually run, which is how `ssr.noExternal:
+        # true` left `astro dev` dead for weeks with every check green —
+        # rolldown does the CJS interop at build time that Vite's dev
+        # module runner does not, so the two paths genuinely disagree and
+        # only one of them was watched.
+        #
+        # ASTRO_DEV_BACKGROUND=1 keeps the server in this process rather
+        # than detaching a child and returning. Nothing is torn down: the
+        # runner is discarded either way, and a kill racing the fetch
+        # would buy flakiness for nothing.
+        env:
+          ASTRO_DEV_BACKGROUND: "1"
+        run: |
+          set -euo pipefail
+          # --host 127.0.0.1 is required, not tidiness. Left to itself the
+          # dev server binds "localhost", which on the runner resolves to
+          # ::1 first — the server comes up healthy and every curl to
+          # 127.0.0.1 is refused. Binding the address explicitly makes the
+          # two agree.
+          npx astro dev --host 127.0.0.1 --port 4327 > /tmp/dev.log 2>&1 &
+          if ! curl -sSf --retry-connrefused --retry 60 --retry-delay 1 \
+                 --retry-max-time 120 --max-time 20 \
+                 -o /tmp/dev-page.html http://127.0.0.1:4327/; then
+            echo "::error::the dev server did not serve a page"
+            tail -30 /tmp/dev.log
+            exit 1
+          fi
+          grep -q "</html>" /tmp/dev-page.html
+          echo "dev server served $(wc -c < /tmp/dev-page.html) bytes"
