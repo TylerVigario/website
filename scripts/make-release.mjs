@@ -138,6 +138,24 @@ for (const f of fs.readdirSync(prebuildDir)) {
   if (f !== "linux-x64.node") fs.rmSync(path.join(prebuildDir, f), { recursive: true });
 }
 
+// The changelog ships inside the artifact. RELEASE pins WHICH commit
+// this is; the changelog says what that commit changed — and says it
+// without a network path back to the release notes, which is the same
+// reason the tarball carries its own node_modules rather than assuming
+// the host can reach a registry.
+//
+// It has to be the regenerated one. The release workflow rewrites
+// CHANGELOG.md before this script runs, so the copy taken here is
+// current; a build from a tree where that rewrite had been reverted
+// would ship a changelog stopping one version short of the artifact
+// describing itself.
+const CHANGELOG = "CHANGELOG.md";
+if (!fs.existsSync(CHANGELOG)) {
+  console.error(`error: ${CHANGELOG} is missing — the artifact would ship without its history.`);
+  process.exit(1);
+}
+fs.copyFileSync(CHANGELOG, path.join(staging, CHANGELOG));
+
 // Identity, so the running site can be traced back to a commit without
 // guessing from a version number that may have been reused.
 fs.writeFileSync(
