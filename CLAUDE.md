@@ -86,42 +86,39 @@ consumes it.
 
 ## Serving contract
 
-What the web server must do. The repo knows this because the repo
-decides what gets emitted; whoever writes the vhost is implementing it.
+What the server in front of this must do. The repo is entitled to assert
+it because the repo decides what gets emitted — but only to assert the
+*contract*. Apache, nginx, Caddy, a CDN in front of any of them: how it
+is expressed is the deployment's business, and nothing here should read
+as though one of them is the way.
 
 | Path | Handling |
 | --- | --- |
-| `/_astro/*` | From disk. `Cache-Control: public, max-age=31536000, immutable` — every filename is content-hashed (verified: 0 unhashed of 177), so a stale cache is impossible and revalidation is wasted. |
-| `/api/*` | Proxy to the Node process. |
-| `/contact`, `/pots-migration` | Proxy to Node — these are the only two pages with `prerender = false`, because they accept input. |
-| everything else | From disk out of `dist/client/`, falling back to the proxy so a new dynamic route does not 404 before the vhost is updated. |
+| `/_astro/*` | Static file. `Cache-Control: public, max-age=31536000, immutable` — every filename is content-hashed (verified: 0 unhashed of 177), so a stale cache is impossible and revalidation is wasted. |
+| `/api/*` | Reaches the Node process. |
+| `/contact`, `/pots-migration` | Reaches the Node process — the only two pages with `prerender = false`, because they accept input. |
+| everything else | Static file from `dist/client/`. Unmatched paths should fall through to the Node process, so adding a dynamic route does not 404 until the server config catches up. |
 
-Two things make this worth writing down rather than leaving to whoever
-deploys next:
+Two properties are worth stating, because both are easy to lose by
+accident and neither is visible from the config alone:
 
-**The immutable rule must move from `/_next/static/` to `/_astro/`.**
-Astro emits nothing under `/_next/`. A rule matching the old prefix is
-not a no-op — it silently drops caching on all 177 hashed assets,
-including the fonts and every image variant, on a site whose page
-weight is almost entirely images.
+**The immutable rule has to match the prefix Astro actually emits.**
+That is `/_astro/`. A rule matching some other prefix is not a no-op —
+it silently drops caching on all 177 hashed assets, fonts and every
+image variant included, on a site whose weight is almost entirely
+images. This is precisely how it was wrong before: the rule still named
+`/_next/static/`, inherited from the framework this site no longer uses.
 
-**Proxying everything to Node is the failure mode to avoid.** It is
-what the Next-era config did and it was correct then, because Next
-served both halves. Here it costs the two properties the hybrid split
-exists to buy: static pages that never touch the Node process, and a
-Node crash that takes down form submission rather than the whole site.
+**Routing everything to the Node process is the failure mode to avoid.**
+It is what a single-process framework needs and what this one does not.
+It costs the two properties the hybrid split exists to buy: static pages
+that never touch Node, and a Node crash that takes down form submission
+rather than the whole site.
 
-The live config satisfies both. It serves `dist/client` from disk as its
-`DocumentRoot`, matches `^/_astro/` for the immutable rule, and proxies
-only `/api/`, `/contact` and `/pots-migration`. It is no longer
-RPM-shipped — the package is gone and the site runs from a versioned
-directory with a `current` symlink.
-
-One divergence stands: the table's last row promises a fallback to the
-proxy for unmatched paths, and the vhost has none, so a newly added
-`prerender = false` route 404s until Apache is updated. Apache, TLS and
-DNS are the host's business, not this repo's; the table is the part this
-repo is entitled to assert.
+The Node process needs `SQLITE_PATH` (absolute) and reads `HOST`/`PORT`;
+it is `node dist/server/entry.mjs`. Nothing else about the machine —
+process supervision, TLS, DNS, where the files live — belongs in this
+repository.
 
 ## Core vocabulary
 
@@ -284,7 +281,7 @@ Don't introduce a permanent `develop` branch — the ceremony outweighs the bene
 ## Environment
 
 - **Dev**: Windows 11 + git-bash. Node via `fnm` — Bash sessions need `eval "$(fnm env --use-on-cd --shell bash)"` once before `npm`/`node` resolve. PowerShell tool also available.
-- **Prod**: serving an older build, and nothing in this repository can update it — there is no release path yet. Don't reason about prod from what is in this tree; they are not the same code. Host-side questions (Apache, TLS, DNS, what is actually installed) belong to server-admin.
+- **Prod**: runs a published release, which is not necessarily the tip of `main` — check the deployed `RELEASE` file for the version and commit rather than assuming. Installing, supervising and fronting the process are the host's concerns and are configured there, not here.
 
 ## Guardrails — things that break correctness if ignored
 

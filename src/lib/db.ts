@@ -13,7 +13,7 @@ function getDbPath(): string {
   // of surfacing later as a database error.
   if (!path.isAbsolute(p)) {
     throw new Error(
-      `SQLITE_PATH must be an absolute path (got "${p}"). Relative paths depend on the process working directory and break under systemd.`,
+      `SQLITE_PATH must be an absolute path (got "${p}"). Relative paths resolve against the process working directory, which depends on how the process was started.`,
     );
   }
   return p;

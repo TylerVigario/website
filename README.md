@@ -20,7 +20,7 @@ zod for validation shared between the endpoints and the browser.
 No UI framework. Most pages ship no JavaScript at all; the forms carry
 ~2 KB and the case-study viewer ~3 KB, inline. `npm run check:bundles`
 asserts that, so it is a fact about the build rather than a claim in a
-readme. Errors go to stdout, which systemd captures.
+readme. Errors go to stdout, for whatever supervises the process to collect.
 
 ## Local dev
 
@@ -33,7 +33,8 @@ npm run dev
 
 `SQLITE_PATH` must be an absolute path — relative paths are rejected at
 the first database open by [getDbPath()](src/lib/db.ts) (they
-break under systemd, and the dev/prod fail-fast surface should match).
+resolve against the process working directory, which the app does not
+control, and the dev/prod fail-fast surface should match).
 
 `npm run preview` serves the built output, and `npm start` runs the
 compiled server directly (`node ./dist/server/entry.mjs`) — the same
