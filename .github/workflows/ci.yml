@@ -105,9 +105,15 @@ jobs:
           ASTRO_DEV_BACKGROUND: "1"
         run: |
           set -euo pipefail
-          npx astro dev --port 4327 > /tmp/dev.log 2>&1 &
-          if ! curl -sSf --retry-connrefused --retry 40 --retry-delay 1 \
-                 --max-time 90 -o /tmp/dev-page.html http://127.0.0.1:4327/; then
+          # --host 127.0.0.1 is required, not tidiness. Left to itself the
+          # dev server binds "localhost", which on the runner resolves to
+          # ::1 first — the server comes up healthy and every curl to
+          # 127.0.0.1 is refused. Binding the address explicitly makes the
+          # two agree.
+          npx astro dev --host 127.0.0.1 --port 4327 > /tmp/dev.log 2>&1 &
+          if ! curl -sSf --retry-connrefused --retry 60 --retry-delay 1 \
+                 --retry-max-time 120 --max-time 20 \
+                 -o /tmp/dev-page.html http://127.0.0.1:4327/; then
             echo "::error::the dev server did not serve a page"
             tail -30 /tmp/dev.log
             exit 1
