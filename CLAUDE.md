@@ -46,13 +46,33 @@ the marketing copy as covered by AGPL and then asked readers not to take
 it, which granted the thing it was asking people to leave alone. A
 request is not a licence term.
 
-## Deploy contract — there isn't one yet
+## Deploy contract — the repo releases, the host installs
 
-This repository builds and gates; it does not release, publish or
-deploy anything. A release path is being built against the static shape
-the site is moving to. Until it exists, "how does this deploy" has the
-answer: it doesn't, yet — so don't reconstruct one from memory or from
-a sibling repo.
+This repository builds, gates and **releases**. It does not install
+anything anywhere, and it holds no tool that runs on a server.
+
+`Release` (`workflow_dispatch`) computes the version from the commits,
+builds one self-contained tarball, attests it through Sigstore, writes
+the version and changelog to `main` as a forge-signed commit, and
+publishes the tag and the artifact in a single call. Everything that can
+fail runs before anything is written, so a failed release leaves no
+commit, no tag and no release behind.
+
+The artifact is `dist/`, `node_modules/` (better-sqlite3 only, for the
+native addon that cannot be bundled), a generated `package.json`,
+`CHANGELOG.md`, `RELEASE` (version + the commit the source came from),
+and `MANIFEST.sha256` — a sha256 of every other file in the tree. It runs
+on `node dist/server/entry.mjs` with `SQLITE_PATH` set, needs no
+toolchain and no network, and is ~9.4 MB.
+
+**Installing it is the host's job, and the tools for that live on the
+host.** Fetching, verifying and swapping a release are operations on a
+machine, not on this codebase — and a verifier shipped from the
+repository it verifies proves nothing about the artifact it checks. What
+this repo owes an installer is the contract above plus the attestation:
+`gh attestation verify` establishes the tarball came from this workflow,
+and `MANIFEST.sha256` inside it answers "is the installed tree still what
+was built" at any time afterwards, which a whole-archive checksum cannot.
 
 What is true about the app regardless of what ships it: `astro build`
 emits `dist/client/` (the static tree, which a web server serves
@@ -91,11 +111,17 @@ served both halves. Here it costs the two properties the hybrid split
 exists to buy: static pages that never touch the Node process, and a
 Node crash that takes down form submission rather than the whole site.
 
-The live config on the current host does both of these wrong. It is
-also RPM-shipped and read-only, so it goes away with the release shape
-rather than being patched in place — see the deploy note above. Apache,
-TLS and DNS are the host's business, not this repo's; the table is the
-part this repo is entitled to assert.
+The live config satisfies both. It serves `dist/client` from disk as its
+`DocumentRoot`, matches `^/_astro/` for the immutable rule, and proxies
+only `/api/`, `/contact` and `/pots-migration`. It is no longer
+RPM-shipped — the package is gone and the site runs from a versioned
+directory with a `current` symlink.
+
+One divergence stands: the table's last row promises a fallback to the
+proxy for unmatched paths, and the vhost has none, so a newly added
+`prerender = false` route 404s until Apache is updated. Apache, TLS and
+DNS are the host's business, not this repo's; the table is the part this
+repo is entitled to assert.
 
 ## Core vocabulary
 
