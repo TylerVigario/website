@@ -149,15 +149,31 @@ for (const f of fs.readdirSync(prebuildDir)) {
 // current; a build from a tree where that rewrite had been reverted
 // would ship a changelog stopping one version short of the artifact
 // describing itself.
-const CHANGELOG = "CHANGELOG.md";
-if (!fs.existsSync(CHANGELOG)) {
-  console.error(`error: ${CHANGELOG} is missing — the artifact would ship without its history.`);
+// --changelog points somewhere other than the tree when the caller has
+// a regenerated one the tree does not carry yet. The release workflow
+// builds BEFORE it writes anything to the repository, so at build time
+// the new changelog exists only as a file the previous step produced.
+// Passing it here is what lets the working tree stay clean — and the
+// clean tree is what keeps the guard above strict rather than something
+// the release has to be excused from.
+const changelogSrc = arg("changelog", "CHANGELOG.md");
+if (!fs.existsSync(changelogSrc)) {
+  console.error(`error: ${changelogSrc} is missing — the artifact would ship without its history.`);
   process.exit(1);
 }
-fs.copyFileSync(CHANGELOG, path.join(staging, CHANGELOG));
+fs.copyFileSync(changelogSrc, path.join(staging, "CHANGELOG.md"));
 
 // Identity, so the running site can be traced back to a commit without
 // guessing from a version number that may have been reused.
+//
+// `commit` is the commit whose SOURCE produced these bytes, which during
+// a release is the parent of the commit the tag points at — the release
+// commit adds the version bump and the changelog on top of this tree and
+// changes nothing that gets compiled. It is recorded rather than the
+// tagged commit because the tagged commit does not exist yet: the
+// workflow builds and attests before it writes anything, so that a
+// failure leaves no tag, no release and no bumped branch behind.
+// `git rev-parse <tag>^` recovers it from the other direction.
 fs.writeFileSync(
   path.join(staging, "RELEASE"),
   [
