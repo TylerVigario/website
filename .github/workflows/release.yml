@@ -67,12 +67,34 @@ jobs:
 
       - name: Decide
         id: decide
+        # Inputs arrive through env, never interpolated into the script.
+        # `${{ }}` pastes the value in as source text before bash sees it,
+        # so a version string containing shell metacharacters would run as
+        # code. Only collaborators can dispatch this, which lowers the
+        # stakes without changing the rule.
+        env:
+          FORCED: ${{ inputs.version }}
+          COMPUTED: ${{ steps.bump.outputs.content }}
         run: |
           set -euo pipefail
           current="v$(node -p "require('./package.json').version")"
-          next="${{ inputs.version && format('v{0}', inputs.version) || steps.bump.outputs.content }}"
-          echo "current=$current  next=$next"
-          if [ -z "$next" ] || [ "$next" = "$current" ]; then
+          forced="$FORCED"
+          next="${forced:+v$forced}"
+          next="${next:-$COMPUTED}"
+          echo "current=$current  next=$next  forced=${forced:-no}"
+          # An explicit version input is an instruction, not a suggestion,
+          # so it skips the equality veto. That is what makes a partial
+          # release recoverable: if a run wrote the commit and then failed
+          # before tagging, main already carries the version and the
+          # computed bump would match it, so without this the retry would
+          # report "nothing to release" and refuse.
+          if [ -n "$forced" ]; then
+            {
+              echo "release=true"
+              echo "version=${next#v}"
+              echo "tag=$next"
+            } >> "$GITHUB_OUTPUT"
+          elif [ -z "$next" ] || [ "$next" = "$current" ]; then
             echo "release=false" >> "$GITHUB_OUTPUT"
             echo "Nothing bump-worthy since $current. No release."
           else
@@ -124,7 +146,9 @@ jobs:
       - name: Write the version into the manifests
         env:
           VERSION: ${{ needs.decide.outputs.version }}
-        run: npm version "$VERSION" --no-git-tag-version
+        # --allow-same-version so a retry of a partial release is not
+        # refused for setting the version it already has.
+        run: npm version "$VERSION" --no-git-tag-version --allow-same-version
 
       - name: Install dependencies
         run: npm ci
@@ -135,31 +159,6 @@ jobs:
         # "build failures are a CD concern" true rather than
         # aspirational: a broken tree never becomes a published artifact.
         run: npm run ci
-
-      - name: Build the artifact
-        # Before anything is written anywhere. Everything above this point
-        # is reversible — a failed build leaves no commit, no tag and no
-        # release, and a re-dispatch starts from an unchanged main.
-        #
-        # The reverse order would strand the repository: the release
-        # commit bumps package.json, so a build that failed after it would
-        # leave main claiming a version that was never tagged or
-        # published, and the next dispatch would compute "nothing to
-        # release" and refuse to retry.
-        run: npm run release
-
-      - name: Attest the artifact
-        # Binds the tarball's sha256 to this workflow, repo and commit
-        # through Sigstore. A host verifies with `gh attestation verify`
-        # before installing, which is the gate against a release asset
-        # that did not come from here.
-        uses: actions/attest-build-provenance@v4
-        with:
-          # One artifact, one attestation. MANIFEST.sha256 lives inside
-          # the tarball, so this signature already covers it; a copy
-          # published beside it would add no proof and one more thing
-          # that could disagree.
-          subject-path: dist-release/vigario-website-${{ needs.decide.outputs.version }}.tar.gz
 
       - name: Ask the forge to write the release commit
         id: commit
@@ -207,6 +206,57 @@ jobs:
           [ -n "$oid" ] || { echo "::error::createCommitOnBranch returned no oid"; exit 1; }
           echo "release commit: $oid"
           echo "oid=$oid" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the release commit
+        # The tree at this point holds the new version and changelog as
+        # uncommitted edits, and make-release refuses a dirty tree —
+        # correctly, because an artifact containing changes no commit
+        # records makes "what is on prod" unanswerable.
+        #
+        # createCommitOnBranch writes to the remote and never touches the
+        # working tree, so no ordering of these steps produces a clean
+        # one. Checking the release commit out does: the tree becomes
+        # exactly what was committed, and the RELEASE file inside the
+        # artifact then records the commit the tag will point at rather
+        # than the one this job started from.
+        env:
+          OID: ${{ steps.commit.outputs.oid }}
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin "$OID"
+          git checkout --quiet --detach "$OID"
+          test -z "$(git status --porcelain)" || {
+            echo "::error::tree still dirty after checking out $OID"
+            git status --porcelain
+            exit 1
+          }
+          echo "building from $OID"
+
+      - name: Build the artifact
+        # Built from the release commit, so the artifact and the tag name
+        # the same tree, and RELEASE records a commit that exists.
+        #
+        # This does mean the commit lands before the build. The gate above
+        # has already run a full `astro build` on this exact tree, so a
+        # failure here is a packaging fault rather than a compile one —
+        # but if it does fail, main carries the version bump with no tag
+        # and no release, and `decide` will report nothing to release on
+        # the next dispatch. Recovering means dispatching with the version
+        # input set to the same number.
+        run: npm run release
+
+      - name: Attest the artifact
+        # Binds the tarball's sha256 to this workflow, repo and commit
+        # through Sigstore. A host verifies with `gh attestation verify`
+        # before installing, which is the gate against a release asset
+        # that did not come from here.
+        uses: actions/attest-build-provenance@v4
+        with:
+          # One artifact, one attestation. MANIFEST.sha256 lives inside
+          # the tarball, so this signature already covers it; a copy
+          # published beside it would add no proof and one more thing
+          # that could disagree.
+          subject-path: dist-release/vigario-website-${{ needs.decide.outputs.version }}.tar.gz
 
       - name: Tag it
         # After the commit exists and the artifact is built and attested.
