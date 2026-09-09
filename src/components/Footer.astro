@@ -13,7 +13,6 @@ const nav = [
 
 const external = [
   { label: "GitHub", href: "https://github.com/tylervigario", icon: "gh" },
-  { label: "VTS on GitHub", href: "https://github.com/Vigario-Technology-Solutions", icon: "gh" },
   { label: "Google Business", href: "https://g.co/kgs/wyVQ2pD", icon: "pin" },
 ] as const;
 
@@ -26,18 +25,49 @@ const year = new Date().getFullYear();
 <footer class="border-t border-border py-8 sm:py-12">
   <div class="mx-auto max-w-6xl px-6">
     <div class="flex flex-col items-center justify-between gap-6 md:flex-row">
-      <address class="text-center not-italic md:text-left">
-        <a href="/" class="inline-block py-2">
-          <Image
-            src={imgVtsLogo0}
-            alt="Vigario Technology Solutions"
-            width="330"
-            height="124"
-            class="h-7 w-auto"
-            loading="lazy" />
-        </a>
-        <p class="mt-2 text-sm text-muted">Fresno, CA &middot; Available remotely nationwide</p>
-      </address>
+      <div class="text-center md:text-left">
+        <address class="not-italic">
+          <a href="/" class="inline-block py-2">
+            <Image
+              src={imgVtsLogo0}
+              alt="Vigario Technology Solutions"
+              width="330"
+              height="124"
+              class="h-7 w-auto"
+              loading="lazy" />
+          </a>
+          <p class="mt-2 text-sm text-muted">Fresno, CA &middot; Available remotely nationwide</p>
+        </address>
+
+        {/* Outside the <address>, deliberately. That element is for contact
+            details — a machine reading it should not be told this is one.
+            It sits in the same column so it reads as part of the identity
+            block rather than as fine print.
+
+            <blockquote> + <cite> because that is what this is: the phrase
+            is quoted from Romans 10:9, and the reference is its source. A
+            bare <span> would render the same and say nothing about how the
+            two relate. `not-italic` because <cite> italicises by default
+            and nothing else in this footer is italic — the <address> above
+            carries the same override.
+
+            The middot separator and the underlined link match what the
+            rest of the footer already does, so the citation reads as one
+            more link rather than a differently-styled exception. */}
+        <blockquote class="mt-3 text-sm text-muted">
+          <p>
+            <span class="font-medium text-foreground">Jesus is Lord</span> &middot;{" "}
+            <cite class="not-italic">
+              <a
+                href="https://openbible.com/par/romans/10-9.htm"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="underline transition-colors hover:text-foreground">Romans 10:9</a
+              >
+            </cite>
+          </p>
+        </blockquote>
+      </div>
 
       <nav
         class="flex flex-wrap items-center justify-center gap-4 text-sm text-muted md:gap-6"
