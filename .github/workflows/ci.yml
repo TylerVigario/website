@@ -105,6 +105,12 @@ jobs:
           ASTRO_DEV_BACKGROUND: "1"
         run: |
           set -euo pipefail
+          # The build cache restores .astro/, which carries dev.json — the
+          # lock recording a running dev server's PID. Cached from another
+          # runner it names a process that never existed here, and Astro
+          # refuses to start rather than fight it. A lock from a different
+          # machine is meaningless, so drop it before starting.
+          rm -f .astro/dev.json
           # --host 127.0.0.1 is required, not tidiness. Left to itself the
           # dev server binds "localhost", which on the runner resolves to
           # ::1 first — the server comes up healthy and every curl to
