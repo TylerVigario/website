@@ -1,10 +1,10 @@
 # actionlint config.
 #
-# Empty of runner-label declarations on purpose. The `fedora` self-hosted
-# label was declared here for the release job, which ran rpmbuild on the
-# prod host. That job and the packaging tree are retired, so every job
-# now runs on a hosted runner and actionlint needs nothing declared.
+# Empty of runner-label declarations on purpose. A `fedora` self-hosted
+# label was declared here when the release built on the same machine it
+# deployed to. It no longer does — every job, release included, runs on a
+# hosted runner — so there is nothing to declare.
 #
-# When a release shape returns, whatever labels it targets are declared
-# here — actionlint flags an undeclared self-hosted label as unknown.
+# If a job ever targets a self-hosted runner again, its labels go here:
+# actionlint flags an undeclared self-hosted label as unknown.
 {}

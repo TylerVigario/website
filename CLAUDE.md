@@ -46,13 +46,33 @@ the marketing copy as covered by AGPL and then asked readers not to take
 it, which granted the thing it was asking people to leave alone. A
 request is not a licence term.
 
-## Deploy contract — there isn't one yet
+## Deploy contract — the repo releases, the host installs
 
-This repository builds and gates; it does not release, publish or
-deploy anything. A release path is being built against the static shape
-the site is moving to. Until it exists, "how does this deploy" has the
-answer: it doesn't, yet — so don't reconstruct one from memory or from
-a sibling repo.
+This repository builds, gates and **releases**. It does not install
+anything anywhere, and it holds no tool that runs on a server.
+
+`Release` (`workflow_dispatch`) computes the version from the commits,
+builds one self-contained tarball, attests it through Sigstore, writes
+the version and changelog to `main` as a forge-signed commit, and
+publishes the tag and the artifact in a single call. Everything that can
+fail runs before anything is written, so a failed release leaves no
+commit, no tag and no release behind.
+
+The artifact is `dist/`, `node_modules/` (better-sqlite3 only, for the
+native addon that cannot be bundled), a generated `package.json`,
+`CHANGELOG.md`, `RELEASE` (version + the commit the source came from),
+and `MANIFEST.sha256` — a sha256 of every other file in the tree. It runs
+on `node dist/server/entry.mjs` with `SQLITE_PATH` set, needs no
+toolchain and no network, and is ~9.4 MB.
+
+**Installing it is the host's job, and the tools for that live on the
+host.** Fetching, verifying and swapping a release are operations on a
+machine, not on this codebase — and a verifier shipped from the
+repository it verifies proves nothing about the artifact it checks. What
+this repo owes an installer is the contract above plus the attestation:
+`gh attestation verify` establishes the tarball came from this workflow,
+and `MANIFEST.sha256` inside it answers "is the installed tree still what
+was built" at any time afterwards, which a whole-archive checksum cannot.
 
 What is true about the app regardless of what ships it: `astro build`
 emits `dist/client/` (the static tree, which a web server serves
@@ -66,36 +86,39 @@ consumes it.
 
 ## Serving contract
 
-What the web server must do. The repo knows this because the repo
-decides what gets emitted; whoever writes the vhost is implementing it.
+What the server in front of this must do. The repo is entitled to assert
+it because the repo decides what gets emitted — but only to assert the
+*contract*. Apache, nginx, Caddy, a CDN in front of any of them: how it
+is expressed is the deployment's business, and nothing here should read
+as though one of them is the way.
 
 | Path | Handling |
 | --- | --- |
-| `/_astro/*` | From disk. `Cache-Control: public, max-age=31536000, immutable` — every filename is content-hashed (verified: 0 unhashed of 177), so a stale cache is impossible and revalidation is wasted. |
-| `/api/*` | Proxy to the Node process. |
-| `/contact`, `/pots-migration` | Proxy to Node — these are the only two pages with `prerender = false`, because they accept input. |
-| everything else | From disk out of `dist/client/`, falling back to the proxy so a new dynamic route does not 404 before the vhost is updated. |
+| `/_astro/*` | Static file. `Cache-Control: public, max-age=31536000, immutable` — every filename is content-hashed (verified: 0 unhashed of 177), so a stale cache is impossible and revalidation is wasted. |
+| `/api/*` | Reaches the Node process. |
+| `/contact`, `/pots-migration` | Reaches the Node process — the only two pages with `prerender = false`, because they accept input. |
+| everything else | Static file from `dist/client/`. Unmatched paths should fall through to the Node process, so adding a dynamic route does not 404 until the server config catches up. |
 
-Two things make this worth writing down rather than leaving to whoever
-deploys next:
+Two properties are worth stating, because both are easy to lose by
+accident and neither is visible from the config alone:
 
-**The immutable rule must move from `/_next/static/` to `/_astro/`.**
-Astro emits nothing under `/_next/`. A rule matching the old prefix is
-not a no-op — it silently drops caching on all 177 hashed assets,
-including the fonts and every image variant, on a site whose page
-weight is almost entirely images.
+**The immutable rule has to match the prefix Astro actually emits.**
+That is `/_astro/`. A rule matching some other prefix is not a no-op —
+it silently drops caching on all 177 hashed assets, fonts and every
+image variant included, on a site whose weight is almost entirely
+images. This is precisely how it was wrong before: the rule still named
+`/_next/static/`, inherited from the framework this site no longer uses.
 
-**Proxying everything to Node is the failure mode to avoid.** It is
-what the Next-era config did and it was correct then, because Next
-served both halves. Here it costs the two properties the hybrid split
-exists to buy: static pages that never touch the Node process, and a
-Node crash that takes down form submission rather than the whole site.
+**Routing everything to the Node process is the failure mode to avoid.**
+It is what a single-process framework needs and what this one does not.
+It costs the two properties the hybrid split exists to buy: static pages
+that never touch Node, and a Node crash that takes down form submission
+rather than the whole site.
 
-The live config on the current host does both of these wrong. It is
-also RPM-shipped and read-only, so it goes away with the release shape
-rather than being patched in place — see the deploy note above. Apache,
-TLS and DNS are the host's business, not this repo's; the table is the
-part this repo is entitled to assert.
+The Node process needs `SQLITE_PATH` (absolute) and reads `HOST`/`PORT`;
+it is `node dist/server/entry.mjs`. Nothing else about the machine —
+process supervision, TLS, DNS, where the files live — belongs in this
+repository.
 
 ## Core vocabulary
 
@@ -258,7 +281,7 @@ Don't introduce a permanent `develop` branch — the ceremony outweighs the bene
 ## Environment
 
 - **Dev**: Windows 11 + git-bash. Node via `fnm` — Bash sessions need `eval "$(fnm env --use-on-cd --shell bash)"` once before `npm`/`node` resolve. PowerShell tool also available.
-- **Prod**: serving an older build, and nothing in this repository can update it — there is no release path yet. Don't reason about prod from what is in this tree; they are not the same code. Host-side questions (Apache, TLS, DNS, what is actually installed) belong to server-admin.
+- **Prod**: runs a published release, which is not necessarily the tip of `main` — check the deployed `RELEASE` file for the version and commit rather than assuming. Installing, supervising and fronting the process are the host's concerns and are configured there, not here.
 
 ## Guardrails — things that break correctness if ignored
 

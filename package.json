@@ -14,7 +14,6 @@
     "ci": "npm run lint && npm run typecheck && npm run format && npm test && npm run build && npm run check:bundles",
     "clean": "node -e \"const fs=require('fs'); ['dist','.astro','node_modules/.cache','.eslintcache'].forEach(p=>fs.rmSync(p,{recursive:true,force:true}))\"",
     "dev": "astro dev",
-    "fetch:release": "node scripts/fetch-release.mjs",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "lint": "npm run lint:js && npm run lint:md && npm run lint:actions",

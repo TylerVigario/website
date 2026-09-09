@@ -1,6 +1,6 @@
 # Dependency updates. Until this existed, npm and action bumps only
-# happened when someone went looking — on a WAN-facing app that ships an
-# RPM straight onto the prod host.
+# happened when someone went looking — on an app reachable from the
+# internet that ships straight to the host serving it.
 #
 # Everything here lands as a PR, so it is gated by ci.yml like any other
 # change; nothing auto-merges.

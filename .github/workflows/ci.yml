@@ -10,8 +10,9 @@ on:
   pull_request:
 
 # Concurrency: PRs cancel prior runs of the same PR (saves CI time on
-# rapid pushes), main pushes queue serially. Nothing releases from here
-# yet — the RPM pipeline was retired and the replacement is not built.
+# rapid pushes), main pushes queue serially. Nothing releases from here —
+# releasing is release.yml, on workflow_dispatch, because merging says
+# the code is good and releasing says ship it.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -23,9 +24,8 @@ permissions:
 jobs:
   # =========================================================================
   # Gate — quality checks + full-build validation. Runs on every PR and
-  # every push to main. It is currently the whole of CI: the RPM release
-  # job was retired with the packaging tree, and no replacement release
-  # shape exists yet.
+  # every push to main. This is the whole of continuous integration;
+  # release.yml is separate and runs only when asked.
   # =========================================================================
   gate:
     name: Gate
@@ -38,9 +38,9 @@ jobs:
         # .nvmrc and package.json#engines.node must declare the same
         # Node major. CI reads .nvmrc directly (node-version-file in the
         # setup composite + the release job), so there's no separate
-        # workflow pin. These were two of four pins once; the RPM spec
-        # and systemd unit held the others and went with the packaging
-        # tree, so this check is now the whole of it.
+        # workflow pin. These were two of four pins once; the other two
+        # belonged to the packaging tree and went with it, so this check
+        # is now the whole of it.
         #
         # It is a script rather than inline bash so the pre-push hook runs
         # the identical comparison. Inline, the check existed only on the

@@ -76,7 +76,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   } catch (emailErr) {
     // Best-effort. The row is already saved; the mailer logs the
     // failure with redacted context and rethrows. Errors land on
-    // stdout, which systemd captures: journalctl -u vigario-website.
+    // stdout, for whatever supervises the process to collect.
     console.error("Failed to send email notification:", emailErr);
   }
 

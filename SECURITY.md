@@ -13,7 +13,7 @@ If you can, include:
 
 - A description of the issue and the impact (what an attacker can do).
 - Steps to reproduce — HTTP requests, sample form payloads, or screenshots.
-- The version (commit SHA or release tag) and how the site is fronted (the reference deployment is Apache reverse-proxy → `127.0.0.1`).
+- The version (commit SHA or release tag) and how the site is fronted — whether the static files are served directly and only `/api/*`, `/contact` and `/pots-migration` reach the Node process, or everything is proxied to it.
 - Your assessment of severity, if you have one.
 
 ## What counts as a security issue
