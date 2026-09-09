@@ -223,7 +223,11 @@ jobs:
           OID: ${{ steps.commit.outputs.oid }}
         run: |
           set -euo pipefail
-          git fetch --quiet origin "$OID"
+          # Fetch the branch, not the bare sha. Fetching an arbitrary
+          # object depends on the server allowing it; fetching main is
+          # guaranteed to carry this commit, which is either its tip or —
+          # if something raced in behind the CAS — an ancestor of it.
+          git fetch --quiet origin main
           git checkout --quiet --detach "$OID"
           test -z "$(git status --porcelain)" || {
             echo "::error::tree still dirty after checking out $OID"
