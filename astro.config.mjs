@@ -35,11 +35,32 @@ export default defineConfig({
   // moment to argue for it — not before.
   integrations: [sitemap()],
   vite: {
-    plugins: [tailwindcss()],
-    // noExternal bundles every dependency into the server output, so
-    // the deployed artifact needs no node_modules beyond the native
-    // addon that cannot be bundled. See runtime-externals.mjs — that
-    // list is shared with the release script so the two cannot drift.
-    ssr: { external: RUNTIME_EXTERNALS, noExternal: true },
+    plugins: [
+      tailwindcss(),
+      // noExternal bundles every dependency into the server output, so
+      // the deployed artifact needs no node_modules beyond the native
+      // addon that cannot be bundled. See runtime-externals.mjs — that
+      // list is shared with the release script so the two cannot drift.
+      //
+      // IT MUST NOT APPLY IN DEV. Set unconditionally it also routes
+      // every dependency through Vite's SSR module runner, which
+      // executes modules as ESM — and picomatch, reached via
+      // @astrojs/node, is CommonJS. `astro dev` died on `require is not
+      // defined` from the moment this was introduced, while `astro
+      // build` stayed green because rolldown does the CJS interop the
+      // dev runner does not. The gate never ran `astro dev`, so nothing
+      // caught it.
+      //
+      // A plugin `config` hook is how Vite exposes the command, which
+      // Astro's plain `vite` object cannot express.
+      {
+        name: "vigario:bundle-ssr-deps-on-build",
+        config(_config, { command }) {
+          if (command !== "build") return;
+          return { ssr: { noExternal: true } };
+        },
+      },
+    ],
+    ssr: { external: RUNTIME_EXTERNALS },
   },
 });
