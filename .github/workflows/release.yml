@@ -67,12 +67,34 @@ jobs:
 
       - name: Decide
         id: decide
+        # Inputs arrive through env, never interpolated into the script.
+        # `${{ }}` pastes the value in as source text before bash sees it,
+        # so a version string containing shell metacharacters would run as
+        # code. Only collaborators can dispatch this, which lowers the
+        # stakes without changing the rule.
+        env:
+          FORCED: ${{ inputs.version }}
+          COMPUTED: ${{ steps.bump.outputs.content }}
         run: |
           set -euo pipefail
           current="v$(node -p "require('./package.json').version")"
-          next="${{ inputs.version && format('v{0}', inputs.version) || steps.bump.outputs.content }}"
-          echo "current=$current  next=$next"
-          if [ -z "$next" ] || [ "$next" = "$current" ]; then
+          forced="$FORCED"
+          next="${forced:+v$forced}"
+          next="${next:-$COMPUTED}"
+          echo "current=$current  next=$next  forced=${forced:-no}"
+          # An explicit version input is an instruction, not a suggestion,
+          # so it skips the equality veto. That is what makes a partial
+          # release recoverable: if a run wrote the commit and then failed
+          # before tagging, main already carries the version and the
+          # computed bump would match it, so without this the retry would
+          # report "nothing to release" and refuse.
+          if [ -n "$forced" ]; then
+            {
+              echo "release=true"
+              echo "version=${next#v}"
+              echo "tag=$next"
+            } >> "$GITHUB_OUTPUT"
+          elif [ -z "$next" ] || [ "$next" = "$current" ]; then
             echo "release=false" >> "$GITHUB_OUTPUT"
             echo "Nothing bump-worthy since $current. No release."
           else
@@ -113,40 +135,44 @@ jobs:
       # builds on the toolchain the gate proved.
       - uses: ./.github/actions/setup
 
-      - name: Regenerate the changelog
-        uses: orhun/git-cliff-action@v4
-        with:
-          config: cliff.toml
-          args: --tag ${{ needs.decide.outputs.tag }}
-        env:
-          OUTPUT: CHANGELOG.md
-
-      - name: Write the version into the manifests
-        env:
-          VERSION: ${{ needs.decide.outputs.version }}
-        run: npm version "$VERSION" --no-git-tag-version
-
       - name: Install dependencies
         run: npm ci
 
-      - name: Gate the release commit
+      - name: Gate the tree
         # The same gate every PR runs. A release is still a commit on
         # main and does not get to skip it — and this is what makes
         # "build failures are a CD concern" true rather than
         # aspirational: a broken tree never becomes a published artifact.
         run: npm run ci
 
+      - name: Regenerate the changelog
+        # Into the runner's temp directory, NOT the tree. The build below
+        # refuses a dirty tree, and that guard is worth more than the
+        # convenience of writing here — it is what stops an artifact
+        # carrying changes no commit records. The file is handed to the
+        # build as an argument and committed further down, so it reaches
+        # both the tarball and the branch without the tree being dirty in
+        # between.
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: cliff.toml
+          args: --tag ${{ needs.decide.outputs.tag }}
+        env:
+          OUTPUT: ${{ runner.temp }}/CHANGELOG.md
+
       - name: Build the artifact
         # Before anything is written anywhere. Everything above this point
-        # is reversible — a failed build leaves no commit, no tag and no
+        # is reversible: a failed build leaves no commit, no tag and no
         # release, and a re-dispatch starts from an unchanged main.
         #
-        # The reverse order would strand the repository: the release
-        # commit bumps package.json, so a build that failed after it would
-        # leave main claiming a version that was never tagged or
-        # published, and the next dispatch would compute "nothing to
-        # release" and refuse to retry.
-        run: npm run release
+        # The version is passed in rather than read from the tree. The
+        # artifact's package.json is generated, so the bump does not need
+        # to exist on disk for the tarball to carry the right number —
+        # which is what lets every write happen after this point instead
+        # of before it.
+        env:
+          VERSION: ${{ needs.decide.outputs.version }}
+        run: npm run release -- --version "$VERSION" --changelog "$RUNNER_TEMP/CHANGELOG.md"
 
       - name: Attest the artifact
         # Binds the tarball's sha256 to this workflow, repo and commit
@@ -163,6 +189,9 @@ jobs:
 
       - name: Ask the forge to write the release commit
         id: commit
+        # THE FIRST WRITE OF THE RUN. The artifact is built and attested
+        # by now, so everything that could fail has.
+        #
         # NOT `git commit && git push`. A push sends an object already
         # built, so it arrives unsigned no matter which token carried it
         # — which is why every chore(release) commit in this
@@ -172,15 +201,18 @@ jobs:
         # expectedHeadOid makes it a compare-and-swap: if anything landed
         # on main since this job read it, the mutation fails rather than
         # clobbering.
-        #
-        # This is the first write of the run. The artifact is already
-        # built and attested by now, so everything that could fail
-        # cheaply has.
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           TAG: ${{ needs.decide.outputs.tag }}
+          VERSION: ${{ needs.decide.outputs.version }}
         run: |
           set -euo pipefail
+          # The bump and the changelog land in the tree only now, purely
+          # to be read into the mutation below. --allow-same-version so a
+          # retry of a partial release is not refused for setting the
+          # number the branch already carries.
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          cp "$RUNNER_TEMP/CHANGELOG.md" CHANGELOG.md
           head=$(git rev-parse HEAD)
           # --rawfile, not --arg "$(base64 ...)". A single argv entry is
           # capped at 128 KB on Linux and package-lock.json base64s to
@@ -208,28 +240,27 @@ jobs:
           echo "release commit: $oid"
           echo "oid=$oid" >> "$GITHUB_OUTPUT"
 
-      - name: Tag it
-        # After the commit exists and the artifact is built and attested.
+      - name: Publish
+        # Tag and release in ONE call. `gh release create --target`
+        # creates the tag at that commit as part of publishing, so there
+        # is no window where a tag names a version with no release behind
+        # it — the state a separate tagging step leaves whenever the
+        # publish that follows it fails. Rule 18 of the repo standard is
+        # explicit that annotated or lightweight "makes no difference",
+        # so collapsing the two costs nothing.
+        #
+        # Notes come from --unreleased rather than --latest: the tag is
+        # being created by this very command, so at the moment it runs
+        # there is no latest release to describe.
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           TAG: ${{ needs.decide.outputs.tag }}
           OID: ${{ steps.commit.outputs.oid }}
-        run: |
-          set -euo pipefail
-          obj=$(gh api "repos/$GITHUB_REPOSITORY/git/tags" \
-            -f tag="$TAG" -f message="Release $TAG" -f object="$OID" -f type=commit \
-            --jq .sha)
-          gh api "repos/$GITHUB_REPOSITORY/git/refs" \
-            -f ref="refs/tags/$TAG" -f sha="$obj" >/dev/null
-          echo "tagged $TAG -> $OID"
-
-      - name: Publish
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          TAG: ${{ needs.decide.outputs.tag }}
           ARTIFACT: dist-release/vigario-website-${{ needs.decide.outputs.version }}.tar.gz
         run: |
           set -euo pipefail
           gh release create "$TAG" "$ARTIFACT" \
+            --target "$OID" \
             --title "$TAG" \
-            --notes "$(npx --yes git-cliff@2 --config cliff.toml --latest --strip all)"
+            --notes "$(npx --yes git-cliff@2 --config cliff.toml --unreleased --tag "$TAG" --strip all)"
+          echo "published $TAG -> $OID"
