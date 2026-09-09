@@ -55,9 +55,10 @@ commit_preprocessors = [
 # `chore` covers `chore(release)` too, which keeps the release commits
 # out of the changelog they generate.
 #
-# `style` is parsed (skip) only to keep historical-commit regeneration
-# faithful. New commits should use `chore` for formatting — commitlint
-# doesn't list `style` in its type-enum.
+# `style` is skipped like the rest of that set. It is a valid type —
+# .commitlintrc.js inherits the eleven Angular types from
+# config-conventional rather than declaring a subset — it simply cannot
+# reach the artifact, so it neither bumps nor appears.
 #
 # See .commitlintrc.js for the matching type-enum + rationale.
 commit_parsers = [

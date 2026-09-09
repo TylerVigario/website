@@ -1,53 +1,44 @@
-// Angular Conventional Commits type set. Type carries release impact;
-// scope says where in the codebase. cliff.toml's parser only bumps
-// versions on `feat`, `fix`, and `revert` — every other type is
-// no-release. Matches pipetree's set (the canonical sibling).
+// Angular Conventional Commits. Type carries release impact; scope says
+// where in the codebase.
 //
-// Bumping vs skipping:
-//   feat      → minor bump, "Features"
-//   fix       → patch bump, "Bug Fixes"
-//   revert    → patch bump, "Bug Fixes" (a revert ships a behavior change
-//               from the user's perspective, even if the commit is
-//               undoing something)
-//   refactor  → no bump, skipped from changelog (per the CC spec,
-//               refactors are behavior-preserving — if it changes
-//               behavior, it's a feat or fix, not a refactor)
-//   perf      → no bump (perf is technically observable but this repo
-//               doesn't ship perf-only releases; treat as refactor)
-//   ci        → no bump, CI infrastructure
-//   build     → no bump, build system + dep packaging
-//   docs      → no bump
-//   test      → no bump
-//   chore     → no bump (release bot, miscellaneous)
+// THE TYPE SET IS NOT DECLARED HERE. @commitlint/config-conventional
+// already ships the eleven Angular types, and restating them would be a
+// second copy to keep in sync with upstream for no gain — the standard's
+// rule 2 puts it as "no repository declares an enum, since declaring one
+// restates a default." An earlier version of this file listed ten of the
+// eleven, omitting `style`; `style` is now allowed and cliff.toml skips
+// it, so it reaches neither the changelog nor a version bump.
 //
-// Why Angular over the prior minimalist 6-type set: the 6-set forced
-// CI-infrastructure changes into one of `chore(ci)`, `refactor(ci)`,
-// or `fix(ci)`, with no semantic difference between them but very
-// different release behavior (refactor and fix bumped, chore didn't).
-// Angular's broader set lets each commit's release impact be implicit
-// from its TYPE alone — `ci:` is unambiguously non-product.
+// WHICH TYPES SHIP is cliff.toml's question, not this file's, and the
+// line it draws is whether the artifact changed: feat, fix, revert,
+// perf, refactor and build produce different bytes, so they are recorded
+// and they bump; ci, docs, test, chore and style cannot reach the
+// artifact, so they do neither. One parser list drives the changelog and
+// --bumped-version together, which is why that split lives in one place.
+//
+// Only genuine overrides remain below. Rules that merely restated the
+// inherited default (type-case, type-empty, subject-empty, subject-case,
+// subject-full-stop) were deleted: identical behaviour, one less copy.
 export default {
   extends: ["@commitlint/config-conventional"],
 
   rules: {
-    "type-enum": [
-      2,
-      "always",
-      ["feat", "fix", "refactor", "perf", "revert", "ci", "build", "docs", "test", "chore"],
-    ],
-    "type-case": [2, "always", "lower-case"],
-    "type-empty": [2, "never"],
-
+    // No inherited default exists for this one.
     "scope-case": [2, "always", "lower-case"],
 
-    "subject-empty": [2, "never"],
-    "subject-case": [2, "never", ["sentence-case", "start-case", "pascal-case", "upper-case"]],
-    "subject-full-stop": [2, "never", "."],
-
+    // 120 rather than the inherited 100. PR titles become main's commit
+    // subject under squash, and a conventional type + scope eats into
+    // the budget before the subject starts.
     "header-max-length": [2, "always", 120],
 
+    // Escalated from warning to error — a body running into the subject
+    // line is a malformed commit, not a style preference.
     "body-leading-blank": [2, "always"],
+
+    // Off rather than the inherited 100. Bodies here carry reasoning and
+    // occasional pasted output; hard-wrapping is the author's call.
     "body-max-line-length": [0],
+
     // footer-leading-blank dropped — the conventional-changelog parser
     // greedy-detects any line-start `Word:` in the body as a trailer
     // boundary, false-firing on natural prose ("What landed:", "Why:"). The
