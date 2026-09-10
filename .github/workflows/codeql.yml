@@ -1,0 +1,63 @@
+name: CodeQL
+
+# Static analysis of the JavaScript and TypeScript in this repository.
+#
+# NOT on pull_request, deliberately. The gate is the thing standing
+# between a change and main, and it is fast because everything in it
+# earns its place; CodeQL takes minutes and finds the class of problem
+# that is no more urgent an hour after merge than before it. Running it
+# on main and weekly catches the same things without making every pull
+# request wait.
+#
+# The weekly run is not redundant with the push run. CodeQL's queries
+# are updated continuously, so a scheduled analysis re-examines
+# unchanged code against rules that did not exist when it was written —
+# which is most of what this ever finds on a codebase this size.
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Sunday, offset from the Dependabot run so the two do not collide.
+    - cron: "23 6 * * 0"
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze JavaScript and TypeScript
+    runs-on: ubuntu-latest
+    permissions:
+      # Writing the results back is the whole point; without it the run
+      # succeeds and reports nowhere.
+      security-events: write
+      # CodeQL reads workflow run data to attribute alerts to commits.
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Initialise CodeQL
+        uses: github/codeql-action/init@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
+        with:
+          languages: javascript-typescript
+          # No build step: the analysis reads the source directly. Astro
+          # compiles to JavaScript that CodeQL would not learn anything
+          # extra from, and building here would double the runtime to
+          # analyse generated output.
+          build-mode: none
+          # security-extended over the default suite. The default is
+          # tuned for low noise on large codebases; this one is small
+          # enough that the extra queries cost little and the server
+          # handles untrusted form input.
+          queries: security-extended
+
+      - name: Analyse
+        uses: github/codeql-action/analyze@b96794f015dfd88f77b49b1c93e0fa7110f94c63 # v4
+        with:
+          category: /language:javascript-typescript
