@@ -33,12 +33,16 @@ const linkClass = (href: string) =>
 <nav class="fixed top-0 right-0 left-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
   <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
     <a href="/" class="flex items-center py-1.5">
+      {/* loading="eager": Astro's <Image> defaults to lazy, which
+          contradicted fetchpriority="high" and deferred the masthead
+          logo — an above-the-fold element. */}
       <Image
         src={imgVtsLogo0}
         alt="Vigario Technology Solutions"
         width="330"
         height="124"
         class="h-8 w-auto"
+        loading="eager"
         fetchpriority="high" />
     </a>
 

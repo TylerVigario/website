@@ -9,6 +9,9 @@ import "@/styles/global.css";
 // rather than the file's bytes — so the preload below points at the
 // same asset the stylesheet resolves to and cannot drift from it.
 import geistLatin from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
+// The social card. Imported rather than written as a path so the URL is
+// whatever Astro emits — the same reason the JSON-LD logo is imported.
+import ogCard from "@/assets/images/og-card.png";
 
 interface Props {
   /** Page title. Rendered as "<title> | Vigario Technology Solutions"
@@ -58,8 +61,12 @@ const canonicalURL = canonical ?? new URL(Astro.url.pathname, Astro.site).href;
     <link rel="preload" href={geistLatin} as="font" type="font/woff2" crossorigin />
     <link rel="canonical" href={canonicalURL} />
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
-    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
-    <link rel="apple-touch-icon" href="/icon.svg" />
+    {/* apple-touch-icon must be a PNG. iOS does not render SVG here, so
+        the SVG this used to point at produced a blank home-screen icon.
+        It also composites onto black if transparent, hence the opaque
+        background baked into the file. */}
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="sitemap" href="/sitemap-index.xml" />
     <meta property="og:type" content="website" />
@@ -68,7 +75,16 @@ const canonicalURL = canonical ?? new URL(Astro.url.pathname, Astro.site).href;
     <meta property="og:url" content={canonicalURL} />
     <meta property="og:site_name" content="Vigario Technology Solutions" />
     <meta property="og:locale" content="en_US" />
+    {/* og:image is what makes summary_large_image mean anything. Without
+        it every share on LinkedIn, X, Slack or iMessage rendered as a
+        bare link — the card was promised and never supplied. Absolute
+        URL because scrapers do not resolve relative ones. */}
+    <meta property="og:image" content={new URL(ogCard.src, Astro.site).href} />
+    <meta property="og:image:width" content={String(ogCard.width)} />
+    <meta property="og:image:height" content={String(ogCard.height)} />
+    <meta property="og:image:alt" content="Vigario Technology Solutions — IT services in Fresno, CA" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={new URL(ogCard.src, Astro.site).href} />
     {
       jsonLd && (
         <script
