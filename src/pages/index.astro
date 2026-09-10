@@ -5,6 +5,7 @@ import Footer from "@/components/Footer.astro";
 import Hero from "@/components/Hero.astro";
 import Services from "@/components/Services.astro";
 import About from "@/components/About.astro";
+import vtsLogo from "@/assets/images/vts-logo.png";
 
 // Built from Astro.site so the canonical domain lives in one place.
 const site = Astro.site!.href.replace(/\/$/, "");
@@ -18,7 +19,12 @@ const jsonLd = {
   url: `${site}`,
   telephone: "+1-559-900-1400",
   email: "tyler@tylervigario.com",
-  image: `${site}/images/vts-logo.png`,
+  // Built from the imported asset, not a hand-written path. The logo moved
+  // to src/assets/ during the Astro rebuild and is emitted content-hashed
+  // under /_astro/, so the literal `/images/vts-logo.png` this used to
+  // name has 404'd ever since — silently, because nothing renders it.
+  // Google reads this for rich results.
+  image: new URL(vtsLogo.src, site).href,
   founder: {
     "@type": "Person",
     name: "Tyler Vigario",
