@@ -36,11 +36,15 @@ for (const c of candidates) {
 if (!bin) {
   console.warn("  SKIPPED  actionlint is not installed — workflows were NOT linted.");
   console.warn("           CI still runs it, so a workflow mistake will surface there instead.");
-  console.warn("           Install it to catch those before pushing:");
+  console.warn("           Install it to catch those before pushing — the same way CI does,");
+  console.warn("           which is a pinned release asset rather than a piped remote script:");
   console.warn(
-    "             curl -sSfL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.12/scripts/download-actionlint.bash \\",
+    "             v=1.7.12; f=actionlint_${v}_linux_amd64.tar.gz; mkdir -p ~/.local/bin",
   );
-  console.warn('               | bash -s -- 1.7.12 "$HOME/.local/bin"');
+  console.warn(
+    "             curl -sSfLO --retry 5 https://github.com/rhysd/actionlint/releases/download/v$v/$f",
+  );
+  console.warn('             tar -xzf "$f" -C ~/.local/bin actionlint');
   process.exit(0);
 }
 
