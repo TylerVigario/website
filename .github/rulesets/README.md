@@ -140,9 +140,23 @@ knowingly.
 
 ## Not included
 
-No tag ruleset yet. Tags here are records of what shipped rather than build inputs — the
-RPM is built from the commit and tagged afterwards — but a version that can be repointed
-at different bits is the same defect one step later, so `refs/tags/v*` with `deletion`
-and `non_fast_forward` is worth adding. Note those two block re-pointing an *annotated*
-tag; a lightweight tag moved to a descendant is a fast-forward and slips through, so it
-rests on `git tag -a`, which the release workflow uses.
+No publishing environment with required reviewers. The release App can write `main` and
+create tags the moment a dispatch starts; an environment gate would put a second person
+between the dispatch and the write. It is the remaining gap, and it is accepted knowingly
+rather than overlooked.
+
+## Corrected
+
+This section previously said there was no tag ruleset, that the artifact was an RPM built
+from the commit and tagged afterwards, and that tag protection "rests on `git tag -a`,
+which the release workflow uses". All three were false, and the third was the dangerous
+one: it named annotated tags as the thing the guarantee depends on.
+
+`tags.json` exists and is applied. The artifact is a tarball. And the release workflow
+does **not** create annotated tags — it publishes with `gh release create --target`, which
+creates a lightweight tag, so `git cat-file -t v1.11.0` reports `commit`.
+
+The protection holds anyway, for the reason given above rather than the one that was
+written here: `update` refuses any move of a ref that already exists, and it does not care
+whether the tag is annotated or lightweight. That is precisely why `update` is in the
+payload and why the two rules that "look like the whole of it" are not.

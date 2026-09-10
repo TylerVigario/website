@@ -72,9 +72,16 @@ src/styles/global.css          # @theme tokens and the reveal rules
 
 ## Build & gate
 
-There is no release pipeline yet. One is being built against the static
-shape the site is moving to; until it exists, this repository builds and
-gates and does not ship anything.
+`Release` is a `workflow_dispatch`: it derives the version from the
+commits, builds one self-contained tarball, attests it through Sigstore,
+writes the bump and changelog to `main` as a forge-signed commit, and
+publishes the tag and artifact together. Nothing is written anywhere
+until the artifact exists and is attested, so a failed release leaves no
+commit, no tag and no release behind.
+
+Merging and releasing are separate decisions, so nothing ships on merge.
+Installing a release is the host's business — the repo carries no tool
+that runs on a server.
 
 `npm run ci` is the gate, and it is the same gate CI runs:
 
