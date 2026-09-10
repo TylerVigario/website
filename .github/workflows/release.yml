@@ -50,7 +50,7 @@ jobs:
       version: ${{ steps.decide.outputs.version }}
       tag: ${{ steps.decide.outputs.tag }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # git-cliff walks back to the previous tag. A shallow clone
           # computes the wrong version silently rather than failing.
@@ -58,7 +58,7 @@ jobs:
 
       - name: Compute the next version
         id: bump
-        uses: orhun/git-cliff-action@v4
+        uses: orhun/git-cliff-action@3d96a18cc4ec17e9dc69ddcc424ccafaf1f78ce2 # v4.9.0
         with:
           config: cliff.toml
           args: --bumped-version
@@ -120,12 +120,12 @@ jobs:
     steps:
       - name: Mint a token for the release App
         id: app-token
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
           app-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           token: ${{ steps.app-token.outputs.token }}
@@ -153,7 +153,7 @@ jobs:
         # build as an argument and committed further down, so it reaches
         # both the tarball and the branch without the tree being dirty in
         # between.
-        uses: orhun/git-cliff-action@v4
+        uses: orhun/git-cliff-action@3d96a18cc4ec17e9dc69ddcc424ccafaf1f78ce2 # v4.9.0
         with:
           config: cliff.toml
           args: --tag ${{ needs.decide.outputs.tag }}
@@ -179,7 +179,7 @@ jobs:
         # through Sigstore. A host verifies with `gh attestation verify`
         # before installing, which is the gate against a release asset
         # that did not come from here.
-        uses: actions/attest-build-provenance@v4
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           # One artifact, one attestation. MANIFEST.sha256 lives inside
           # the tarball, so this signature already covers it; a copy
