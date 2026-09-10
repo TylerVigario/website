@@ -7,7 +7,7 @@
 Use one of these private channels:
 
 - **Preferred: [GitHub Security Advisory](https://github.com/TylerVigario/website/security/advisories/new)** — a private collaboration space between you and the maintainer, supporting private patch development and coordinated disclosure.
-- **Fallback: email `admin@tylervigario.com`** with subject prefix `[vigario-website security]`. If you need PGP, ask in your first message and a key will be exchanged.
+- **Fallback: email `security@vigario.tech`** with subject prefix `[vigario-website security]`. If you need PGP, ask in your first message and a key will be exchanged.
 
 If you can, include:
 

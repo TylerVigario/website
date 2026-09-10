@@ -147,8 +147,10 @@ It drives every canonical link, `og:url`, the JSON-LD `@id` and `url`,
 `robots.txt` and both sitemaps — 16 built files in total. Nothing else
 in the site hardcodes it.
 
-Contact addresses are deliberately not part of that move: they remain on
-`tylervigario.com`, which is a mail question rather than a web one.
+Contact addresses move with it. `vigario.tech` runs a catch-all, so the
+site uses the prefix that fits the context rather than one personal
+address everywhere — `contact@` for the public contact points and the
+business record, `security@` for vulnerability reports.
 
 ## License
 
