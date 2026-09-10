@@ -1,4 +1,14 @@
 # Changelog
+## [1.12.0](https://github.com/TylerVigario/website/compare/v1.11.0...v1.12.0) (2026-09-10)
+
+### Features
+
+* **site:** Add the Jesus is Lord tagline, drop the retired org link 
+
+### Build & Packaging
+
+* Stop bundling SSR deps in dev, which broke astro dev 
+
 ## [1.11.0](https://github.com/TylerVigario/website/compare/v1.10.1...v1.11.0) (2026-09-09)
 
 ### Features
