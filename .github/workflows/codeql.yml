@@ -1,0 +1,79 @@
+name: CodeQL
+
+# Static analysis of this repository's source AND its workflows.
+#
+# NOT on pull_request, deliberately. The gate is the thing standing
+# between a change and main, and it is fast because everything in it
+# earns its place; CodeQL takes minutes and finds the class of problem
+# that is no more urgent an hour after merge than before it. Running it
+# on main and weekly catches the same things without making every pull
+# request wait.
+#
+# The weekly run is not redundant with the push run. CodeQL's queries
+# are updated continuously, so a scheduled analysis re-examines
+# unchanged code against rules that did not exist when it was written —
+# which is most of what this ever finds on a codebase this size.
+on:
+  push:
+    branches: [main]
+  schedule:
+    # Sunday, offset from the Dependabot run so the two do not collide.
+    - cron: "23 6 * * 0"
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze ${{ matrix.language }}
+    runs-on: ubuntu-latest
+    permissions:
+      # Writing the results back is the whole point; without it the run
+      # succeeds and reports nowhere.
+      security-events: write
+      # CodeQL reads workflow run data to attribute alerts to commits.
+      actions: read
+      contents: read
+    strategy:
+      # One language failing must not cancel the other's analysis. They
+      # are independent answers to independent questions.
+      fail-fast: false
+      matrix:
+        # `actions` is not padding. The release workflow holds a token
+        # that can write to main, and its safety rests on a hand-argued
+        # rule — that dispatch inputs reach scripts through env and are
+        # never pasted into a shell by `${{ }}`. That rule is currently
+        # enforced by a comment and whoever reads it. These queries
+        # check it mechanically, on every push, including in workflows
+        # nobody thought to re-read.
+        language: [javascript-typescript, actions]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Initialise CodeQL
+        # Pinned to the commit `v4` resolves to, not to the `v4` ref
+        # object. That tag is ANNOTATED, so the tag's own sha is not a
+        # commit sha and a workflow pinned to it fails to resolve.
+        uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
+        with:
+          languages: ${{ matrix.language }}
+          # No build step: the analysis reads the source directly. Astro
+          # compiles to JavaScript that CodeQL would not learn anything
+          # extra from, and building here would double the runtime to
+          # analyse generated output. `actions` has no build mode at all.
+          build-mode: none
+          # security-extended over the default suite. The default is
+          # tuned for low noise on large codebases; this one is small
+          # enough that the extra queries cost little and the server
+          # handles untrusted form input.
+          queries: security-extended
+
+      - name: Analyse
+        uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
+        with:
+          category: /language:${{ matrix.language }}
