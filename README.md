@@ -138,8 +138,17 @@ same commits.
 
 ## Domain
 
-`vigario.tech` once DNS/SSL is sorted. For now it answers on
-tylervigario.com.
+`vigario.tech` is canonical. `tylervigario.com` redirects to it,
+per-path and permanently, and stays registered for exactly that reason —
+a 301 carries link equity only while it exists.
+
+`site` in `astro.config.mjs` is the single place the domain is written.
+It drives every canonical link, `og:url`, the JSON-LD `@id` and `url`,
+`robots.txt` and both sitemaps — 16 built files in total. Nothing else
+in the site hardcodes it.
+
+Contact addresses are deliberately not part of that move: they remain on
+`tylervigario.com`, which is a mail question rather than a web one.
 
 ## License
 

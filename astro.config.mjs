@@ -20,7 +20,7 @@ import { RUNTIME_EXTERNALS } from "./runtime-externals.mjs";
 // reason to touch, and one crashed process taking all 13 static pages
 // down with it. See "Serving contract" in CLAUDE.md.
 export default defineConfig({
-  site: "https://tylervigario.com",
+  site: "https://vigario.tech",
   output: "static",
   adapter: node({ mode: "standalone" }),
   trailingSlash: "never",
