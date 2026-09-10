@@ -1,4 +1,14 @@
 # Changelog
+## [1.13.0](https://github.com/TylerVigario/website/compare/v1.12.0...v1.13.0) (2026-09-10)
+
+### Features
+
+* **site:** Make vigario.tech the canonical domain 
+
+### Bug Fixes
+
+* **seo:** Point the structured-data logo at a file that exists 
+
 ## [1.12.0](https://github.com/TylerVigario/website/compare/v1.11.0...v1.12.0) (2026-09-10)
 
 ### Features
