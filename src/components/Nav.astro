@@ -1,5 +1,4 @@
 ---
-import { Image } from "astro:assets";
 import imgVtsLogo0 from "@/assets/images/vts-logo.png";
 // Was a React client component holding `open` in useState and reading
 // the active route from usePathname(). Neither needs a runtime here:
@@ -33,11 +32,25 @@ const linkClass = (href: string) =>
 <nav class="fixed top-0 right-0 left-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
   <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
     <a href="/" class="flex items-center py-1.5">
-      {/* loading="eager": Astro's <Image> defaults to lazy, which
-          contradicted fetchpriority="high" and deferred the masthead
-          logo — an above-the-fold element. */}
-      <Image
-        src={imgVtsLogo0}
+      {/* A plain <img>, not Astro's <Image>, and that is load-bearing.
+          /contact and /pots-migration are prerender = false, so <Image>
+          there defers optimisation to /_image at REQUEST time — which
+          needs sharp, which the artifact cannot carry because a native
+          module will not bundle. It returned 500 and the logo was broken
+          on the two pages the site exists to convert.
+
+          Shipping sharp would add ~19.5 MB to a 9.4 MB artifact to serve
+          six requests, and buys nothing: this is a flat-colour logo, so
+          the emitted PNG is 2435 bytes against 4434 for the webp being
+          generated. The original is smaller than its own optimisation.
+
+          loading="eager" because the masthead logo is above the fold and
+          <img> would otherwise inherit no priority at all. Photographs
+          keep using <Image> — they appear only on prerendered pages,
+          where processing happens at build time and webp wins. */}
+      <img
+        src={imgVtsLogo0.src}
+              decoding="async"
         alt="Vigario Technology Solutions"
         width="330"
         height="124"

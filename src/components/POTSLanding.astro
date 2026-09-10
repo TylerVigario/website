@@ -1,5 +1,4 @@
 ---
-import { Image } from "astro:assets";
 import imgVtsLogo0 from "@/assets/images/vts-logo.png";
 import Check from "@/components/icons/Check.astro";
 import Email from "@/components/icons/Email.astro";
@@ -66,8 +65,9 @@ const faqs = [
       <header class="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-xl">
         <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
           <a href="/" aria-label="Vigario Technology Solutions home">
-            <Image
-              src={imgVtsLogo0}
+            <img
+              src={imgVtsLogo0.src}
+              decoding="async"
               alt="Vigario Technology Solutions"
               width={330}
               height={124}
@@ -519,8 +519,9 @@ const faqs = [
         <div class="mx-auto max-w-6xl px-6">
           <div class="flex flex-col items-center justify-between gap-4 text-sm text-muted sm:flex-row">
             <a href="/" class="inline-block py-2">
-              <Image
-                src={imgVtsLogo0}
+              <img
+                src={imgVtsLogo0.src}
+              decoding="async"
                 alt="Vigario Technology Solutions"
                 width={330}
                 height={124}

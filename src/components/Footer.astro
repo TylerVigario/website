@@ -1,5 +1,4 @@
 ---
-import { Image } from "astro:assets";
 import imgVtsLogo0 from "@/assets/images/vts-logo.png";
 import GitHub from "@/components/icons/GitHub.astro";
 import MapPin from "@/components/icons/MapPin.astro";
@@ -28,8 +27,9 @@ const year = new Date().getFullYear();
       <div class="text-center md:text-left">
         <address class="not-italic">
           <a href="/" class="inline-block py-2">
-            <Image
-              src={imgVtsLogo0}
+            <img
+              src={imgVtsLogo0.src}
+              decoding="async"
               alt="Vigario Technology Solutions"
               width="330"
               height="124"
