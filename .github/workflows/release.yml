@@ -241,17 +241,27 @@ jobs:
           echo "oid=$oid" >> "$GITHUB_OUTPUT"
 
       - name: Publish
-        # Tag and release in ONE call. `gh release create --target`
-        # creates the tag at that commit as part of publishing, so there
-        # is no window where a tag names a version with no release behind
-        # it — the state a separate tagging step leaves whenever the
-        # publish that follows it fails. Rule 18 of the repo standard is
-        # explicit that annotated or lightweight "makes no difference",
-        # so collapsing the two costs nothing.
+        # DRAFT, ATTACH, THEN PUBLISH — in that order, and not as one call.
         #
-        # Notes come from --unreleased rather than --latest: the tag is
-        # being created by this very command, so at the moment it runs
-        # there is no latest release to describe.
+        # Immutable releases freeze a release's assets at PUBLICATION.
+        # `gh release create` with the file attaches it after the release
+        # already exists, so publishing first would freeze an empty
+        # release and refuse the upload that follows.
+        #
+        # A draft creates no tag. That is the second reason for this
+        # order: until the draft is published, this run has produced no
+        # tag at all, so a failure during upload leaves a deletable draft
+        # rather than a permanent tag naming a release with nothing in it
+        # — and the tag ruleset makes such a tag unremovable. Verified:
+        # creating a draft left zero tags on the remote, and deleting it
+        # left zero behind.
+        #
+        # Publishing is what creates the tag, at --target. Rule 18 is
+        # explicit that annotated or lightweight makes no difference, so
+        # the lightweight tag this produces costs nothing.
+        #
+        # Notes come from --unreleased rather than --latest: the tag does
+        # not exist while this runs, so there is no latest to describe.
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           TAG: ${{ needs.decide.outputs.tag }}
@@ -259,8 +269,15 @@ jobs:
           ARTIFACT: dist-release/vigario-website-${{ needs.decide.outputs.version }}.tar.gz
         run: |
           set -euo pipefail
-          gh release create "$TAG" "$ARTIFACT" \
-            --target "$OID" \
-            --title "$TAG" \
-            --notes "$(npx --yes git-cliff@2 --config cliff.toml --unreleased --tag "$TAG" --strip all)"
-          echo "published $TAG -> $OID"
+          notes=$(npx --yes git-cliff@2 --config cliff.toml --unreleased --tag "$TAG" --strip all)
+
+          gh release create "$TAG" --draft --target "$OID" --title "$TAG" --notes "$notes"
+          gh release upload "$TAG" "$ARTIFACT"
+
+          # Only now does the tag exist and the freeze fall.
+          gh release edit "$TAG" --draft=false
+
+          published=$(gh release view "$TAG" --json isDraft,assets \
+            --jq 'if .isDraft then "draft" else ([.assets[].name]|join(",")) end')
+          [ "$published" != "draft" ] || { echo "::error::$TAG is still a draft"; exit 1; }
+          echo "published $TAG -> $OID with $published"
