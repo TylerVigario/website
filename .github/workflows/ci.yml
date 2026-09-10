@@ -37,7 +37,7 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Verify Node major pins agree
         # .nvmrc and package.json#engines.node must declare the same
         # Node major. CI reads .nvmrc directly (node-version-file in the
@@ -53,7 +53,7 @@ jobs:
       - name: Cache actionlint
         # Keyed on the pinned version, so the usual run downloads nothing.
         id: actionlint-cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.local/bin/actionlint
           key: actionlint-${{ runner.os }}-${{ env.ACTIONLINT_VERSION }}
@@ -103,7 +103,7 @@ jobs:
         # Astro's content and build caches live under .astro/. A warm
         # cache shaves wall-clock; the key rotates when deps or source
         # change, and restore-keys let a stale cache still seed it.
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .astro
           key: astro-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'astro.config.mjs') }}
