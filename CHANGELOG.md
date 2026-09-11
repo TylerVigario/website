@@ -1,4 +1,11 @@
 # Changelog
+## [1.13.1](https://github.com/TylerVigario/website/compare/v1.13.0...v1.13.1) (2026-09-11)
+
+### Bug Fixes
+
+* **seo:** Repair the logo and supply the social and icon assets 
+* **site:** Stop the logo 500ing on the two pages that accept input 
+
 ## [1.13.0](https://github.com/TylerVigario/website/compare/v1.12.0...v1.13.0) (2026-09-10)
 
 ### Features
