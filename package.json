@@ -32,11 +32,11 @@
     "check:pins": "node scripts/check-node-pins.mjs"
   },
   "dependencies": {
-    "@astrojs/node": "^11.1.5",
+    "@astrojs/node": "^11.1.6",
     "@astrojs/sitemap": "^3.7.4",
     "@fontsource-variable/geist": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
-    "astro": "^7.3.1",
+    "astro": "^7.3.3",
     "better-sqlite3": "^13.0.3",
     "nodemailer": "^10.0.1",
     "zod": "^4.5.4"
