@@ -61,6 +61,16 @@ export default defineConfig({
         },
       },
     ],
+    // Emit scripts as files rather than inlining them. Inline script is
+    // the one thing that forces a CSP to carry hashes — a per-page policy
+    // regenerated whenever a script changes, which silently becomes a
+    // broken page when it is not. External, the whole rule is
+    // `script-src 'self'`.
+    //
+    // It costs nothing. The bytes are identical and the HTML is smaller;
+    // and since HTML is no-cache while /_astro is immutable, inline
+    // script was re-sent on every navigation where a file is fetched once.
+    build: { assetsInlineLimit: 0 },
     ssr: { external: RUNTIME_EXTERNALS },
   },
 });

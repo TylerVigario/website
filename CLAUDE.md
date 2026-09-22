@@ -134,6 +134,38 @@ it is `node dist/server/entry.mjs`. Nothing else about the machine —
 process supervision, TLS, DNS, where the files live — belongs in this
 repository.
 
+## Security headers the server must send
+
+Stated here because the repo is what makes them satisfiable. The site can
+be served under a strict policy only because it contains nothing that
+needs an exception, and that is a property of the build:
+
+```text
+Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self';
+  img-src 'self'; font-src 'self'; connect-src 'self'; form-action 'self';
+  frame-ancestors 'none'; base-uri 'none'; object-src 'none';
+  upgrade-insecure-requests
+Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(),
+  magnetometer=(), microphone=(), payment=(), usb=()
+```
+
+**No `'unsafe-inline'`, and keeping it that way is the repo's job.** Three
+things would force one, and all three are currently zero across every
+page including the two that render at request time: inline `<script>`
+(scripts are emitted as files — `build.assetsInlineLimit: 0` in
+`astro.config.mjs`), inline `<style>`, and `style=` attributes. The hero's
+grid pattern was the only one of the last kind and now lives in
+`global.css` as `.hero-grid`.
+
+Adding any of them does not fail the build — it silently requires the
+policy to be weakened, which is the sort of thing that gets done in a
+hurry and never undone. `npm run check:bundles` catches the script case
+by budgeting total JavaScript weight; the other two are on review.
+
+`frame-ancestors 'none'` supersedes `X-Frame-Options` for anything
+current, and the two must agree — a browser reading only the older header
+should not be told something laxer.
+
 ## Core vocabulary
 
 - **Quote** — a "request a quote" submission from the main contact form. Schema in [`src/lib/api/quote.ts`](src/lib/api/quote.ts). Route handler at [`src/pages/api/quote.ts`](src/pages/api/quote.ts).

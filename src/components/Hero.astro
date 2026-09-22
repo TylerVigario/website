@@ -11,15 +11,13 @@ const stats = [
       {/* Background */}
       <div class="absolute inset-0 -z-10">
         <div class="absolute inset-0 bg-navy" />
-        {/* Grid pattern */}
-        <div
-          class="absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)",
-            backgroundSize: "64px 64px",
-          }}
-        />
+        {/* Grid pattern. Defined in global.css rather than a style
+            attribute: it is decorative and unchanging, so a per-element
+            style buys nothing — and it was the only inline style in the
+            build, which is the difference between serving under
+            style-src 'self' and having to allow 'unsafe-inline' for one
+            grid. */}
+        <div class="hero-grid absolute inset-0 opacity-[0.07]" />
         {/* Gradient accents */}
         <div class="pointer-events-none absolute -top-40 -right-40 h-150 w-150 rounded-full bg-accent/20 blur-[120px]" />
         <div class="pointer-events-none absolute -bottom-40 -left-40 h-125 w-125 rounded-full bg-accent/10 blur-[120px]" />
