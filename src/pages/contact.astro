@@ -10,6 +10,18 @@ import QuoteForm from "@/components/QuoteForm.astro";
 // the repopulation would silently do nothing. Pages that accept input
 // are dynamic; the rest of the site stays files on disk.
 export const prerender = false;
+// These responses carry what someone typed. The no-JS path redirects
+// back here with the submitted values and any errors in the query
+// string, so the HTML contains a real person's name, contact details
+// and message. Nothing may store that: not a browser cache a shared
+// machine can be walked up to, not an intermediary, not the back
+// button restoring it for whoever is next.
+//
+// no-store rather than no-cache — no-cache permits storage as long as
+// the cache revalidates, which is the wrong answer when the objection
+// is the storing itself.
+Astro.response.headers.set("Cache-Control", "no-store");
+
 const params = Astro.url.searchParams;
 const parseParam = (key: string) => {
   const raw = params.get(key);
