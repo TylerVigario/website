@@ -83,3 +83,14 @@ select:focus-visible {
       transform 0.6s ease-out;
   }
 }
+
+/* Hero backdrop. Extracted from an inline style attribute so the site can
+   be served under style-src 'self' with no 'unsafe-inline' exception —
+   one decorative grid is not worth weakening the rule that stops an
+   injected <style> from repainting the page. */
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
