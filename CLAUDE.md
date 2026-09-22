@@ -97,7 +97,21 @@ as though one of them is the way.
 | `/_astro/*` | Static file. `Cache-Control: public, max-age=31536000, immutable` — every filename is content-hashed (verified: 0 unhashed of 177), so a stale cache is impossible and revalidation is wasted. |
 | `/api/*` | Reaches the Node process. |
 | `/contact`, `/pots-migration` | Reaches the Node process — the only two pages with `prerender = false`, because they accept input. |
-| everything else | Static file from `dist/client/`. Unmatched paths should fall through to the Node process, so adding a dynamic route does not 404 until the server config catches up. |
+| everything else | Static file from `dist/client/`, served `Cache-Control: no-cache`. Unmatched paths should fall through to the Node process, so adding a dynamic route does not 404 until the server config catches up. |
+
+`no-cache` on HTML is not `no-store`: the file is cached, and revalidated
+before use. Apache already sends `ETag` and `Last-Modified`, so
+revalidation is a 304 with no body — the bandwidth cost is a header
+exchange and the benefit is that a release is visible the moment it
+lands. Sent nothing, HTML falls to heuristic freshness, where a cache is
+free to reuse a page for a fraction of its age without asking. An install
+that completes in six seconds is then invisible for hours, which makes
+the whole delivery path a guess.
+
+The two dynamic pages are `no-store`, set by the pages themselves rather
+than the server. They echo submitted values back into the form, so their
+HTML contains a real person's name and contact details; that must not be
+written to disk anywhere, and the app knows it whoever is serving it.
 
 Two properties are worth stating, because both are easy to lose by
 accident and neither is visible from the config alone:
