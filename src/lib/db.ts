@@ -49,3 +49,33 @@ export function getDb() {
   }
   return g.__sqlite__;
 }
+
+/** The columns a submission writes. Named once, here, because both
+ *  endpoints write the same row and each used to carry its own copy of
+ *  the INSERT. Two copies of a column list are two things to keep in
+ *  step with the table, and nothing was checking either of them. */
+export const SUBMISSION_COLUMNS = ["name", "contact", "services", "details"] as const;
+
+export interface Submission {
+  name: string;
+  contact: string;
+  /** A real services list for a quote; POTS_AUDIT_MARKER for an audit. */
+  services: string;
+  details: string | null;
+}
+
+/** Writes one submission and returns its row id.
+ *
+ *  The single place the table is written. A field added to a request
+ *  schema without a column here fails to compile rather than at INSERT
+ *  time, on a real submission, in production — which is where the
+ *  duplicated statements would have failed, on the one path this site
+ *  exists to serve.
+ */
+export function insertSubmission(row: Submission): number {
+  const cols = SUBMISSION_COLUMNS.join(", ");
+  const placeholders = SUBMISSION_COLUMNS.map(() => "?").join(", ");
+  const stmt = getDb().prepare(`INSERT INTO quotes (${cols}) VALUES (${placeholders})`);
+  const info = stmt.run(...SUBMISSION_COLUMNS.map((c) => row[c]));
+  return Number(info.lastInsertRowid);
+}

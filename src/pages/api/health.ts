@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { getDb } from "@/lib/db";
+import { getDb, SUBMISSION_COLUMNS, insertSubmission } from "@/lib/db";
 
 export const prerender = false;
 
@@ -18,9 +18,11 @@ export const prerender = false;
  * form on the site is losing leads.
  */
 
-/** Columns the two POST routes write. Present and named, or an insert
- *  fails at request time instead of here. */
-const REQUIRED_COLUMNS = ["name", "contact", "services", "details"];
+/** Columns the two POST routes write — imported, not restated. This
+ *  file used to carry its own copy beside its own INSERT, which made
+ *  four independent column lists across three files with nothing
+ *  checking any of them against the table. */
+const REQUIRED_COLUMNS: readonly string[] = SUBMISSION_COLUMNS;
 
 /** Thrown to unwind the write probe's transaction. Not a failure —
  *  reaching it means the write succeeded and is being undone. */
@@ -79,9 +81,15 @@ export const GET: APIRoute = () => {
       // scratch table would test a different, easier path than the one
       // that has to work.
       const probe = db!.transaction(() => {
-        db!
-          .prepare("INSERT INTO quotes (name, contact, services, details) VALUES (?, ?, ?, ?)")
-          .run("__healthcheck__", "__healthcheck__", "__healthcheck__", null);
+        // Through insertSubmission, so the probe exercises the exact
+        // statement a submission uses rather than a copy that could drift
+        // into passing while the real one fails.
+        insertSubmission({
+          name: "__healthcheck__",
+          contact: "__healthcheck__",
+          services: "__healthcheck__",
+          details: null,
+        });
         throw new Rollback();
       });
       try {

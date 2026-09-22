@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { getDb } from "@/lib/db";
+import { insertSubmission } from "@/lib/db";
 import { POTS_AUDIT_MARKER, PotsAuditRequest } from "@/lib/api/pots-audit";
 import { zodError } from "@/lib/api/error";
 import { sendPotsAuditNotification } from "@/lib/email/mailer";
@@ -43,13 +43,12 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 
   // Both forms land in the same table; `services` is what distinguishes
   // them, carrying the literal marker for an audit rather than a list.
-  const db = getDb();
-  db.prepare("INSERT INTO quotes (name, contact, services, details) VALUES (?, ?, ?, ?)").run(
+  insertSubmission({
     name,
     contact,
-    POTS_AUDIT_MARKER,
-    [`Business: ${business}`, `Monthly bill: ${bill}`, details].filter(Boolean).join("\n"),
-  );
+    services: POTS_AUDIT_MARKER,
+    details: [`Business: ${business}`, `Monthly bill: ${bill}`, details].filter(Boolean).join("\n"),
+  });
 
   try {
     await sendPotsAuditNotification({ business, name, contact, bill, details });
