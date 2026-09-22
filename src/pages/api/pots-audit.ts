@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { insertSubmission } from "@/lib/db";
 import { POTS_AUDIT_MARKER, PotsAuditRequest } from "@/lib/api/pots-audit";
-import { zodError } from "@/lib/api/error";
+import { methodNotAllowed, zodError } from "@/lib/api/error";
 import { sendPotsAuditNotification } from "@/lib/email/mailer";
 
 export const prerender = false;
@@ -65,3 +65,8 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   }
   return redirect("/pots-migration?sent=1#audit", 303);
 };
+
+/** Any other method. A specific export wins over ALL in Astro, so POST
+ *  above still handles POST; this exists so the rest get 405 with an
+ *  Allow header instead of the site's HTML 404. */
+export const ALL: APIRoute = () => methodNotAllowed(["POST"]);
