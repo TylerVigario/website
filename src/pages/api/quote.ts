@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { getDb } from "@/lib/db";
+import { insertSubmission } from "@/lib/db";
 import { QuoteRequest } from "@/lib/api/quote";
 import { zodError } from "@/lib/api/error";
 import { sendQuoteNotification } from "@/lib/email/mailer";
@@ -63,13 +63,12 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 
   const { name, contact, services, details } = parsed.data;
 
-  const db = getDb();
-  db.prepare("INSERT INTO quotes (name, contact, services, details) VALUES (?, ?, ?, ?)").run(
+  insertSubmission({
     name,
     contact,
-    services.join(", "),
-    details || null,
-  );
+    services: services.join(", "),
+    details: details || null,
+  });
 
   try {
     await sendQuoteNotification({ name, contact, services, details });
