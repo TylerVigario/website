@@ -1,4 +1,19 @@
 # Changelog
+## [1.14.0](https://github.com/TylerVigario/website/compare/v1.13.1...v1.14.0) (2026-09-23)
+
+### Features
+
+* **site:** Make the site servable under a strict CSP, and serve it 
+* **site:** Publish security.txt at the URI researchers actually check 
+* **db:** Version the schema so it can change after it has data 
+* **site:** Trap form spam, and support an unauthenticated relay 
+
+### Bug Fixes
+
+* **db:** Make one place own the write, and prove it matches the table 
+* **site:** Forbid storing the pages that echo what someone typed 
+* **api:** Answer an unsupported method with 405, and /api/ in one shape 
+
 ## [1.13.1](https://github.com/TylerVigario/website/compare/v1.13.0...v1.13.1) (2026-09-11)
 
 ### Bug Fixes
