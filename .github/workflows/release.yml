@@ -58,7 +58,7 @@ jobs:
 
       - name: Compute the next version
         id: bump
-        uses: orhun/git-cliff-action@3d96a18cc4ec17e9dc69ddcc424ccafaf1f78ce2 # v4.9.0
+        uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4.9.1
         with:
           config: cliff.toml
           args: --bumped-version
@@ -153,12 +153,31 @@ jobs:
         # build as an argument and committed further down, so it reaches
         # both the tarball and the branch without the tree being dirty in
         # between.
-        uses: orhun/git-cliff-action@3d96a18cc4ec17e9dc69ddcc424ccafaf1f78ce2 # v4.9.0
+        uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4.9.1
         with:
           config: cliff.toml
           args: --tag ${{ needs.decide.outputs.tag }}
         env:
           OUTPUT: ${{ runner.temp }}/CHANGELOG.md
+
+      - name: Render the release notes
+        # Same git-cliff, same commit range, same run as the changelog
+        # above, so the notes shown on the release and the section added
+        # to CHANGELOG.md cannot describe different sets of commits.
+        #
+        # This was `npx --yes git-cliff@2` down in Publish: an unpinned
+        # fetch of whatever 2.x the registry happened to serve, resolved
+        # at release time, in the job that holds the App token and
+        # produces the signed artifact. It was the only dependency in the
+        # pipeline not pinned to a digest, and the only one Dependabot
+        # could not see. The action is pinned, so the binary is now the
+        # same every run and a bump arrives as a reviewable PR.
+        uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4.9.1
+        with:
+          config: cliff.toml
+          args: --unreleased --tag ${{ needs.decide.outputs.tag }} --strip all
+        env:
+          OUTPUT: ${{ runner.temp }}/NOTES.md
 
       - name: Build the artifact
         # Before anything is written anywhere. Everything above this point
@@ -269,9 +288,8 @@ jobs:
           ARTIFACT: dist-release/vigario-website-${{ needs.decide.outputs.version }}.tar.gz
         run: |
           set -euo pipefail
-          notes=$(npx --yes git-cliff@2 --config cliff.toml --unreleased --tag "$TAG" --strip all)
-
-          gh release create "$TAG" --draft --target "$OID" --title "$TAG" --notes "$notes"
+          gh release create "$TAG" --draft --target "$OID" --title "$TAG" \
+            --notes-file "$RUNNER_TEMP/NOTES.md"
           gh release upload "$TAG" "$ARTIFACT"
 
           # Only now does the tag exist and the freeze fall.

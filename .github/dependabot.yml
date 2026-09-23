@@ -38,8 +38,11 @@ updates:
       # Held deliberately, and Dependabot re-raises both weekly without
       # this. Remove an entry when its blocker clears.
       #
-      # typescript-eslint declares a peer of >=4.8.4 <6.1.0, so
-      # TypeScript 7 has no supported lint path yet.
+      # Two independent blockers, both re-verified 2026-09-22:
+      # typescript-eslint peers >=4.8.4 <6.1.0, and @astrojs/check —
+      # which is what `npm run typecheck` runs — peers ^5.0.0 ||
+      # ^6.0.0. TypeScript 7 has neither a lint path nor a typecheck
+      # path yet, and typecheck is the load-bearing one.
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
       # @types/node tracks the runtime, and .nvmrc plus engines.node both
