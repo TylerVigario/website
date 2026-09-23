@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { insertSubmission } from "@/lib/db";
 import { QuoteRequest } from "@/lib/api/quote";
-import { zodError } from "@/lib/api/error";
+import { methodNotAllowed, zodError } from "@/lib/api/error";
 import { sendQuoteNotification } from "@/lib/email/mailer";
 
 // The one thing on this route that opts out of prerendering. Everything
@@ -87,3 +87,8 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   }
   return redirect("/contact?sent=1", 303);
 };
+
+/** Any other method. A specific export wins over ALL in Astro, so POST
+ *  above still handles POST; this exists so the rest get 405 with an
+ *  Allow header instead of the site's HTML 404. */
+export const ALL: APIRoute = () => methodNotAllowed(["POST"]);

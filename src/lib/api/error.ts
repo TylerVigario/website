@@ -75,3 +75,60 @@ export function zodError(result: SafeParseFailure): Response {
     headers: { "Content-Type": "application/problem+json" },
   });
 }
+
+/** 405, with the `Allow` header RFC 9110 requires on one.
+ *
+ *  Without a handler for the other methods, Astro has no route for them
+ *  and answers 404 with an HTML error page — telling a client the
+ *  endpoint does not exist when it does, in a media type an API consumer
+ *  did not ask for. The distinction matters to anything deciding whether
+ *  to retry, and `enhance.ts` parses every failure as Problem Details, so
+ *  an HTML body degrades a specific message into a generic one.
+ */
+export function methodNotAllowed(allowed: readonly string[]): Response {
+  const allow = allowed.join(", ");
+  const body: ProblemDetails = {
+    type: "/errors/method-not-allowed",
+    title: "Method Not Allowed",
+    status: 405,
+    detail: `This endpoint accepts ${allow}.`,
+  };
+  return new Response(JSON.stringify(body), {
+    status: 405,
+    headers: { "Content-Type": "application/problem+json", Allow: allow },
+  });
+}
+
+/** TWO ERRORS UNDER /api/ ARE NOT THIS SHAPE, AND CANNOT BE.
+ *
+ *  A cross-site write is rejected by Astro before any middleware or
+ *  route runs — `403 text/plain`, "Cross-site POST form submissions are
+ *  forbidden". Measured: middleware executes for 200 and 405 and never
+ *  for that 403. Controlling its shape would mean turning off
+ *  `checkOrigin` and reimplementing the check, trading a working
+ *  security boundary for a media type.
+ *
+ *  An unhandled fault in a route returns the site's `500 text/html`.
+ *  Catching that to reshape it is the blanket try/catch the guardrails
+ *  forbid, and it would drop the stack the adapter logs.
+ *
+ *  Neither costs the one consumer anything: enhance.ts parses failures
+ *  with `res.json().catch(() => null)` and falls back to a root message,
+ *  so an unparseable body degrades the wording rather than the handling.
+ *
+ *  404 for a path under /api/ that no route claims.
+ *
+ *  The namespace answers in one media type. A client that asked for JSON
+ *  and got an HTML 404 has to guess whether it reached the API at all. */
+export function notFound(): Response {
+  const body: ProblemDetails = {
+    type: "/errors/not-found",
+    title: "Not Found",
+    status: 404,
+    detail: "No endpoint at this path.",
+  };
+  return new Response(JSON.stringify(body), {
+    status: 404,
+    headers: { "Content-Type": "application/problem+json" },
+  });
+}

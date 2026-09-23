@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import { methodNotAllowed } from "@/lib/api/error";
 import { getDb, SUBMISSION_COLUMNS, insertSubmission } from "@/lib/db";
 
 export const prerender = false;
@@ -108,3 +109,7 @@ export const GET: APIRoute = () => {
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
 };
+
+/** Anything but GET. A monitor that POSTs here has a bug, and should be
+ *  told so rather than handed an HTML 404 suggesting the endpoint moved. */
+export const ALL: APIRoute = () => methodNotAllowed(["GET"]);
