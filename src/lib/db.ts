@@ -31,10 +31,32 @@ function getDbPath(): string {
 // close.
 const g = globalThis as unknown as { __sqlite__?: Database.Database };
 
-export function getDb() {
-  if (!g.__sqlite__) {
-    const db = new Database(getDbPath());
-    db.pragma("journal_mode = WAL");
+/**
+ * Ordered schema migrations. Index 0 takes the database from version 0
+ * to 1, index 1 from 1 to 2, and so on; `PRAGMA user_version` records
+ * where a file has got to.
+ *
+ * WHY THIS EXISTS. The schema was one `CREATE TABLE IF NOT EXISTS` and
+ * nothing else, which is fine exactly once. Adding a column to a table
+ * that already holds rows had no defined path — the CREATE is a no-op on
+ * an existing table, so a new column would simply never appear, and the
+ * failure would surface as an INSERT rejecting a field that exists in
+ * the schema and not on disk. The live database is in that state now:
+ * user_version 0, with real submissions in it.
+ *
+ * MIGRATION 1 IS DELIBERATELY THE EXISTING SCHEMA. On a fresh file it
+ * creates the table; on the production file it does nothing, because the
+ * table is already there and identical. Either way the file ends at
+ * version 1 and every later migration can assume that shape. A migration
+ * that only works on an empty database is not a migration.
+ *
+ * NEVER EDIT A MIGRATION THAT HAS SHIPPED. Databases that already ran it
+ * will not run it again, so an edit changes what new files get and
+ * nothing else — the two silently diverge. Append a new one instead.
+ */
+const MIGRATIONS: readonly ((db: Database.Database) => void)[] = [
+  // 0 -> 1: the schema as it stood before versioning existed.
+  (db) =>
     db.exec(`
       CREATE TABLE IF NOT EXISTS quotes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,7 +66,40 @@ export function getDb() {
         details TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
-    `);
+    `),
+];
+
+/** The version a database is brought to. Exported so a test can assert
+ *  the two agree rather than trusting the loop. */
+export const SCHEMA_VERSION = MIGRATIONS.length;
+
+function migrate(db: Database.Database): void {
+  const from = db.pragma("user_version", { simple: true }) as number;
+  if (from > MIGRATIONS.length) {
+    // Older code against a newer file. Refusing is the only safe answer:
+    // the table may have columns this build does not know how to write.
+    throw new Error(
+      `database is at schema version ${from}, newer than this build understands (${MIGRATIONS.length}). ` +
+        `Deploy a build that knows it, or restore an older file.`,
+    );
+  }
+  for (let v = from; v < MIGRATIONS.length; v++) {
+    // One transaction per step, so a failure leaves the version at the
+    // last step that fully applied rather than half of the next one.
+    db.transaction(() => {
+      MIGRATIONS[v](db);
+      // v is a loop index over a literal array, so there is nothing to
+      // interpolate but a number — PRAGMA takes no bound parameters.
+      db.pragma(`user_version = ${v + 1}`);
+    })();
+  }
+}
+
+export function getDb() {
+  if (!g.__sqlite__) {
+    const db = new Database(getDbPath());
+    db.pragma("journal_mode = WAL");
+    migrate(db);
     g.__sqlite__ = db;
   }
   return g.__sqlite__;
