@@ -94,3 +94,14 @@ select:focus-visible {
     linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
   background-size: 64px 64px;
 }
+
+/* Honeypot. Off-canvas rather than display:none — bots that respect
+   display:none skip the field, and a skipped trap catches nothing. It
+   stays in the layout, occupying no space anyone can reach. */
+.hp-field {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}

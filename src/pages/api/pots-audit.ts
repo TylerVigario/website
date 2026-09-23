@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { insertSubmission } from "@/lib/db";
 import { POTS_AUDIT_MARKER, PotsAuditRequest } from "@/lib/api/pots-audit";
 import { methodNotAllowed, zodError } from "@/lib/api/error";
+import { isTrapped } from "@/lib/api/honeypot";
 import { sendPotsAuditNotification } from "@/lib/email/mailer";
 
 export const prerender = false;
@@ -24,6 +25,20 @@ async function readBody(request: Request): Promise<unknown> {
 export const POST: APIRoute = async ({ request, redirect }) => {
   const wantsJson = (request.headers.get("content-type") ?? "").includes("application/json");
   const body = await readBody(request);
+
+  // Dropped before validation and before the database. The reply is the
+  // one a real submission gets — same status, same body, same redirect —
+  // because an error teaches a bot what to change, and a 200 that stores
+  // nothing teaches it that it already succeeded.
+  if (isTrapped(body)) {
+    if (wantsJson) {
+      return new Response(JSON.stringify({ success: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return redirect("/pots-migration?sent=1", 303);
+  }
   const parsed = PotsAuditRequest.safeParse(body);
 
   if (!parsed.success) {
