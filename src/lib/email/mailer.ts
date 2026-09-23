@@ -18,43 +18,83 @@ import { renderPotsAuditEmail, renderQuoteEmail } from "@/emails/templates";
 // work fine without one.
 const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || process.env.SMTP_USER || "";
 
-// SMTP config gates on USER+PASS (Gmail-style auth) rather than HOST
-// alone — the Gmail relay we use requires authentication. Vis-daily-
-// tracker's mailer uses an unauthenticated internal relay (host-only
-// gate); the shape is the same, the predicate is different.
-// Three states, not two. Both set is on; neither set is deliberately
-// off; exactly one set is a mistake that must not look like the second.
+// TWO WAYS TO BE CONFIGURED, because there are two kinds of relay.
 //
-// A typo in a variable name, or a secret that did not propagate, leaves
-// the transporter null and the send logging "would send" to stdout —
-// identical to having chosen not to configure mail. The submission is
-// still saved and still answered, so nothing is lost from the visitor's
-// side, but nobody is told a lead arrived and nothing says why.
+// An authenticated relay (Gmail-style) needs SMTP_USER + SMTP_PASS. An
+// internal relay does not — an MTA listening on loopback commonly takes
+// local mail without credentials and forwards it upstream. Gating on
+// USER+PASS alone made that shape unusable, so a deployment with a
+// perfectly good relay could still have mail silently off, every
+// submission logging "would send".
+//
+// Three states, not two. Configured is on; nothing set is deliberately
+// off; exactly one of USER/PASS is a mistake that must not look like the
+// second. A typo in a variable name leaves the transporter null and the
+// send logging to stdout — indistinguishable from having chosen not to
+// configure mail, which is why the misconfiguration is called out loudly.
+// The envelope sender. An authenticated relay implies one — the account
+// doing the authenticating — but an unauthenticated relay does not, and
+// interpolating an unset SMTP_USER produced `<undefined>`, which is a
+// malformed address every send would have failed on.
+const MAIL_FROM = process.env.SMTP_FROM || process.env.SMTP_USER || "";
+
 const SMTP_USER_SET = Boolean(process.env.SMTP_USER);
 const SMTP_PASS_SET = Boolean(process.env.SMTP_PASS);
-const SMTP_CONFIGURED = SMTP_USER_SET && SMTP_PASS_SET;
+const SMTP_AUTHED = SMTP_USER_SET && SMTP_PASS_SET;
+const SMTP_HOST_SET = Boolean(process.env.SMTP_HOST);
+const SMTP_CONFIGURED = SMTP_AUTHED || SMTP_HOST_SET;
 
 if (SMTP_USER_SET !== SMTP_PASS_SET) {
   const set = SMTP_USER_SET ? "SMTP_USER" : "SMTP_PASS";
   const missing = SMTP_USER_SET ? "SMTP_PASS" : "SMTP_USER";
   console.error(
-    `[Mailer] MISCONFIGURED: ${set} is set but ${missing} is not, so notification ` +
-      `email is OFF. Submissions are still saved and answered, but no one is told ` +
-      `they arrived. Set ${missing}, or unset ${set} if mail is meant to be off.`,
+    `[Mailer] MISCONFIGURED: ${set} is set but ${missing} is not. If this relay ` +
+      `needs authentication, notification email is OFF until ${missing} is set. ` +
+      `Submissions are still saved and answered, but no one is told they arrived.`,
   );
 }
 
-const transporter = SMTP_CONFIGURED
-  ? nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.gmail.com",
-      port: Number(process.env.SMTP_PORT) || 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    })
-  : null;
+// An unauthenticated relay has no account to fall back to, so the
+// recipient must be stated. Without this the transporter would be built
+// and every send would fail on an empty `to` — configured, and silently
+// delivering nowhere, which is worse than off.
+if (SMTP_CONFIGURED && (!NOTIFY_EMAIL || !MAIL_FROM)) {
+  console.error(
+    `[Mailer] MISCONFIGURED: a relay is configured but ${!NOTIFY_EMAIL ? "no recipient" : "no sender"} is. ` +
+      "Set NOTIFY_EMAIL and SMTP_FROM — SMTP_USER is only a default for either when the " +
+      "relay authenticates. Notification email is OFF.",
+  );
+}
+
+const SMTP_HOST = process.env.SMTP_HOST || "smtp.gmail.com";
+
+// A relay on this machine is reached over loopback, where there is no
+// network for anyone to sit on and therefore nothing for certificate
+// verification to protect against. A local MTA routinely presents a
+// self-signed or long-stale certificate on loopback, which nodemailer
+// correctly refuses — every send then fails while the submission saves
+// fine and nobody is told.
+//
+// Relaxed for loopback ONLY, and by host rather than by a flag, so it
+// cannot be switched on for a relay that actually crosses a network. A
+// remote relay keeps full verification.
+const LOOPBACK = ["localhost", "127.0.0.1", "::1", "[::1]"].includes(SMTP_HOST);
+
+const transporter =
+  SMTP_CONFIGURED && NOTIFY_EMAIL && MAIL_FROM
+    ? nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: false,
+        ...(LOOPBACK ? { tls: { rejectUnauthorized: false } } : {}),
+        // Omitted entirely rather than passed empty: nodemailer attempts
+        // AUTH when the key is present, and a relay that offers no AUTH
+        // rejects the attempt.
+        ...(SMTP_AUTHED
+          ? { auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } }
+          : {}),
+      })
+    : null;
 
 interface SendOptions {
   to: string;
@@ -89,7 +129,7 @@ async function sendEmail(options: SendOptions): Promise<boolean> {
 
   try {
     const info = await transporter.sendMail({
-      from: `"VTS Website" <${process.env.SMTP_USER}>`,
+      from: `"VTS Website" <${MAIL_FROM}>`,
       to: options.to,
       subject: options.subject,
       text: options.text,

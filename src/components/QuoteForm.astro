@@ -30,6 +30,29 @@ const inputClass =
     </div>
   ) : (
     <form method="post" action="/api/quote" novalidate data-quote-form class="group">
+      {/* Honeypot. Hidden from people, filled by bots — three of the four
+          submissions this site has ever had were spam, and each one ticked
+          every checkbox it could find. A crawler fills this; a visitor
+          never sees it.
+
+          Hidden by CLASS, not a style attribute: the site is served under
+          style-src 'self' with no 'unsafe-inline', so an inline style here
+          would either be blocked or force the policy open for one field.
+
+          Not display:none — some bots skip those deliberately. Positioned
+          off-canvas instead, with aria-hidden and tabindex="-1" so it is
+          absent for a screen reader and unreachable by keyboard, and
+          autocomplete off so no browser ever fills it for a real person. */}
+      <div class="hp-field" aria-hidden="true">
+        <label for="quote-website">Leave this field empty</label>
+        <input
+          type="text"
+          id="quote-website"
+          name="website"
+          tabindex="-1"
+          autocomplete="off"
+        />
+      </div>
       <p
         data-form-error
         role="alert"
