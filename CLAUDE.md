@@ -326,7 +326,7 @@ Hard rules. These mirror pipetree's; they exist because violating them produced 
 A change spanning 2+ PRs needs the series-as-shipped to be what you tested, not the per-PR view (per-PR green ≠ series-as-shipped green).
 
 - **Predictable upfront**: branch `integration/<slug>` off `main`; sub-PRs target the integration branch (each still gets full CI via `pull_request`). The closing `integration/<slug>` → `main` PR is the release unit.
-- **Not predictable upfront**: control the release boundary with commit type. Intermediate PRs merge as `refactor:` / `chore:` (no bump); the closing PR that makes the series cohere gets `fix:` / `feat:` and ships.
+- **Not predictable upfront**: control the release boundary with *when you dispatch*. Releases are `workflow_dispatch`, never triggered by a merge, so intermediate PRs merge with their honest types and nothing ships until Release is run after the series coheres. Don't retype an intermediate PR to dodge a bump: `chore:` misrecords a change to the artifact, and `refactor:` bumps anyway.
 
 Don't introduce a permanent `develop` branch — the ceremony outweighs the benefit for a single-prod app. Integration branches are short-lived and per-series; `main` stays trunk.
 

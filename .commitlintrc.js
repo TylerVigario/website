@@ -22,6 +22,15 @@
 export default {
   extends: ["@commitlint/config-conventional"],
 
+  // commitlint skips messages it recognises as generated: `Revert "…"`,
+  // `Merge … into …`, a bare version number. Here that let such a PR title
+  // pass the title gate, become main's commit under squash, and then be
+  // skipped by git-cliff, which parses only conventional types. GitHub's
+  // Revert button produces exactly that title, so an urgent revert merged
+  // green and Release reported nothing to ship. With the defaults off, the
+  // title has to say `revert: …`, which cliff.toml releases as a patch.
+  defaultIgnores: false,
+
   rules: {
     // No inherited default exists for this one.
     "scope-case": [2, "always", "lower-case"],

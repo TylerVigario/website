@@ -41,9 +41,12 @@ compiled server directly (`node ./dist/server/entry.mjs`) — the same
 entrypoint production runs. Both need a prior `npm run build`.
 
 Pre-commit runs lint-staged then `astro check` and the tests. Commitlint enforces the Angular type set on the message
-— `feat`, `fix`, `refactor`, `perf`, `revert`, `ci`, `build`, `docs`,
-`test`, `chore`, lowercase subject. Only `feat`/`fix`/`revert` cut a
-release; the rest ship no version bump. Don't try to be clever.
+— `feat`, `fix`, `refactor`, `perf`, `revert`, `style`, `ci`, `build`,
+`docs`, `test`, `chore`, lowercase subject. The type is the release
+decision: `feat` bumps minor; `fix`, `revert`, `perf`, `refactor` and
+`build` bump patch, because each changes the shipped artifact; `ci`,
+`docs`, `test`, `chore` and `style` never bump. A revert is titled
+`revert: …`, not GitHub's `Revert "…"`, which the title check refuses.
 
 ## Where stuff lives
 

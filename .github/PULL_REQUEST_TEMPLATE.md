@@ -3,8 +3,10 @@ PR title MUST be a Conventional Commit — `<type>[optional scope]: <description
 Squash-merge uses the title as main's commit message; commitlint enforces
 this via the PR-title workflow.
 
-Types: feat | fix | refactor | perf | revert | ci | build | docs | test | chore
-Only feat / fix / revert bump versions; everything else is no-release.
+Types: feat | fix | refactor | perf | revert | build | style | ci | docs | test | chore
+feat bumps minor; fix / revert / perf / refactor / build bump patch (they change
+the artifact); style / ci / docs / test / chore never bump. A revert is titled
+`revert: …` — GitHub's `Revert "…"` title is refused.
 -->
 
 ## Summary

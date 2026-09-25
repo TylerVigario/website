@@ -20,7 +20,7 @@
 # and the bundle assertion run once per push instead — see the bottom
 # of this file.
 
-valid='^(feat|fix|refactor|perf|ci|build|docs|test|chore|revert|integration)/[a-z0-9]+(-[a-z0-9]+)*$'
+valid='^(feat|fix|refactor|perf|style|ci|build|docs|test|chore|revert|integration)/[a-z0-9]+(-[a-z0-9]+)*$'
 
 while read -r local_ref local_sha remote_ref remote_sha; do
   # Delete refs have local_sha = 40 zeros. Nothing to validate.
@@ -41,7 +41,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
     echo "error: branch name '$branch' doesn't match the convention." >&2
     echo "" >&2
     echo "Expected: <type>/<slug>" >&2
-    echo "  type: feat | fix | refactor | perf | ci | build | docs | test | chore | revert | integration" >&2
+    echo "  type: feat | fix | refactor | perf | style | ci | build | docs | test | chore | revert | integration" >&2
     echo "  slug: kebab-case — starts and ends with [a-z0-9], single dashes only" >&2
     echo "" >&2
     echo "Examples:" >&2

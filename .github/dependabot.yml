@@ -13,10 +13,17 @@ updates:
       day: sunday
     open-pull-requests-limit: 5
     commit-message:
-      # Matches the repo's conventional-commit gate (pr-title.yml) and
-      # keeps dependency noise out of the release changelog's feat/fix
-      # sections.
-      prefix: chore
+      # The type is the release decision, so it follows the repo's rule:
+      # did the artifact change. Runtime dependencies ship in the tarball,
+      # so their bumps are `build` — which cliff.toml records under Build &
+      # Packaging and releases as a patch. Development dependencies never
+      # reach the tarball, so theirs are `chore` and release nothing.
+      #
+      # Every npm bump used to be `chore`, which cliff.toml skips. A
+      # security fix to nodemailer or better-sqlite3 would merge, and
+      # Release would then report "nothing bump-worthy" and ship nothing.
+      prefix: build
+      prefix-development: chore
       include: scope
     groups:
       # One PR per cluster rather than per package: an astro bump that
@@ -26,7 +33,11 @@ updates:
       # This previously grouped next / @next/* / react, none of which
       # have existed since the Astro rebuild — so those groups matched
       # nothing, and the packages that do exist arrived one PR each.
+      # Production only, so the group is wholly `build` or wholly `chore`
+      # — never a mix whose prefix would depend on how Dependabot breaks
+      # the tie. @astrojs/check, a dev tool, lands in dev-tooling.
       astro:
+        dependency-type: production
         patterns:
           - astro
           - "@astrojs/*"
@@ -64,7 +75,8 @@ updates:
       day: sunday
     open-pull-requests-limit: 5
     commit-message:
-      prefix: chore
+      # Workflow changes are CI infrastructure: `ci`, which never releases.
+      prefix: ci
       include: scope
     groups:
       actions:
