@@ -1,7 +1,5 @@
 ---
 import Base from "@/layouts/Base.astro";
-import Nav from "@/components/Nav.astro";
-import Footer from "@/components/Footer.astro";
 
 // Built from Astro.site so the canonical domain lives in one place.
 const site = Astro.site!.href.replace(/\/$/, "");
@@ -62,7 +60,6 @@ const capabilities = [
 ---
 
 <Base title="Windows Systems" description="Windows deployment, management, and support for small businesses in Fresno, CA. Workstations, servers, Active Directory, Group Policy, and patching." jsonLd={jsonLd}>
-  <Nav />
 
     <>
       {/* Hero */}
@@ -206,5 +203,4 @@ const capabilities = [
         </div>
       </section>
     </>
-  <Footer />
 </Base>

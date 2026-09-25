@@ -1,0 +1,31 @@
+---
+// The header for a campaign landing page: the logo home and a call
+// button, and deliberately no navigation. A landing page has one job,
+// and every link that leads elsewhere is a way off the offer. Passed
+// into Base as slot="header"; the site footer still closes the page.
+import imgVtsLogo0 from "@/assets/images/vts-logo.png";
+import Phone from "@/components/icons/Phone.astro";
+---
+
+<header class="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-xl">
+  <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+    <a href="/" aria-label="Vigario Technology Solutions home">
+      <img
+        src={imgVtsLogo0.src}
+        decoding="async"
+        alt="Vigario Technology Solutions"
+        width={330}
+        height={124}
+        class="h-7 w-auto"
+        fetchpriority="high" />
+    </a>
+    <a
+      href="tel:+15599001400"
+      class="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent-bright"
+    >
+      <Phone class="h-4 w-4" />
+      <span class="hidden sm:inline">(559) 900-1400</span>
+      <span class="sm:hidden">Call</span>
+    </a>
+  </div>
+</header>

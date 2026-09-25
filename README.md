@@ -65,7 +65,7 @@ src/lib/
   email/mailer.ts              # nodemailer; best-effort form notification, logged on failure
 src/emails/templates.ts        # notification bodies as HTML strings, escaped at every interpolation
 src/components/                # .astro — Nav, Hero, the forms, Lightbox, icons/
-src/layouts/Base.astro         # <head>, canonical URL, nav, footer
+src/layouts/Base.astro         # <head>, canonical URL, and the frame: nav, <main>, footer
 src/scripts/                   # the only browser JS: lightbox, scroll reveal
 src/styles/global.css          # @theme tokens and the reveal rules
 ```

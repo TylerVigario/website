@@ -1,7 +1,5 @@
 ---
 import Base from "@/layouts/Base.astro";
-import Nav from "@/components/Nav.astro";
-import Footer from "@/components/Footer.astro";
 import ServiceIcon from "@/components/ServiceIcon.astro";
 import { services } from "@/lib/services";
 
@@ -68,7 +66,6 @@ const general = services.filter(
 ---
 
 <Base title="IT Services" description="Full-stack IT in Fresno, CA — networking, security cameras, Windows and Linux, cabling, and custom software. Transparent hourly rate, no retainers." jsonLd={jsonLd}>
-  <Nav />
 
     <>
       {/* Header */}
@@ -203,5 +200,4 @@ const general = services.filter(
         </div>
       </section>
     </>
-  <Footer />
 </Base>

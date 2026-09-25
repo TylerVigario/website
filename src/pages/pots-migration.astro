@@ -1,8 +1,7 @@
 ---
 import Base from "@/layouts/Base.astro";
 import POTSLanding from "@/components/POTSLanding.astro";
-import Nav from "@/components/Nav.astro";
-import Footer from "@/components/Footer.astro";
+import LandingHeader from "@/components/LandingHeader.astro";
 
 // Built from Astro.site so the canonical domain lives in one place.
 const site = Astro.site!.href.replace(/\/$/, "");
@@ -75,11 +74,7 @@ const errors = parseParam("e");
 const submitted = params.get("sent") === "1";
 ---
 
-<Base title="POTS to VoIP Migration | Stop Overpaying for Landline Service" description="Still on AT&T or Verizon copper landlines? Your carrier is charging you 5-20x what modern VoIP costs. Free telecom audit for Central Valley businesses." jsonLd={jsonLd}>
-  <Nav />
-
-    <>
-      <POTSLanding values={values} errors={errors} submitted={submitted} />
-    </>
-  <Footer />
+<Base title="POTS to VoIP Migration | Stop Overpaying for Landline Service" description="Still on AT&T or Verizon copper landlines? Your carrier is charging you 5-20x what modern VoIP costs. Free telecom audit for Central Valley businesses." jsonLd={jsonLd} mainClass="pt-16">
+  <LandingHeader slot="header" />
+  <POTSLanding values={values} errors={errors} submitted={submitted} />
 </Base>

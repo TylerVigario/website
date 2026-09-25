@@ -14,8 +14,6 @@ const preview = (rel: string) => {
   return hit.default;
 };
 import Base from "@/layouts/Base.astro";
-import Nav from "@/components/Nav.astro";
-import Footer from "@/components/Footer.astro";
 import { caseStudies } from "@/lib/work";
 
 // Built from Astro.site so the canonical domain lives in one place.
@@ -41,7 +39,6 @@ const jsonLd = {
 ---
 
 <Base title="Work" description="Case studies: custom field-operations software, a home for an author's work, and telecom advocacy that saved a family business five figures." jsonLd={jsonLd}>
-  <Nav />
 
     <>
       {/* Hero */}
@@ -150,5 +147,4 @@ const jsonLd = {
         </div>
       </section>
     </>
-  <Footer />
 </Base>
