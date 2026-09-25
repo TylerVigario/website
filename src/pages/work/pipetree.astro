@@ -2,8 +2,6 @@
 import { Image } from "astro:assets";
 import imgAddressesFull0 from "@/assets/images/work/pipetree/addresses-full.webp";
 import Base from "@/layouts/Base.astro";
-import Nav from "@/components/Nav.astro";
-import Footer from "@/components/Footer.astro";
 import PipetreeScreenshots from "@/components/PipetreeScreenshots.astro";
 
 // Built from Astro.site so the canonical domain lives in one place.
@@ -78,7 +76,6 @@ const stack = [
 ---
 
 <Base title="Pipetree Case Study" description="How VTS built Pipetree — an operations platform for crossbore CCTV pipe inspection. Typed field data in, a live infrastructure graph out, PM review inline." jsonLd={jsonLd}>
-  <Nav />
 
     <>
       {/* Hero */}
@@ -337,5 +334,4 @@ const stack = [
         </div>
       </section>
     </>
-  <Footer />
 </Base>

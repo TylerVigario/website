@@ -2,8 +2,6 @@
 import { Image } from "astro:assets";
 import imgHero0 from "@/assets/images/work/italesowell/hero.webp";
 import Base from "@/layouts/Base.astro";
-import Nav from "@/components/Nav.astro";
-import Footer from "@/components/Footer.astro";
 import ItalesowellScreenshots from "@/components/ItalesowellScreenshots.astro";
 
 // Built from Astro.site so the canonical domain lives in one place.
@@ -86,7 +84,6 @@ const stack = [
 ---
 
 <Base title="iTaleSoWell Case Study" description="How VTS built iTaleSoWell — a home for Aniken D. Robinson's dark short fiction. Twenty tales, an ePub for every one, and an audience the author owns." jsonLd={jsonLd}>
-  <Nav />
 
     <>
       {/* Hero */}
@@ -392,5 +389,4 @@ const stack = [
         </div>
       </section>
     </>
-  <Footer />
 </Base>

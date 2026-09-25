@@ -1,7 +1,5 @@
 ---
 import Base from "@/layouts/Base.astro";
-import Nav from "@/components/Nav.astro";
-import Footer from "@/components/Footer.astro";
 
 // Built from Astro.site so the canonical domain lives in one place.
 const site = Astro.site!.href.replace(/\/$/, "");
@@ -38,7 +36,6 @@ const credentials = [
 ---
 
 <Base title="About Tyler Vigario" description="20+ years in tech, from pulling cable to writing custom software. Tyler Vigario founded VTS in 2021 to bring full-stack IT to Central Valley businesses." jsonLd={jsonLd}>
-  <Nav />
 
     <>
       {/* Story */}
@@ -156,5 +153,4 @@ const credentials = [
         </div>
       </section>
     </>
-  <Footer />
 </Base>

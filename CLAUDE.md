@@ -196,8 +196,9 @@ src/
 │   ├── QuoteForm.astro  PotsAuditForm.astro
 │   ├── Lightbox.astro                # <dialog> + scroll-snap viewer
 │   ├── POTSLanding.astro             # hero, case study, FAQ, form
+│   ├── LandingHeader.astro           # logo + call, no nav; the POTS page's header slot
 │   └── icons/                        # inline SVG, incl. icons/services/*
-├── layouts/Base.astro                # <head>, canonical, nav, footer
+├── layouts/Base.astro                # <head>, canonical, and the frame: nav, <main id="main">, footer
 ├── lib/
 │   ├── db.ts                         # better-sqlite3 singleton
 │   ├── services.ts  work.ts          # content catalogs

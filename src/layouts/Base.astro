@@ -12,6 +12,8 @@ import geistLatin from "@fontsource-variable/geist/files/geist-latin-wght-normal
 // The social card. Imported rather than written as a path so the URL is
 // whatever Astro emits — the same reason the JSON-LD logo is imported.
 import ogCard from "@/assets/images/og-card.png";
+import Nav from "@/components/Nav.astro";
+import Footer from "@/components/Footer.astro";
 
 interface Props {
   /** Page title. Rendered as "<title> | Vigario Technology Solutions"
@@ -27,9 +29,12 @@ interface Props {
    * page data, but serialised here so every page emits it the same way
    * and nothing hardcodes the domain. */
   jsonLd?: unknown;
+  /** Classes for the page's <main>, for pages whose content is laid
+   * out on the landmark itself rather than on sections inside it. */
+  mainClass?: string;
 }
 
-const { title, description, bareTitle = false, canonical, jsonLd } = Astro.props;
+const { title, description, bareTitle = false, canonical, jsonLd, mainClass } = Astro.props;
 
 const fullTitle = bareTitle ? title : `${title} | Vigario Technology Solutions`;
 
@@ -102,7 +107,21 @@ const canonicalURL = canonical ?? new URL(Astro.url.pathname, Astro.site).href;
     >
       Skip to content
     </a>
-    <slot />
+    {/* The frame lives here, once, rather than in every page. When each
+        page repeated it by hand, eleven of fifteen left out <main> — so
+        the skip link above pointed at nothing and there was no main
+        landmark — and the POTS page ended up with two headers and two
+        footers. A page now supplies its content; the frame is not
+        something it can forget or double.
+
+        The header and footer are slots with the site's own as the
+        fallback, so a page that needs a different one says so
+        explicitly (slot="header") instead of rebuilding the frame. */}
+    <slot name="header"><Nav /></slot>
+    <main id="main" class={mainClass}>
+      <slot />
+    </main>
+    <slot name="footer"><Footer /></slot>
     <script>
       import "@/scripts/reveal";
     </script>
