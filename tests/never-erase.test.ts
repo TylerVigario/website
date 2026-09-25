@@ -33,6 +33,8 @@ const ASSIGN = /\.value\s*=(?!=)/g;
 const RESET = /\.reset\s*\(\s*\)/g;
 /** Replacing a subtree the user may be typing into. */
 const INNER_HTML = /\.innerHTML\s*=(?!=)/g;
+/** Ticking or unticking a checkbox — also input, also erasable. */
+const CHECKED = /\.checked\s*=(?!=)/g;
 
 const hits = (re: RegExp) =>
   sourceFiles(SRC).flatMap((f) => {
@@ -65,6 +67,41 @@ describe("nothing erases what someone typed", () => {
 
   it("never calls form.reset()", () => {
     expect(hits(RESET).map((f) => `${f.file}:${f.line}`)).toHaveLength(0);
+  });
+
+  // A tick is input as much as text is. The only code allowed to set one
+  // is the draft restore, it may only ever tick, and only in a group the
+  // user has not touched — so no path in the tree can untick anything.
+  it("only ever ticks a checkbox, in the draft restore, in an untouched group", () => {
+    const found = hits(CHECKED);
+    expect(found.length, "the restore no longer ticks anything?").toBeGreaterThan(0);
+    for (const { file, line, text } of found) {
+      expect(file, `${file}:${line} sets .checked outside the restore`).toBe(
+        path.join("src", "lib", "forms", "enhance.ts"),
+      );
+      expect(text, `${file}:${line} assigns something other than true`).toMatch(
+        /\.checked\s*=\s*true\s*;/,
+      );
+      const lines = readFileSync(file, "utf8").split("\n");
+      const before = lines.slice(Math.max(0, line - 4), line).join("\n");
+      expect(before, `${file}:${line} is not guarded on an untouched group`).toMatch(
+        /!\s*\w+\.some\(\s*\(?\w+\)?\s*=>\s*\w+\.checked\s*\)/,
+      );
+    }
+  });
+
+  // A textarea's default value is everything between its tags. Markup
+  // like `<textarea>\n  {value}\n</textarea>` makes the default a run of
+  // whitespace, which is never "", so the restore's empty-field guard
+  // never fires — and the no-JS path echoes the padding back, growing
+  // the text on every round trip.
+  it("never pads a textarea's content", () => {
+    const padded = sourceFiles(SRC).flatMap((f) =>
+      [...readFileSync(f, "utf8").matchAll(/<textarea\b[^>]*>([\s\S]*?)<\/textarea>/g)]
+        .filter((m) => /^\s|\s$/.test(m[1]))
+        .map(() => f),
+    );
+    expect(padded, "a textarea whose content is padded with whitespace").toEqual([]);
   });
 
   // innerHTML is only dangerous on a subtree that might hold live input.

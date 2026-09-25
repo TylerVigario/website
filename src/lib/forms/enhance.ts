@@ -125,20 +125,46 @@ export function enhance({
       return;
     }
     if (!raw) return;
-    let saved: Fields;
+    let saved: unknown;
     try {
-      saved = JSON.parse(raw) as Fields;
+      saved = JSON.parse(raw);
     } catch {
       return;
     }
+    // Valid JSON is not necessarily a draft. `null`, a number or an array
+    // parse fine and would throw below, after the listeners are attached,
+    // taking the rest of the page's script down with them.
+    if (!saved || typeof saved !== "object" || Array.isArray(saved)) return;
 
-    for (const [field, value] of Object.entries(saved)) {
-      for (const c of controlsFor(form, field)) {
-        if (c instanceof HTMLInputElement && c.type === "checkbox") {
-          c.checked = Array.isArray(value) && value.includes(c.value);
-        } else if (
-          (c instanceof HTMLInputElement || c instanceof HTMLTextAreaElement) &&
+    for (const [field, value] of Object.entries(saved as Fields)) {
+      const controls = controlsFor(form, field);
+
+      // A checkbox group is restored only if nothing in it is ticked.
+      // Ticking is input as much as typing is, and a draft is older than
+      // whatever the page shows now — a no-JS round trip re-renders the
+      // group with the choices just submitted. Restoring only ever ticks;
+      // it never unticks anything.
+      const boxes = controls.filter(
+        (c): c is HTMLInputElement => c instanceof HTMLInputElement && c.type === "checkbox",
+      );
+      if (boxes.length > 0) {
+        if (Array.isArray(value) && !boxes.some((b) => b.checked)) {
+          for (const b of boxes) if (value.includes(b.value)) b.checked = true;
+        }
+        continue;
+      }
+
+      for (const c of controls) {
+        if (
+          (c instanceof HTMLInputElement ||
+            c instanceof HTMLTextAreaElement ||
+            c instanceof HTMLSelectElement) &&
           typeof value === "string" &&
+          // A select only takes a value it still offers. Assigning one it
+          // does not have leaves it with nothing selected, not even the
+          // placeholder.
+          (!(c instanceof HTMLSelectElement) ||
+            Array.from(c.options).some((o) => o.value === value)) &&
           // Only fill a control the user has not already typed into, so
           // a restore can never clobber live input.
           c.value === ""
@@ -283,11 +309,26 @@ export function enhance({
           : [];
 
         if (fieldErrors.length > 0) {
+          // Each error goes to the control it names. An item inside a
+          // group ("services.0" — the path zod reports) goes to its
+          // group. Anything that names no control ("(root)", or a field
+          // this form does not have) goes to the form-level alert:
+          // dropping it would leave the button re-enabled and the person
+          // with no idea why nothing happened.
+          const unplaced: string[] = [];
+          let first: HTMLElement | undefined;
           for (const { field, message } of fieldErrors) {
-            touched.add(field);
-            setError(form, field, message);
+            const name = controlsFor(form, field).length > 0 ? field : field.split(".")[0];
+            const controls = controlsFor(form, name);
+            if (controls.length === 0) {
+              unplaced.push(message);
+              continue;
+            }
+            touched.add(name);
+            setError(form, name, message);
+            first ??= controls[0];
           }
-          const first = controlsFor(form, fieldErrors[0].field)[0];
+          if (unplaced.length > 0) rootError(unplaced.join(" "));
           first?.focus();
         } else {
           const fallback =
