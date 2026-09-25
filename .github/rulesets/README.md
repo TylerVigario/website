@@ -114,7 +114,7 @@ no ruleset and leaving nothing in the ruleset history.
 ## `bypass_actors` — exactly one, and why
 
 ```json
-{ "actor_id": 4497411, "actor_type": "Integration", "bypass_mode": "always" }
+{ "actor_id": 4810355, "actor_type": "Integration", "bypass_mode": "always" }
 ```
 
 That is the **App ID** of `website-release`, installed on this repository only. It is not
@@ -122,7 +122,7 @@ the Client ID — rulesets identify actors by App ID, and a Client ID here does 
 The whole `PUT` fails with 422 rather than the one line being rejected.
 
 The App exists because this release **records itself**: it bumps `package.json`, writes
-`CHANGELOG.md` and pushes the tag. A release that cannot write the branch cannot leave a
+`CHANGELOG.md` and creates the tag by publishing the release. A release that cannot write the branch cannot leave a
 receipt in it, and dropping the receipt to avoid a credential trades a durable property
 of the project for an operational one.
 
@@ -132,11 +132,10 @@ rule in the ruleset, not only `pull_request` — so this App is past `deletion` 
 with the bypass and one without. Judged not worth the second apply step here; revisit if
 the repository stops being single-owner.
 
-There is no environment gate with required reviewers. greenroom-win has one because its
-releases are dispatched by hand; this repository releases on merge, and a required
-reviewer would stall every run. The consequence is that any workflow in this repository
-can mint this App's token — which is the exposure that gate would close, accepted
-knowingly.
+There is no environment gate with required reviewers. Releases here are dispatched by
+hand, as greenroom-win's are, so a reviewer would not stall anything; the gate is simply
+not in place. The consequence is that any workflow in this repository can mint this App's
+token, which is the exposure such a gate would close.
 
 ## Not included
 

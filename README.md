@@ -73,11 +73,13 @@ src/styles/global.css          # @theme tokens and the reveal rules
 ## Build & gate
 
 `Release` is a `workflow_dispatch`: it derives the version from the
-commits, builds one self-contained tarball, attests it through Sigstore,
-writes the bump and changelog to `main` as a forge-signed commit, and
-publishes the tag and artifact together. Nothing is written anywhere
-until the artifact exists and is attested, so a failed release leaves no
-commit, no tag and no release behind.
+commits, runs the pull-request gate against that commit, builds one
+self-contained tarball, attests it through Sigstore, writes the bump and
+changelog to `main` as a forge-signed commit, and publishes the artifact,
+which creates the tag. Nothing is written anywhere until the artifact
+exists and is attested. A failure after that, while publishing, leaves the
+release commit without a tag, and re-dispatching with that version
+finishes the job.
 
 Merging and releasing are separate decisions, so nothing ships on merge.
 Installing a release is the host's business — the repo carries no tool

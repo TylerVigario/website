@@ -12,6 +12,10 @@ on:
   push:
     branches: [main]
   pull_request:
+  # release.yml calls this workflow as its gate, so a release is checked
+  # by exactly what every pull request is checked by, on the commit being
+  # released. A copy of the steps there would drift from these.
+  workflow_call:
 
 # Concurrency: PRs cancel prior runs of the same PR (saves CI time on
 # rapid pushes), main pushes queue serially. Nothing releases from here —
@@ -27,9 +31,8 @@ permissions:
 
 jobs:
   # =========================================================================
-  # Gate — quality checks + full-build validation. Runs on every PR and
-  # every push to main. This is the whole of continuous integration;
-  # release.yml is separate and runs only when asked.
+  # Gate — quality checks + full-build validation. Runs on every PR,
+  # every push to main, and as the first job of every release.
   # =========================================================================
   gate:
     name: Gate
@@ -38,6 +41,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Nothing here talks to the remote after checkout, so the token
+          # has no reason to sit in .git/config while npm ci, the tests and
+          # the build run whatever the dependency tree contains.
+          persist-credentials: false
       - name: Verify Node major pins agree
         # .nvmrc and package.json#engines.node must declare the same
         # Node major. CI reads .nvmrc directly (node-version-file in the

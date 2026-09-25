@@ -144,11 +144,6 @@ for (const f of fs.readdirSync(prebuildDir)) {
 // reason the tarball carries its own node_modules rather than assuming
 // the host can reach a registry.
 //
-// It has to be the regenerated one. The release workflow rewrites
-// CHANGELOG.md before this script runs, so the copy taken here is
-// current; a build from a tree where that rewrite had been reverted
-// would ship a changelog stopping one version short of the artifact
-// describing itself.
 // --changelog points somewhere other than the tree when the caller has
 // a regenerated one the tree does not carry yet. The release workflow
 // builds BEFORE it writes anything to the repository, so at build time
@@ -192,14 +187,17 @@ fs.writeFileSync(
 // An attestation covers the tarball's digest, which proves the download
 // was genuine and says nothing about the extracted tree afterwards —
 // and the extracted tree is what actually serves. Drift there (a
-// half-finished deploy, corruption, a dropped-in file) is invisible to
-// a whole-archive checksum.
+// half-finished deploy, corruption, an edited file) is invisible to a
+// whole-archive checksum.
 //
-// The manifest is written into the artifact AND published beside it as
-// its own release asset. The release copy is the authoritative one:
-// anything on the host is exactly as suspect as the files it would be
-// vouching for, so verification compares the installed tree against
-// GitHub, never against another local file.
+// What the manifest catches is a file that changed or went missing.
+// `sha256sum -c` checks the files it lists and nothing else, so a file
+// ADDED to the tree passes it; noticing one means comparing the tree's
+// file list against the manifest's as well.
+//
+// The reference is the copy inside a freshly downloaded, attestation-
+// verified tarball. A manifest already on the host is exactly as suspect
+// as the files it would be vouching for.
 //
 // sha256sum's own format, so `sha256sum -c` works on it directly.
 function manifestLines(dir, base = dir) {
