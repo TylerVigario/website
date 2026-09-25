@@ -9,13 +9,38 @@
 # diff after the fact. Filtering ACM (Added / Copied / Modified)
 # leaves out deletions/renames since lint-staged handles those fine.
 STAGED=$(git diff --cached --name-only --diff-filter=ACM)
+# Files that differ between the index and the working tree: the ones
+# staged only in part, with the rest left out deliberately.
+PARTIAL=$(git diff --name-only)
 
 npx lint-staged
 
-# Re-stage everything that was originally staged. No-op when
-# lint-staged worked correctly; closes the gap when it didn't.
-# `xargs` skips when input is empty, so the no-files case is fine.
-[ -n "$STAGED" ] && echo "$STAGED" | xargs git add --
+# Re-stage what was originally staged — but only files that were staged
+# WHOLE. No-op when lint-staged worked correctly; closes the gap when it
+# did not.
+#
+# A partially staged file is never re-added. `git add` stages a whole
+# file, so re-adding one commits every hunk that was left out on purpose
+# (a debug line, a local secret) into a public repository. lint-staged
+# already handles those files itself: it hides the unstaged hunks while
+# the formatters run, stages what they changed, and puts the hunks back.
+# The Windows gap this block exists for would leave such a file's
+# formatting unstaged; the commit then fails CI's format check, which
+# is loud and fixable. Re-adding it would instead publish something its
+# author chose not to, which is neither.
+IFS='
+'
+for f in $STAGED; do
+  case "
+$PARTIAL
+" in
+    *"
+$f
+"*) ;;
+    *) git add -- "$f" ;;
+  esac
+done
+unset IFS
 
 node --run typecheck
 node --run test
