@@ -1,23 +1,45 @@
 name: CodeQL
 
-# Static analysis of this repository's source AND its workflows.
+# Static analysis of the repository's TypeScript and JavaScript, and of
+# its workflows.
 #
-# NOT on pull_request, deliberately. The gate is the thing standing
-# between a change and main, and it is fast because everything in it
-# earns its place; CodeQL takes minutes and finds the class of problem
-# that is no more urgent an hour after merge than before it. Running it
-# on main and weekly catches the same things without making every pull
-# request wait.
+# WHAT THIS DOES NOT SEE. Stated first because this file used to claim
+# all three, and a comment saying a check exists is what stops people
+# checking by hand.
 #
-# The weekly run is not redundant with the push run. CodeQL's queries
-# are updated continuously, so a scheduled analysis re-examines
-# unchanged code against rules that did not exist when it was written —
-# which is most of what this ever finds on a codebase this size.
+# - .astro files. CodeQL's JavaScript extractor has no handler for the
+#   extension, so every page, layout and component is skipped, including
+#   the two request-time pages that parse the query string and render it
+#   back. What is analysed is the plain .ts and .mjs: src/lib, the API
+#   routes, scripts/ and the config files.
+# - Astro's request as a source of untrusted data. CodeQL models Express,
+#   Nest and Next, not Astro, so the taint-tracking queries (SQL
+#   injection, XSS, HTML injection) have nowhere to start in
+#   src/pages/api/. Queries that need no source still run.
+# - workflow_dispatch inputs. The workflow queries treat data an
+#   outsider controls as untrusted (PR titles, branch names, issue and
+#   comment bodies, artifacts), not inputs a collaborator dispatches.
+#   The release override is validated in release.yml's decide job, and
+#   that validation is the guard.
 on:
+  # No paths filter on push. CodeQL compares each analysis with the
+  # previous commit's, and a commit it skipped is a gap it reports as a
+  # missing analysis, not as nothing to see.
   push:
     branches: [main]
+  # The workflow leg only, and only when a workflow changes. Without this
+  # a workflow is live on main before its analysis exists, and workflows
+  # are the code that runs holding this repository's tokens. It takes
+  # seconds, and it is not a required check, so nothing waits on it.
+  pull_request:
+    paths:
+      - ".github/**"
   schedule:
-    # Sunday, offset from the Dependabot run so the two do not collide.
+    # Weekly, because CodeQL's queries change, and unchanged code is
+    # re-examined against rules that did not exist when it was written.
+    # GitHub disables a public repository's scheduled workflows after 60
+    # days without activity. If this repository goes that quiet, the run
+    # stops until it is re-enabled from the Actions tab.
     - cron: "23 6 * * 0"
   workflow_dispatch:
 
@@ -32,48 +54,45 @@ jobs:
   analyze:
     name: Analyze ${{ matrix.language }}
     runs-on: ubuntu-latest
+    # The gate's ceiling. A repository this size analyses in minutes; a
+    # hung upload should fail rather than hold a runner for six hours.
+    timeout-minutes: 15
     permissions:
-      # Writing the results back is the whole point; without it the run
-      # succeeds and reports nowhere.
+      # The SARIF upload needs it. Without it the upload is refused and
+      # the job fails.
       security-events: write
-      # CodeQL reads workflow run data to attribute alerts to commits.
-      actions: read
+      # No `actions: read`: CodeQL needs it only in private repositories,
+      # and this one is public.
       contents: read
     strategy:
-      # One language failing must not cancel the other's analysis. They
-      # are independent answers to independent questions.
+      # One leg failing must not cancel the other's analysis.
       fail-fast: false
       matrix:
-        # `actions` is not padding. The release workflow holds a token
-        # that can write to main, and its safety rests on a hand-argued
-        # rule — that dispatch inputs reach scripts through env and are
-        # never pasted into a shell by `${{ }}`. That rule is currently
-        # enforced by a comment and whoever reads it. These queries
-        # check it mechanically, on every push, including in workflows
-        # nobody thought to re-read.
-        language: [javascript-typescript, actions]
+        # `actions` guards the workflows that read outsider-controlled
+        # event data. pr-title.yml is the live case: it lints the PR
+        # title, which is whatever the author typed, and must only ever
+        # hand it to a shell through env.
+        language: ${{ github.event_name == 'pull_request' && fromJSON('["actions"]') || fromJSON('["javascript-typescript", "actions"]') }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Nothing after checkout uses git credentials. CodeQL is given
+          # its token directly.
+          persist-credentials: false
 
       - name: Initialise CodeQL
-        # Pinned to the commit `v4` resolves to, not to the `v4` ref
-        # object. That tag is ANNOTATED, so the tag's own sha is not a
-        # commit sha and a workflow pinned to it fails to resolve.
-        uses: github/codeql-action/init@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
+        uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           languages: ${{ matrix.language }}
-          # No build step: the analysis reads the source directly. Astro
-          # compiles to JavaScript that CodeQL would not learn anything
-          # extra from, and building here would double the runtime to
-          # analyse generated output. `actions` has no build mode at all.
+          # The extractor reads source directly, and `actions` has no
+          # build mode. See the header for what that leaves out.
           build-mode: none
-          # security-extended over the default suite. The default is
-          # tuned for low noise on large codebases; this one is small
-          # enough that the extra queries cost little and the server
-          # handles untrusted form input.
+          # security-extended over the default suite, which is tuned for
+          # low noise on large codebases. This one is small enough that
+          # the extra queries cost little.
           queries: security-extended
 
       - name: Analyse
-        uses: github/codeql-action/analyze@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4
+        uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           category: /language:${{ matrix.language }}
