@@ -23,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Override the computed version (rarely needed; blank lets the commits decide)"
+        description: "Override the computed version, as MAJOR.MINOR.PATCH (rarely needed; blank lets the commits decide)"
         required: false
         type: string
 
@@ -72,15 +72,42 @@ jobs:
         # so a version string containing shell metacharacters would run as
         # code. Only collaborators can dispatch this, which lowers the
         # stakes without changing the rule.
+        #
+        # Env alone is not enough, because the tag this step outputs does
+        # not stay in env. git-cliff-action's run step is
+        # `run.sh --config=${{ inputs.config }} ${{ inputs.args }}`, and
+        # the release job passes it `args: --tag <this tag>` — so whatever
+        # is decided here IS pasted into a shell, twice, in the job that
+        # holds the release App token. A tag of `v1.2.3;id` runs `id`
+        # there, and an innocent `1.2.3 ` with a trailing space breaks the
+        # release.
+        #
+        # So the value is validated here, at the one place it enters, and
+        # nothing downstream has to be trusted to quote it. Both sources
+        # are checked: the override because a person typed it, the
+        # computed bump because it is text another program produced.
+        # Nothing mechanical checks this for us — CodeQL's workflow
+        # queries do not treat dispatch inputs as untrusted — which is why
+        # it is a refusal in code rather than a rule in a comment.
         env:
           FORCED: ${{ inputs.version }}
           COMPUTED: ${{ steps.bump.outputs.content }}
         run: |
           set -euo pipefail
           current="v$(node -p "require('./package.json').version")"
-          forced="$FORCED"
+          # One leading "v" is tolerated on the override: typing the tag
+          # instead of the version is the obvious slip, and it is not the
+          # kind of input this guard exists for.
+          forced="${FORCED#v}"
           next="${forced:+v$forced}"
           next="${next:-$COMPUTED}"
+          if [ -n "$next" ] && ! [[ "$next" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            # %q, not the raw value. A newline in the input would
+            # otherwise start a line of its own, and a line beginning
+            # `::` is a workflow command.
+            printf '::error::Not a version (expected MAJOR.MINOR.PATCH): %q\n' "$next"
+            exit 1
+          fi
           echo "current=$current  next=$next  forced=${forced:-no}"
           # An explicit version input is an instruction, not a suggestion,
           # so it skips the equality veto. That is what makes a partial
@@ -146,6 +173,8 @@ jobs:
         run: npm run ci
 
       - name: Regenerate the changelog
+        # The tag in `args` reaches a shell unquoted inside the action —
+        # see decide, which validates it for exactly that reason.
         # Into the runner's temp directory, NOT the tree. The build below
         # refuses a dirty tree, and that guard is worth more than the
         # convenience of writing here — it is what stops an artifact
@@ -171,7 +200,9 @@ jobs:
         # produces the signed artifact. It was the only dependency in the
         # pipeline not pinned to a digest, and the only one Dependabot
         # could not see. The action is pinned, so the binary is now the
-        # same every run and a bump arrives as a reviewable PR.
+        # same every run and a bump arrives as a reviewable PR. Its
+        # `args` reach a shell unquoted, as above; decide validates the
+        # tag for both.
         uses: orhun/git-cliff-action@a9a95522b26fe6403f7bb24031f21fb573d0f5ff # v4.9.1
         with:
           config: cliff.toml
