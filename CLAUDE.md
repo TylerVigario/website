@@ -52,11 +52,15 @@ This repository builds, gates and **releases**. It does not install
 anything anywhere, and it holds no tool that runs on a server.
 
 `Release` (`workflow_dispatch`) computes the version from the commits,
-builds one self-contained tarball, attests it through Sigstore, writes
-the version and changelog to `main` as a forge-signed commit, and
-publishes the tag and the artifact in a single call. Everything that can
-fail runs before anything is written, so a failed release leaves no
-commit, no tag and no release behind.
+runs the same gate every pull request runs (`ci.yml`, called), builds one
+self-contained tarball, attests it through Sigstore, writes the version
+and changelog to `main` as a forge-signed commit, and publishes: a draft
+release, the artifact attached, then published, which is what creates the
+tag. Nothing is written until the artifact is built and attested, so a
+failure up to then leaves no commit, no tag and no release. A failure
+while publishing leaves the release commit on `main` without a tag;
+dispatching again with that version completes it. A version whose tag
+already exists is refused before anything runs.
 
 The artifact is `dist/`, `node_modules/` (better-sqlite3 only, for the
 native addon that cannot be bundled), a generated `package.json`,
