@@ -1,16 +1,37 @@
 import * as z from "zod/mini";
+import { MAX, tooLong } from "@/lib/forms/limits";
 
-// Shared shape for /api/pots-audit — used by the route handler to
-// validate the inbound POST body and by POTSLanding to construct it.
-// Messages are user-facing: they surface inline next to inputs (via
-// the zodResolver client-side) and inside Problem Details errors[]
-// when the server rejects (via zodError() → setError()).
+// The POTS audit form's shape, enforced wherever an audit is submitted
+// (src/lib/api/submit.ts, for both the JSON API and the no-JS page).
+// Messages are user-facing: they render beside the field, and
+// src/lib/forms/rules.ts repeats them in the browser, verified by
+// tests/form-rules.test.ts.
 export const PotsAuditRequest = z.object({
-  business: z.string().check(z.trim(), z.minLength(1, "Please enter the business name.")),
-  name: z.string().check(z.trim(), z.minLength(1, "Please enter your name.")),
-  contact: z.string().check(z.trim(), z.minLength(1, "Please enter a phone number or email.")),
-  bill: z.string().check(z.trim(), z.minLength(1, "Pick a range.")),
-  details: z.optional(z.string().check(z.trim())),
+  business: z
+    .string()
+    .check(
+      z.trim(),
+      z.minLength(1, "Please enter the business name."),
+      z.maxLength(MAX.business, tooLong(MAX.business)),
+    ),
+  name: z
+    .string()
+    .check(
+      z.trim(),
+      z.minLength(1, "Please enter your name."),
+      z.maxLength(MAX.name, tooLong(MAX.name)),
+    ),
+  contact: z
+    .string()
+    .check(
+      z.trim(),
+      z.minLength(1, "Please enter a phone number or email."),
+      z.maxLength(MAX.contact, tooLong(MAX.contact)),
+    ),
+  bill: z
+    .string()
+    .check(z.trim(), z.minLength(1, "Pick a range."), z.maxLength(MAX.bill, tooLong(MAX.bill))),
+  details: z.optional(z.string().check(z.trim(), z.maxLength(MAX.details, tooLong(MAX.details)))),
 });
 export type PotsAuditRequest = z.infer<typeof PotsAuditRequest>;
 

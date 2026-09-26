@@ -1,9 +1,10 @@
 ---
 import { services as serviceCatalog } from "@/lib/services";
 
-// The endpoint re-renders this component with `values` and `errors`
-// populated when JavaScript is off and the POST fails validation, so
-// nothing the user typed is lost on that path either.
+// Without JavaScript the form posts to its own page (/contact), which
+// re-renders this component with `values` and `errors` populated when
+// the submit fails validation, so nothing typed is lost on that path
+// either. With JavaScript, enhance() posts JSON to /api/quote instead.
 interface Props {
   values?: Record<string, string | string[]>;
   errors?: Record<string, string>;
@@ -29,7 +30,7 @@ const inputClass =
       </p>
     </div>
   ) : (
-    <form method="post" action="/api/quote" novalidate data-quote-form class="group">
+    <form method="post" action="/contact" novalidate data-quote-form class="group">
       {/* Honeypot. Hidden from people, filled by bots — three of the four
           submissions this site has ever had were spam, and each one ticked
           every checkbox it could find. A crawler fills this; a visitor

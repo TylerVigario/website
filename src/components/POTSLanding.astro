@@ -6,7 +6,7 @@ import FaqItem from "@/components/FaqItem.astro";
 import PotsAuditForm from "@/components/PotsAuditForm.astro";
 
 interface Props {
-  values?: Record<string, string>;
+  values?: Record<string, string | string[]>;
   errors?: Record<string, string>;
   submitted?: boolean;
 }

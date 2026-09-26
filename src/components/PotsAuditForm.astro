@@ -3,14 +3,17 @@
 // QuoteForm — one enhancement module, one never-erase guarantee, one
 // no-JS path — differing only in fields.
 interface Props {
-  values?: Record<string, string>;
+  values?: Record<string, string | string[]>;
   errors?: Record<string, string>;
   submitted?: boolean;
 }
 const { values = {}, errors = {}, submitted = false } = Astro.props;
 
 const billRanges = ["$100–$300", "$300–$500", "$500–$1,000", "$1,000+"];
-const str = (k: string) => values[k] ?? "";
+const str = (k: string) => {
+  const v = values[k];
+  return typeof v === "string" ? v : "";
+};
 
 const inputClass =
   "w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent aria-invalid:border-red-500";
@@ -36,7 +39,7 @@ const fields = [
       </p>
     </div>
   ) : (
-    <form method="post" action="/api/pots-audit" novalidate data-pots-form class="group">
+    <form method="post" action="/pots-migration#audit" novalidate data-pots-form class="group">
       {/* Honeypot. Hidden from people, filled by bots — three of the four
           submissions this site has ever had were spam, and each one ticked
           every checkbox it could find. A crawler fills this; a visitor

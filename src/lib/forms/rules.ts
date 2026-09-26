@@ -31,12 +31,23 @@
  * failed, never discovered by rejection.
  */
 
+import { MAX, tooLong } from "@/lib/forms/limits";
+
 export type FieldValue = string | string[];
 export type Rule = (value: FieldValue) => string | null;
 export type Rules = Record<string, Rule>;
 
-const filled = (message: string): Rule => {
-  return (value) => (typeof value === "string" && value.trim().length > 0 ? null : message);
+// Lengths are measured after trimming, as the schema's z.trim() does.
+const filled = (message: string, max: number): Rule => {
+  return (value) => {
+    const v = typeof value === "string" ? value.trim() : "";
+    if (v.length === 0) return message;
+    return v.length > max ? tooLong(max) : null;
+  };
+};
+
+const upTo = (max: number): Rule => {
+  return (value) => (typeof value === "string" && value.trim().length > max ? tooLong(max) : null);
 };
 
 const chosen = (message: string): Rule => {
@@ -46,17 +57,17 @@ const chosen = (message: string): Rule => {
 /** Mirrors QuoteRequest. Messages are copied from the schema so the two
  *  read identically to a user; the test proves they stay that way. */
 export const quoteRules: Rules = {
-  name: filled("Please enter your name."),
-  contact: filled("Please enter a phone number or email."),
+  name: filled("Please enter your name.", MAX.name),
+  contact: filled("Please enter a phone number or email.", MAX.contact),
   services: chosen("Pick at least one service."),
-  details: () => null,
+  details: upTo(MAX.details),
 };
 
 /** Mirrors PotsAuditRequest. */
 export const potsAuditRules: Rules = {
-  business: filled("Please enter the business name."),
-  name: filled("Please enter your name."),
-  contact: filled("Please enter a phone number or email."),
-  bill: filled("Pick a range."),
-  details: () => null,
+  business: filled("Please enter the business name.", MAX.business),
+  name: filled("Please enter your name.", MAX.name),
+  contact: filled("Please enter a phone number or email.", MAX.contact),
+  bill: filled("Pick a range.", MAX.bill),
+  details: upTo(MAX.details),
 };

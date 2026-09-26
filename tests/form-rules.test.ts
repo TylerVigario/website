@@ -42,6 +42,12 @@ const SAMPLES: FieldValue[] = [
   "a",
   "Tyler Vigario",
   "call the shop, 559 900 1400 ext 2",
+  // Both sides of every length limit in src/lib/forms/limits.ts. Each
+  // field is tried against all of them, so a limit that differs between
+  // the rule and the schema, or a message that does, fails here.
+  ...[100, 150, 254, 20_000].flatMap((n) => ["x".repeat(n), "x".repeat(n + 1)]),
+  // Measured after trimming, on both sides.
+  "  " + "x".repeat(100) + "  ",
 ];
 const ARRAY_SAMPLES: FieldValue[] = [[], ["Networking"], ["Networking", "Linux"]];
 

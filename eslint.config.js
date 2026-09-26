@@ -30,6 +30,13 @@ export default defineConfig([
       "@typescript-eslint/no-unsafe-call": "off",
       "@typescript-eslint/no-unsafe-return": "off",
       "@typescript-eslint/no-unsafe-argument": "off",
+      // A page may return a Response from its frontmatter: /contact and
+      // /pots-migration redirect after a submit. That `return` has no
+      // enclosing function, and this rule's return-statement check walks up
+      // for one and throws, crashing the whole lint run instead of
+      // reporting anything. Only that check is off, and only here; every
+      // other void-return check the rule makes still applies.
+      "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { returns: false } }],
     },
   },
 

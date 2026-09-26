@@ -10,9 +10,9 @@ import type { Rules } from "@/lib/forms/rules";
  * no framework that could throw DOM away, so losing what someone typed
  * is not a bug that can occur — it is a code path that does not exist.
  *
- * Without JavaScript the form still posts and the endpoint re-renders
- * with every value repopulated. This layer makes that experience live
- * rather than replacing it.
+ * Without JavaScript the form still posts, to its own page, which
+ * re-renders with every value repopulated. This layer makes that
+ * experience live rather than replacing it.
  */
 
 type Fields = Record<string, string | string[]>;
