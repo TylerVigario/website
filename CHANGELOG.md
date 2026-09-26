@@ -1,4 +1,10 @@
 # Changelog
+## [1.15.1](https://github.com/TylerVigario/website/compare/v1.15.0...v1.15.1) (2026-09-26)
+
+### Bug Fixes
+
+* **site:** Keep the space beside links and emphasis across line breaks 
+
 ## [1.15.0](https://github.com/TylerVigario/website/compare/v1.14.0...v1.15.0) (2026-09-26)
 
 ### Features
