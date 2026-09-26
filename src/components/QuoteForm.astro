@@ -96,7 +96,7 @@ const inputClass =
           type="text"
           value={str("contact")}
           aria-required="true"
-          aria-describedby={errors.contact ? "contact-error" : "contact-hint"}
+          aria-describedby={errors.contact ? "contact-error contact-hint" : "contact-hint"}
           aria-invalid={errors.contact ? "true" : undefined}
           class={inputClass}
         />
@@ -122,6 +122,8 @@ const inputClass =
                 name="services"
                 value={service}
                 checked={picked.includes(service)}
+                aria-invalid={errors.services ? "true" : undefined}
+                aria-describedby={errors.services ? "services-error services-hint" : "services-hint"}
                 class="peer sr-only"
               />
               <span class="inline-block rounded-full border border-border px-4 py-2 text-sm transition-colors peer-checked:border-accent peer-checked:bg-accent-soft peer-checked:text-accent peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent">

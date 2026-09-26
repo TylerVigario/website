@@ -46,12 +46,17 @@ import path from "node:path";
 
 const ROOT = "dist/client";
 
-/** Per-page JavaScript budget, inline plus referenced files. The real
- *  numbers are 508 B for a plain page (the scroll reveal) and 3380 B for
- *  a case study (reveal + the image viewer). The ceiling leaves room to
- *  edit those without tripping, while staying far below anything that
- *  could be a framework. */
+/** Per-page JavaScript budget, inline plus referenced files. A plain page
+ *  ships 508 B (the scroll reveal). The ceiling leaves room to edit that
+ *  without tripping, while staying far below anything that could be a
+ *  framework. */
 const JS_BUDGET = 4096;
+/** A page with the image viewer (the case studies) also carries its
+ *  pinch, pan and zoom: 4,921 B in all when pan was added, which is what
+ *  tripped the ceiling above. It gets its own ceiling rather than lifting
+ *  every other page's. Recognised by the viewer's markup, so a new case
+ *  study is covered with no list of routes to keep up to date. */
+const VIEWER_BUDGET = 6144;
 /** The homepage is the strictest claim the README makes: it needs almost
  *  nothing, so it gets almost nothing. */
 const HOMEPAGE_BUDGET = 1024;
@@ -136,7 +141,12 @@ for (const file of htmlFiles(ROOT).sort()) {
     ),
   ];
   const external = loadedFiles(named);
-  const budget = route === "/" ? HOMEPAGE_BUDGET : JS_BUDGET;
+  const budget =
+    route === "/"
+      ? HOMEPAGE_BUDGET
+      : html.includes("data-lightbox-dialog")
+        ? VIEWER_BUDGET
+        : JS_BUDGET;
 
   let externalBytes = 0;
   for (const src of external) {

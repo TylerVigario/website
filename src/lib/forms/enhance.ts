@@ -51,11 +51,20 @@ function setError(form: HTMLFormElement, field: string, message: string | null) 
   const errorId = `${field}-error`;
   const existing = form.querySelector<HTMLElement>(`#${CSS.escape(errorId)}`);
 
+  // aria-describedby is a list, and the field's hint belongs in it
+  // whether or not there is an error. Replacing or removing the whole
+  // attribute cut the hint off the first time a valid field was left,
+  // and an error used to take the hint's place rather than join it.
+  const describedBy = (c: HTMLElement) =>
+    (c.getAttribute("aria-describedby") ?? "").split(/\s+/).filter((id) => id && id !== errorId);
+
   if (!message) {
     existing?.remove();
     for (const c of controls) {
       c.removeAttribute("aria-invalid");
-      c.removeAttribute("aria-describedby");
+      const rest = describedBy(c);
+      if (rest.length) c.setAttribute("aria-describedby", rest.join(" "));
+      else c.removeAttribute("aria-describedby");
     }
     return;
   }
@@ -77,7 +86,8 @@ function setError(form: HTMLFormElement, field: string, message: string | null) 
 
   for (const c of controls) {
     c.setAttribute("aria-invalid", "true");
-    c.setAttribute("aria-describedby", errorId);
+    // The error first, so it is read before the hint.
+    c.setAttribute("aria-describedby", [errorId, ...describedBy(c)].join(" "));
   }
 }
 
@@ -208,6 +218,13 @@ export function enhance({
       const el = e.target as HTMLElement;
       const field = el.getAttribute?.("name");
       if (!field) return;
+      // A checkbox group is one answer, so it is left when focus leaves
+      // the group, not when it moves from one box to the next. Otherwise
+      // tabbing from the first chip to the second announced "Pick at least
+      // one service" to someone still choosing.
+      const group = el.closest("fieldset");
+      const next = e.relatedTarget as Node | null;
+      if (group && next && group.contains(next)) return;
       touched.add(field);
       refresh(field);
     },

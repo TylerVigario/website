@@ -307,7 +307,7 @@ const faqs = [
             </h2>
           </div>
 
-          <div data-reveal>
+          <div data-reveal class="group">
             <div class="mt-8 space-y-3">
               {checklistItems.map((item) => (
                 <label
@@ -315,8 +315,7 @@ const faqs = [
                 >
                   <input
                     type="checkbox"
-                    class="peer"
-                    class="mt-0.5 h-5 w-5 shrink-0 rounded border-border text-accent accent-accent"
+                    class="peer mt-0.5 h-5 w-5 shrink-0 rounded border-border text-accent accent-accent"
                   />
                   <span
                     class="text-sm text-muted peer-checked:text-foreground sm:text-base"
@@ -329,9 +328,12 @@ const faqs = [
 
               {/* The React version restyled this box from a live count of
                   ticked items. The checklist is plain checkboxes now, so
-                  :has() reads the same state in CSS, with no runtime. */}
+                  :has() reads the same state in CSS, with no runtime. It
+                  asks the shared parent (group-has), because the boxes
+                  are this element's siblings, not its children, and a
+                  plain has-[:checked] here could never match. */}
               <div
-                class="mt-6 rounded-xl border border-border bg-surface p-5 transition-all has-[:checked]:border-accent/30 has-[:checked]:bg-accent/5"
+                class="mt-6 rounded-xl border border-border bg-surface p-5 transition-all group-has-[:checked]:border-accent/30 group-has-[:checked]:bg-accent/5"
               >
               <p class="text-muted">
                 Tick any that apply. If more than a couple are true, your carrier is counting on
