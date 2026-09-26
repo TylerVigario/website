@@ -1,4 +1,5 @@
 ---
+import { BILL_RANGES } from "@/lib/api/pots-audit";
 // The audit form from the POTS landing page. Same machinery as
 // QuoteForm — one enhancement module, one never-erase guarantee, one
 // no-JS path — differing only in fields.
@@ -9,7 +10,6 @@ interface Props {
 }
 const { values = {}, errors = {}, submitted = false } = Astro.props;
 
-const billRanges = ["$100–$300", "$300–$500", "$500–$1,000", "$1,000+"];
 const str = (k: string) => {
   const v = values[k];
   return typeof v === "string" ? v : "";
@@ -116,7 +116,7 @@ const fields = [
           class={inputClass}
         >
           <option value="">Pick a range…</option>
-          {billRanges.map((r) => (
+          {BILL_RANGES.map((r) => (
             <option value={r} selected={str("bill") === r}>
               {r}
             </option>

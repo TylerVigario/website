@@ -1,6 +1,8 @@
 import type { APIRoute } from "astro";
 import { methodNotAllowed } from "@/lib/api/error";
-import { getDb, SUBMISSION_COLUMNS, insertSubmission } from "@/lib/db";
+import { statfsSync } from "node:fs";
+import path from "node:path";
+import { getDb, getDbPath, SUBMISSION_COLUMNS, insertSubmission } from "@/lib/db";
 
 export const prerender = false;
 
@@ -24,6 +26,11 @@ export const prerender = false;
  *  four independent column lists across three files with nothing
  *  checking any of them against the table. */
 const REQUIRED_COLUMNS: readonly string[] = SUBMISSION_COLUMNS;
+
+/** Free space below which the service reports itself unable to take
+ *  submissions. 64 MB is some 250 of the largest request the adapter will
+ *  accept (256 KB). HEALTH_MIN_FREE_MB overrides it; 0 turns the check off. */
+const DEFAULT_MIN_FREE_MB = 64;
 
 /** Thrown to unwind the write probe's transaction. Not a failure —
  *  reaching it means the write succeeded and is being undone. */
@@ -99,6 +106,29 @@ export const GET: APIRoute = () => {
         if (!(err instanceof Rollback)) throw err;
       }
     });
+
+    record("space", () => {
+      // The failure a submission is likeliest to meet, and the one no
+      // write probe can see coming. A full disk was measured: the rolled-
+      // back INSERT above kept passing, and so did a committed write to a
+      // row that already exists, because neither needs new space, while
+      // every real submission, which grows the database, failed with
+      // "database or disk is full". Free space is the only signal that
+      // answers "is there room for the next lead", and it answers before
+      // the leads start failing rather than after.
+      const raw = process.env.HEALTH_MIN_FREE_MB;
+      const minMb = raw ? Number(raw) : DEFAULT_MIN_FREE_MB;
+      if (!Number.isFinite(minMb) || minMb < 0) {
+        throw new Error(`HEALTH_MIN_FREE_MB=${raw} is not a number of megabytes`);
+      }
+      const fs = statfsSync(path.dirname(getDbPath()));
+      const freeMb = (fs.bavail * fs.bsize) / 1024 / 1024;
+      if (freeMb < minMb) {
+        throw new Error(
+          `${freeMb.toFixed(2)} MB free where the database lives, under the ${minMb} MB minimum`,
+        );
+      }
+    });
   }
 
   const ok = checks.every((c) => c.ok);
@@ -110,6 +140,11 @@ export const GET: APIRoute = () => {
   });
 };
 
-/** Anything but GET. A monitor that POSTs here has a bug, and should be
- *  told so rather than handed an HTML 404 suggesting the endpoint moved. */
-export const ALL: APIRoute = () => methodNotAllowed(["GET"]);
+/** HEAD is a GET without the body. Astro picks an export or ALL before it
+ *  falls back from HEAD to GET, so without this a monitor that probes with
+ *  HEAD got 405 from a healthy service. */
+export const HEAD: APIRoute = (ctx) => GET(ctx);
+
+/** Anything else. A monitor that POSTs here has a bug, and should be told
+ *  so rather than handed an HTML 404 suggesting the endpoint moved. */
+export const ALL: APIRoute = () => methodNotAllowed(["GET", "HEAD"]);

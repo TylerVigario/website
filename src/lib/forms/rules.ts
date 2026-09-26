@@ -68,6 +68,6 @@ export const potsAuditRules: Rules = {
   business: filled("Please enter the business name.", MAX.business),
   name: filled("Please enter your name.", MAX.name),
   contact: filled("Please enter a phone number or email.", MAX.contact),
-  bill: filled("Pick a range.", MAX.bill),
+  bill: filled("Pick a range.", Infinity),
   details: upTo(MAX.details),
 };
