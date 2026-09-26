@@ -137,6 +137,15 @@ It costs the two properties the hybrid split exists to buy: static pages
 that never touch Node, and a Node crash that takes down form submission
 rather than the whole site.
 
+**What the proxy forwards to Node.** `Host` as the browser sent it (or
+`X-Forwarded-Host`), and `X-Forwarded-Proto: https`, set by the proxy
+rather than passed through from the client. `security.allowedDomains` in
+`astro.config.mjs` trusts those for this site's own https origin, which
+is what makes a no-JS form POST's `Origin: https://…` match the request.
+**Do not rewrite `Origin`.** A proxy that turns it into `http://` works
+with a build that ignores forwarded headers and breaks every no-JS
+submission with one that trusts them.
+
 The Node process needs `SQLITE_PATH` (absolute) and reads `HOST`/`PORT`;
 it is `node dist/server/entry.mjs`. Nothing else about the machine —
 process supervision, TLS, DNS, where the files live — belongs in this

@@ -20,8 +20,27 @@ import { RUNTIME_EXTERNALS } from "./runtime-externals.mjs";
 // shape back with extra steps: Node serving static bytes it has no
 // reason to touch, and one crashed process taking all 13 static pages
 // down with it. See "Serving contract" in CLAUDE.md.
+const SITE = "https://vigario.tech";
+
 export default defineConfig({
-  site: "https://vigario.tech",
+  site: SITE,
+  // Trust the proxy's X-Forwarded-Proto and X-Forwarded-Host, but only for
+  // this site's own https origin. Without this Astro never trusts them, so
+  // behind a proxy that terminates TLS the request URL Node sees is
+  // http://…, while a browser posting a form sends Origin: https://…, and
+  // the origin check refuses every no-JavaScript submission with 403.
+  // Measured: a form POST forwarded that way was refused before this was
+  // set and accepted after. The only way round it without this is for the
+  // proxy to rewrite Origin, which every host would have to know to do.
+  //
+  // Safe because the pattern is narrow: a forwarded host is used only if
+  // it is this site's hostname, and anything else (a spoofed
+  // X-Forwarded-Host) is ignored in favour of the real Host. A cross-site
+  // POST is still refused. The serving contract in CLAUDE.md states what
+  // the proxy must forward.
+  security: {
+    allowedDomains: [{ protocol: "https", hostname: new URL(SITE).hostname }],
+  },
   output: "static",
   // bodySizeLimit: 256 KB rather than the adapter's default of 1 GiB,
   // which let one request store tens of megabytes. The longest valid
