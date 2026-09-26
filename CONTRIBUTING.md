@@ -44,6 +44,6 @@ These mirror [CLAUDE.md](CLAUDE.md)'s "Git + PR workflow" — that's the source 
 
 - Prettier (100 col, double quotes, semicolons) and ESLint (type-aware) — `npm run format` and `npm run lint`.
 - `req.json()` is `any`; always parse through a zod schema in `src/lib/api/`.
-- Run `npm run ci` (lint + typecheck + format + test) before pushing. Tests are Vitest: `npm test`.
+- `npm run ci` is the gate: lint, typecheck, format, test, build and the bundle budget. pre-push runs all of it. Tests are Vitest: `npm test`.
 
 The pre-commit and pre-push hooks run these automatically; CI is the backstop.

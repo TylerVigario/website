@@ -27,8 +27,10 @@ No auth, no API consumers other than the site's own forms.
 **No UI framework, and that is load-bearing.** Nothing here needs one:
 the menu is `<details>`, the reveal is one CSS rule armed by a 500-byte
 script, the lightbox is `<dialog>` plus scroll-snap, and the forms post
-HTML. Most pages ship zero JavaScript, and `npm run check:bundles`
-asserts it locally and in CI. If
+HTML. No page ships a framework: a plain page carries 508 B (the scroll
+reveal), a case study about 4.9 KB (plus the image viewer), and the two
+input pages about 5.4 KB (plus the form script). `npm run check:bundles`
+budgets every prerendered page, following imports, locally and in CI. If
 something ever genuinely needs a framework, argue for it then — do not
 reintroduce one to solve a problem the platform already solves.
 
@@ -67,7 +69,7 @@ native addon that cannot be bundled), a generated `package.json`,
 `CHANGELOG.md`, `RELEASE` (version + the commit the source came from),
 and `MANIFEST.sha256` — a sha256 of every other file in the tree. It runs
 on `node dist/server/entry.mjs` with `SQLITE_PATH` set, needs no
-toolchain and no network, and is ~9.4 MB.
+toolchain and no network, and is about 10 MB.
 
 **Installing it is the host's job, and the tools for that live on the
 host.** Fetching, verifying and swapping a release are operations on a
@@ -100,6 +102,8 @@ as though one of them is the way.
 | --- | --- |
 | `/_astro/*` | Static file. `Cache-Control: public, max-age=31536000, immutable` — every filename is content-hashed (verified: 0 unhashed of 177), so a stale cache is impossible and revalidation is wasted. |
 | `/api/*` | Reaches the Node process. |
+| `/.well-known/security.txt`, `/robots.txt` | Static file, `Content-Type: text/plain; charset=utf-8` (RFC 9116 requires it for `security.txt`). Prerendered, so the headers set in their `.ts` endpoints are never sent in production; the server chooses them. |
+| `/manifest.webmanifest` | Static file, `Content-Type: application/manifest+json`, for the same reason. |
 | `/contact`, `/pots-migration` | Reaches the Node process — the only two pages with `prerender = false`, because they accept input. |
 | everything else | Static file from `dist/client/`, served `Cache-Control: no-cache`. Unmatched paths should fall through to the Node process, so adding a dynamic route does not 404 until the server config catches up. |
 
@@ -174,7 +178,7 @@ should not be told something laxer.
 
 - **Quote** — a "request a quote" submission from the main contact form. Schema in [`src/lib/api/quote.ts`](src/lib/api/quote.ts). Submitted through `submitQuote()` in [`src/lib/api/submit.ts`](src/lib/api/submit.ts), which both ways in call: `/api/quote` for JSON, and `/contact` itself for a no-JS form post.
 - **POTS audit** — a "free phone-bill audit" submission from the `/pots-migration` landing page. Different schema ([`src/lib/api/pots-audit.ts`](src/lib/api/pots-audit.ts)), same destination row, submitted through `submitPotsAudit()` the same two ways (`/api/pots-audit`, `/pots-migration`).
-- **`quotes` table** — single SQLite table that holds both kinds of submission. The `services` column distinguishes: a real services array for quote submissions, the literal string `"POTS Migration Audit"` for audit submissions. Schema is `CREATE TABLE IF NOT EXISTS` inside `getDb()` — no migrations.
+- **`quotes` table** — single SQLite table that holds both kinds of submission. The `services` column distinguishes: a real services array for quote submissions, the literal string `"POTS Migration Audit"` for audit submissions. Its schema is versioned: `getDb()` runs the migrations in `src/lib/db.ts` against `PRAGMA user_version`. A migration that has shipped is never edited; append a new one.
 - **Problem Details** — the API error shape, per RFC 9457, `application/problem+json`. Validation failures via `zodError()`, an unsupported method via `methodNotAllowed()` (which sets `Allow`), an unclaimed path via `notFound()` from the `[...path].ts` catch-all. Two errors are NOT this shape and cannot be: a cross-site write is refused by Astro before middleware or routes run (`403 text/plain`), and an unhandled route fault returns the site's `500 text/html` — catching that is the blanket try/catch the guardrails forbid. `error.ts` records both, with the measurement. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()`, whose response body is annotated with the `ProblemDetails` type so a change to the shape fails the build. The client does **not** import that schema: [`enhance.ts`](src/lib/forms/enhance.ts) reads the shape by hand, because validating it in the browser would pull zod into a bundle that is otherwise ~2 KB in order to re-check a response this server just produced. See "Form patterns" below.
 
 ## Key paths
@@ -216,8 +220,9 @@ src/
 ├── styles/global.css                 # @theme tokens + the reveal rules
 └── assets/                           # images processed by astro:assets
 
-tests/
-└── form-rules.test.ts                # proves rules.ts and the zod schemas agree
+tests/                                # one file per property, each opening with
+                                      # what it proves (never-erase, form-rules,
+                                      # submit, relay, page-frame, ...)
 
 (no docs/, packaging/, instrumentation.ts or sentry.*.config.ts — if a
 sibling repo or an old memory says otherwise, the tree above is right)
@@ -310,7 +315,7 @@ npm test                          # vitest run
 npm run lint                      # eslint (js) + markdownlint (md)
 npm run format                    # prettier --check
 npm run format:fix                # prettier --write
-npm run ci                        # lint + typecheck + format + test (gate umbrella)
+npm run ci                        # lint + typecheck + format + test + build + check:bundles
 npm run lint:actions              # actionlint over .github/workflows
 npm run clean                     # rm dist, .astro, node_modules/.cache, .eslintcache
 npm run check:pins                # .nvmrc and engines.node agree (also in pre-push)
@@ -349,7 +354,7 @@ Don't introduce a permanent `develop` branch — the ceremony outweighs the bene
 
 ## Environment
 
-- **Dev**: Windows 11 + git-bash. Node via `fnm` — Bash sessions need `eval "$(fnm env --use-on-cd --shell bash)"` once before `npm`/`node` resolve. PowerShell tool also available.
+- **Dev**: the Node major in `.nvmrc`, on any OS. `npm run dev`, `preview` and `start` load `.env.local` themselves (Node's `--env-file-if-exists`); Astro does not put it into `process.env`, so running `astro dev` directly leaves `SQLITE_PATH` unset.
 - **Prod**: runs a published release, which is not necessarily the tip of `main` — check the deployed `RELEASE` file for the version and commit rather than assuming. Installing, supervising and fronting the process are the host's concerns and are configured there, not here.
 
 ## Guardrails — things that break correctness if ignored
@@ -364,6 +369,5 @@ Don't introduce a permanent `develop` branch — the ceremony outweighs the bene
 - **Prettier does not format `.astro`, and that is a decision, not an oversight.** `prettier-plugin-astro` rewrites rendered HTML rather than only source — it injects whitespace inside elements, turning `<a>Services</a>` into `<a> Services </a>`. Measured here: 4 built pages changed on default settings, 8 on `htmlWhitespaceSensitivity: "strict"`. A formatter that alters output cannot be run unattended. `.astro` is in `.prettierignore`; those files are still linted by `eslint-plugin-astro` and typechecked by `astro check`. If you add the plugin, diff `dist/client` before and after and look at what moved.
 - **`HOST`, not `HOSTNAME`.** `@astrojs/node` reads `HOST` and `PORT`. `HOSTNAME` — which the Next-era env template documented — is read by nothing and fails silently. Unset, the server listens on `localhost:4321`.
 - **Don't wrap route handlers in top-level try/catch.** A blanket catch turns a real fault into a generic 500 and drops the stack, which is the difference between a fixable report and "the form is broken sometimes." Let errors propagate; the adapter logs them with the stack intact. The email-send `try/catch` is the one legitimate catch — the row is already saved by then, so SMTP being down must not fail a submission that actually succeeded.
-- **Don't add `output: "standalone"` back.** Next's static-trace machinery keeps tripping over custom server entrypoints + dynamic requires (v2.80.0–v2.83.0 in vis-daily-tracker were four consecutive bad releases). `next() + app.prepare()` works because the full Next module tree is present. If the static migration removes the custom server entirely this guardrail retires with it — until then it holds.
 - **Bump Node major across both pins together.** `.nvmrc` and `package.json#engines.node` must agree; CI reads `.nvmrc` directly via `node-version-file`, so there is no third pin. The gate's "Verify Node major pins agree" step enforces it.
 - **`better-sqlite3` is a native module.** Declared in [`astro.config.mjs`](astro.config.mjs)'s `vite.ssr.external` so the SSR build resolves it at runtime instead of trying to bundle it. Since v13 it is built on the N-API, so the prebuilt binary published with the package is ABI-stable across Node majors — bumping Node no longer invalidates the binding, which it did up to v12. It still compiles from source during `npm ci` where no prebuilt matches the platform, so a toolchain is needed wherever that happens.
