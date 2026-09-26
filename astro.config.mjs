@@ -7,10 +7,11 @@ import { RUNTIME_EXTERNALS } from "./runtime-externals.mjs";
 
 // Hybrid, not static and not server. `output: "static"` with an adapter
 // present means every page prerenders to HTML at build time unless it
-// opts out with `export const prerender = false`. Only the three
-// endpoints under src/pages/api/ opt out, so the marketing surface is
-// files on disk and the Node process exists solely to accept two form
-// POSTs and answer a health check.
+// opts out with `export const prerender = false`. Six routes opt out: the
+// four under src/pages/api/ and the two pages that take input, /contact
+// and /pots-migration. So the marketing surface is files on disk, and
+// the Node process exists to take submissions, render those two pages
+// and answer the health check.
 //
 // That split is the whole point of the shape — but it is a property of
 // how the site is SERVED, not of this file. It only holds if the web
@@ -35,9 +36,9 @@ export default defineConfig({
   // IntersectionObserver, the menu is <details>, the lightbox is
   // <dialog> plus CSS scroll-snap, and the forms post HTML. Adding a
   // framework here would put a runtime in the browser that no page has
-  // a use for — and the CI gate asserts the homepage ships zero
-  // external bundles, so doing it would fail the build rather than
-  // quietly regress. If something ever genuinely needs one, that is the
+  // a use for — and check:bundles budgets every prerendered page's
+  // JavaScript, the homepage at 1 KB, so doing it would fail the build
+  // rather than quietly regress. If something ever genuinely needs one, that is the
   // moment to argue for it — not before.
   integrations: [sitemap()],
   vite: {

@@ -90,7 +90,10 @@ fs.writeFileSync(
 //
 // So rather than install everything and try to prune, read the answer
 // off the artifact itself: scan the emitted server for bare specifiers
-// and install exactly those, at the versions the lockfile pins. If a
+// and install exactly those, each at the version the lockfile records.
+// Their own dependencies resolve from the registry at release time; for
+// better-sqlite3 13 that is node-addon-api alone, a header library for
+// compiling the addon that the running server never loads. If a
 // future dependency has to stay external, it appears here on its own —
 // nothing to remember to update.
 const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
