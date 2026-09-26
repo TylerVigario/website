@@ -1,4 +1,19 @@
 # Changelog
+## [1.15.0](https://github.com/TylerVigario/website/compare/v1.14.0...v1.15.0) (2026-09-26)
+
+### Features
+
+* **email:** Let the operator choose how the relay is reached 
+
+### Bug Fixes
+
+* **site:** Stop the forms losing drafts and swallowing errors 
+* **site:** Let the layout own the page frame 
+* **site:** Take the no-JS submit on the page, and bound what it can store 
+* **site:** Make health see a full disk, and keep what has been committed 
+* **site:** Make the viewer, the forms and the POTS page do what they say 
+* **site:** Trust the proxy's forwarded headers for this site's own origin 
+
 ## [1.14.0](https://github.com/TylerVigario/website/compare/v1.13.1...v1.14.0) (2026-09-23)
 
 ### Features
