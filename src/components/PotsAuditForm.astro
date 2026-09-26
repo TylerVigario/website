@@ -89,7 +89,7 @@ const fields = [
             value={str(f.id)}
             aria-required="true"
             aria-invalid={errors[f.id] ? "true" : undefined}
-            aria-describedby={errors[f.id] ? `${f.id}-error` : f.hint ? `${f.id}-hint` : undefined}
+            aria-describedby={[errors[f.id] && `${f.id}-error`, f.hint && `${f.id}-hint`].filter(Boolean).join(" ") || undefined}
             class={inputClass}
           />
           {errors[f.id] && (
@@ -112,7 +112,7 @@ const fields = [
           name="bill"
           aria-required="true"
           aria-invalid={errors.bill ? "true" : undefined}
-          aria-describedby={errors.bill ? "bill-error" : "bill-hint"}
+          aria-describedby={errors.bill ? "bill-error bill-hint" : "bill-hint"}
           class={inputClass}
         >
           <option value="">Pick a range…</option>

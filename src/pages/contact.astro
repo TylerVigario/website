@@ -2,6 +2,7 @@
 import Base from "@/layouts/Base.astro";
 import QuoteForm from "@/components/QuoteForm.astro";
 import { readSubmission, submitQuote, type Values } from "@/lib/api/submit";
+import { services as catalog } from "@/lib/services";
 
 // Rendered per request, not prerendered: this page takes the form's
 // no-JS submit, below. Pages that accept input are dynamic; the rest of
@@ -37,6 +38,15 @@ if (Astro.request.method === "POST") {
   Astro.response.status = 422;
 }
 const submitted = Astro.url.searchParams.get("sent") === "1";
+
+// The service pages link here as /contact?service=<title>, promising the
+// form arrives with that service ticked. Only a title the catalog has is
+// honoured, and it only ever ticks a box that already exists, so nothing
+// from the link is echoed into the page.
+const preselect = Astro.url.searchParams.get("service");
+if (Astro.request.method !== "POST" && preselect && catalog.some((s) => s.title === preselect)) {
+  values = { services: [preselect] };
+}
 ---
 
 <Base title="Contact" description="Get in touch with Vigario Technology Solutions." mainClass="mx-auto max-w-2xl px-6 pt-32 pb-16">
