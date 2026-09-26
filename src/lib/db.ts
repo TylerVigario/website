@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import path from "node:path";
 
-function getDbPath(): string {
+export function getDbPath(): string {
   const p = process.env.SQLITE_PATH;
   if (!p) {
     throw new Error("SQLITE_PATH is not set. Copy .env.example to .env.local for development.");
@@ -98,8 +98,23 @@ function migrate(db: Database.Database): void {
 export function getDb() {
   if (!g.__sqlite__) {
     const db = new Database(getDbPath());
-    db.pragma("journal_mode = WAL");
-    migrate(db);
+    try {
+      db.pragma("journal_mode = WAL");
+      // FULL, not better-sqlite3's NORMAL. In WAL mode NORMAL does not
+      // sync at each commit, so a power cut or kernel crash can roll back
+      // commits that already happened. Here the one that matters is a lead
+      // that got its 200, whose sender's browser then cleared the draft:
+      // gone from both ends. FULL costs an fsync per submission, which a
+      // form this size cannot notice.
+      db.pragma("synchronous = FULL");
+      migrate(db);
+    } catch (err) {
+      // Nothing caches a handle that failed to set up, so without this
+      // every request opened another and left it for the garbage
+      // collector: two file descriptors per failed request.
+      db.close();
+      throw err;
+    }
     g.__sqlite__ = db;
   }
   return g.__sqlite__;

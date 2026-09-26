@@ -79,15 +79,50 @@ describe("schema migrations", () => {
   });
 
   it("does not re-run on an already-migrated database", async () => {
+    // Step one is CREATE TABLE IF NOT EXISTS, so re-running it can neither
+    // throw nor be seen on a normal file, and "the version did not change"
+    // would pass whether the loop repeated it or not. So move the table
+    // aside first: a repeated step one would leave a new, empty `quotes`
+    // behind, and that is observable.
     const db = await openAt("twice.db");
-    db.getDb();
+    db.getDb().exec("ALTER TABLE quotes RENAME TO quotes_moved");
     const first = version("twice.db");
-    // A second open must be a no-op — re-running a migration that
-    // created a table would throw, and one that added a column would
-    // corrupt it.
     const again = await openAt("twice.db");
-    expect(() => again.getDb()).not.toThrow();
+    const handle = again.getDb();
     expect(version("twice.db")).toBe(first);
+    expect(
+      handle.prepare("SELECT count(*) AS n FROM sqlite_schema WHERE name = 'quotes'").get(),
+      "a migration that already ran was run again",
+    ).toEqual({ n: 0 });
+  });
+
+  it("syncs every commit (synchronous = FULL)", async () => {
+    // NORMAL, better-sqlite3's default in WAL mode, can lose commits that
+    // already returned on a power cut: a lead that got its 200, gone.
+    const db = await openAt("sync.db");
+    expect(db.getDb().pragma("synchronous", { simple: true })).toBe(2);
+  });
+
+  it.skipIf(process.platform !== "linux")("does not leak a handle when opening fails", async () => {
+    // A file this build refuses is the simplest way to make getDb()
+    // fail after the handle is open. Each failed call used to leave two
+    // descriptors (the file and its WAL) for the garbage collector.
+    const ahead = path.join(dir, "leak.db");
+    const seed = new Database(ahead);
+    seed.pragma("user_version = 99");
+    seed.close();
+    const { readdirSync, readlinkSync } = await import("node:fs");
+    const open = () =>
+      readdirSync("/proc/self/fd").filter((fd) => {
+        try {
+          return readlinkSync(`/proc/self/fd/${fd}`).startsWith(ahead);
+        } catch {
+          return false;
+        }
+      }).length;
+    const db = await openAt("leak.db");
+    for (let i = 0; i < 20; i++) expect(() => db.getDb()).toThrow();
+    expect(open()).toBe(0);
   });
 
   it("refuses a database newer than the build understands", async () => {

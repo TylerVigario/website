@@ -195,7 +195,7 @@ src/
 │   └── api/                          # prerender = false, like contact + pots-migration
 │       ├── quote.ts                  # POST, JSON: submitQuote(); a form post is 307'd to /contact
 │       ├── pots-audit.ts             # POST, JSON: submitPotsAudit(); a form post is 307'd to the page
-│       └── health.ts                 # GET: open/read/schema/write-probe → 200 or 503
+│       └── health.ts                 # GET/HEAD: open, read, schema, write-probe, free space → 200 or 503
 ├── components/                       # .astro, render to HTML at build time
 │   ├── QuoteForm.astro  PotsAuditForm.astro
 │   ├── Lightbox.astro                # <dialog> + scroll-snap viewer

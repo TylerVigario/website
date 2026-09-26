@@ -54,7 +54,10 @@ describe("a plain form post to the API", () => {
 
 describe("the JSON path", () => {
   it("stores a valid quote and answers success", async () => {
-    const res = await call(quote, jsonPost({ name: "Dana", contact: "x", services: ["Linux"] }));
+    const res = await call(
+      quote,
+      jsonPost({ name: "Dana", contact: "x", services: ["Custom Software"] }),
+    );
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true });
     expect(insertSubmission).toHaveBeenCalledOnce();

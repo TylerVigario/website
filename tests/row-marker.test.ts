@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { POTS_AUDIT_MARKER } from "../src/lib/api/pots-audit";
+import { BILL_RANGES, POTS_AUDIT_MARKER } from "../src/lib/api/pots-audit";
 
 import type { insertSubmission as InsertSubmission } from "@/lib/db";
 
@@ -31,14 +31,27 @@ describe("the audit row marker", () => {
   // constant and then inserted something else passed the old version.
   it("is the value an audit submission actually stores", async () => {
     insertSubmission.mockClear();
-    await submitPotsAudit({ business: "Acme", name: "Dana", contact: "x", bill: "Under $100" });
+    await submitPotsAudit({ business: "Acme", name: "Dana", contact: "x", bill: BILL_RANGES[0] });
     expect(insertSubmission).toHaveBeenCalledOnce();
     expect(insertSubmission.mock.calls[0][0].services).toBe(POTS_AUDIT_MARKER);
   });
 
   it("is not what a quote stores, which is the services chosen", async () => {
     insertSubmission.mockClear();
-    await submitQuote({ name: "Dana", contact: "x", services: ["Linux", "Windows"] });
-    expect(insertSubmission.mock.calls[0][0].services).toBe("Linux, Windows");
+    await submitQuote({
+      name: "Dana",
+      contact: "x",
+      services: ["Custom Software", "Low-Voltage Cabling"],
+    });
+    expect(insertSubmission.mock.calls[0][0].services).toBe("Custom Software, Low-Voltage Cabling");
+  });
+
+  it("cannot be claimed by a quote", async () => {
+    // Before services was restricted to the catalog, a quote submitted
+    // with this "service" stored a row indistinguishable from an audit.
+    insertSubmission.mockClear();
+    const out = await submitQuote({ name: "Dana", contact: "x", services: [POTS_AUDIT_MARKER] });
+    expect(out.kind).toBe("invalid");
+    expect(insertSubmission).not.toHaveBeenCalled();
   });
 });

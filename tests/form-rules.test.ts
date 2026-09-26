@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { potsAuditRules, quoteRules, type FieldValue } from "@/lib/forms/rules";
 import { QuoteRequest } from "@/lib/api/quote";
-import { PotsAuditRequest } from "@/lib/api/pots-audit";
+import { BILL_RANGES, PotsAuditRequest } from "@/lib/api/pots-audit";
+import { services as catalog } from "@/lib/services";
 
 /** Paired HERE rather than in rules.ts: that module is imported by the
  *  browser, and importing a zod schema alongside the rules pulled zod
@@ -49,7 +50,15 @@ const SAMPLES: FieldValue[] = [
   // Measured after trimming, on both sides.
   "  " + "x".repeat(100) + "  ",
 ];
-const ARRAY_SAMPLES: FieldValue[] = [[], ["Networking"], ["Networking", "Linux"]];
+/** Choice fields can only send what they offer — the checkbox group its
+ *  catalog titles, the select its ranges or its empty placeholder — so
+ *  those are their samples. The schema rejects anything else, and the
+ *  browser cannot produce anything else to be rejected. */
+const [t0, t1] = catalog.map((s) => s.title);
+const CHOICES: Record<string, { baseline: FieldValue; samples: FieldValue[] }> = {
+  services: { baseline: [t0], samples: [[], [t0], [t0, t1]] },
+  bill: { baseline: BILL_RANGES[0], samples: ["", ...BILL_RANGES] },
+};
 
 function schemaMessageFor(
   schema: { safeParse: (v: unknown) => { success: boolean; error?: { issues: unknown[] } } },
@@ -73,10 +82,7 @@ describe.each(RULE_SCHEMA_PAIRS)("$name rules match the schema", ({ rules, schem
   for (const f of fields) {
     valid[f] = rules[f]([]) === null && rules[f]("x") === null ? "x" : "x";
   }
-  // Array fields are the ones whose rule rejects a plain string.
-  for (const f of fields) {
-    if (rules[f]("x") !== null) valid[f] = ["Networking"];
-  }
+  for (const f of fields) if (f in CHOICES) valid[f] = CHOICES[f].baseline;
 
   it("the baseline is actually valid, or every case below is meaningless", () => {
     expect(schema.safeParse(valid).success).toBe(true);
@@ -88,7 +94,7 @@ describe.each(RULE_SCHEMA_PAIRS)("$name rules match the schema", ({ rules, schem
   });
 
   for (const field of fields) {
-    const samples = Array.isArray(valid[field]) ? ARRAY_SAMPLES : SAMPLES;
+    const samples = CHOICES[field]?.samples ?? SAMPLES;
     // Wrapped: it.each spreads an array case into separate arguments,
     // so ["Networking"] would arrive as the string "Networking".
     it.each(samples.map((s) => [s]))(`${field} agrees on %j`, (value) => {

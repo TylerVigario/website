@@ -28,7 +28,7 @@ const AUDIT = {
   business: "Acme",
   name: "Dana",
   contact: "559 555 0100",
-  bill: "$100–$500",
+  bill: "$100–$300",
   details: "two lines",
 };
 
@@ -62,7 +62,7 @@ describe("a valid quote", () => {
 
 describe("an invalid submission", () => {
   it("stores nothing, and hands back every value typed and one message per field", async () => {
-    const body = { name: "", contact: "", services: ["Linux"], details: "kept" };
+    const body = { name: "", contact: "", services: ["Custom Software"], details: "kept" };
     const out = await submitQuote(body);
     expect(out.kind).toBe("invalid");
     if (out.kind !== "invalid") return;
@@ -77,6 +77,14 @@ describe("an invalid submission", () => {
   it("is refused past the length limit, with the shared message", async () => {
     const out = await submitQuote({ ...QUOTE, details: "x".repeat(MAX.details + 1) });
     expect(out.kind === "invalid" && out.errors.details).toBe(tooLong(MAX.details));
+    expect(insertSubmission).not.toHaveBeenCalled();
+  });
+
+  it("is refused for a choice the form does not offer", async () => {
+    const bill = await submitPotsAudit({ ...AUDIT, bill: "a range the select never showed" });
+    expect(bill.kind === "invalid" && bill.errors.bill).toBe("Pick a range.");
+    const svc = await submitQuote({ ...QUOTE, services: ["Something else"] });
+    expect(svc.kind === "invalid" && svc.errors.services).toBe("Pick from the listed services.");
     expect(insertSubmission).not.toHaveBeenCalled();
   });
 

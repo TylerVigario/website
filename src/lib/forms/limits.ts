@@ -16,7 +16,6 @@ export const MAX = {
   // The longest valid email address (RFC 5321's path limit); a phone
   // number, the other thing this field takes, is far shorter.
   contact: 254,
-  bill: 100,
   details: 20_000,
 } as const;
 
