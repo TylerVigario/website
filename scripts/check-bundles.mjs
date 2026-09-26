@@ -28,6 +28,15 @@
  * referenced from every page while the build stayed green; that trips
  * this whether it arrives inline or as a file.
  *
+ * EVERY FILE A PAGE LOADS, NOT ONLY THE ONES IT NAMES. A page's <script>
+ * is an entry point, and the build splits code two pages share into
+ * chunks the entry imports. Counting only the files named in the HTML
+ * missed those: an entry of 511 B importing a 3,467 B chunk measured as
+ * 511 B, so a page could load several times its budget and pass. Static
+ * imports and modulepreload links are followed to the end, and each file
+ * is counted once. Dynamic import() is not followed, because a page loads
+ * it only when that code runs.
+ *
  * Only prerendered pages can be checked here. /contact and
  * /pots-migration render at request time and never become files, so
  * they are outside what a static assertion can see.
@@ -70,6 +79,39 @@ function htmlFiles(dir) {
 // Skips ld+json: structured data is markup in a <script> tag, not code.
 const INLINE = /<script(?![^>]*ld\+json)(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g;
 const EXTERNAL = /<script[^>]*\ssrc="([^"]+)"/g;
+const PRELOAD = /<link[^>]*\brel="modulepreload"[^>]*\bhref="([^"]+)"/g;
+// Static imports in emitted ESM, minified or not: `import "x"`,
+// `import {a} from "x"`, `export {a} from "x"`. Not `import(...)`.
+const STATIC_IMPORT = /\bimport\s*["']([^"']+)["']|\bfrom\s*["']([^"']+)["']/g;
+
+/** Local specifiers only: relative to the importing file, or rooted. A
+ *  bare one cannot load in a browser at all, so it is not ours to count. */
+function resolveImport(spec, fromUrl) {
+  if (spec.startsWith("/")) return spec;
+  if (spec.startsWith("./") || spec.startsWith("../")) {
+    return new URL(spec, `https://x${fromUrl}`).pathname;
+  }
+  return null;
+}
+
+/** Every file the given entry URLs load, following static imports. */
+function loadedFiles(entries) {
+  const seen = new Set();
+  const queue = [...entries];
+  while (queue.length) {
+    const url = queue.pop();
+    if (seen.has(url)) continue;
+    seen.add(url);
+    const onDisk = path.join(ROOT, url);
+    if (!url.startsWith(LOCAL_PREFIX) || !fs.existsSync(onDisk)) continue;
+    const code = fs.readFileSync(onDisk, "utf8");
+    for (const m of code.matchAll(STATIC_IMPORT)) {
+      const next = resolveImport(m[1] ?? m[2], url);
+      if (next && !seen.has(next)) queue.push(next);
+    }
+  }
+  return [...seen];
+}
 
 let failed = false;
 const rows = [];
@@ -81,8 +123,19 @@ for (const file of htmlFiles(ROOT).sort()) {
     .replace(/\\/g, "/")
     .replace(/\/index\.html$/, "/");
 
-  const inline = [...html.matchAll(INLINE)].reduce((sum, m) => sum + m[1].length, 0);
-  const external = [...html.matchAll(EXTERNAL)].map((m) => m[1]);
+  const inlineCode = [...html.matchAll(INLINE)].map((m) => m[1]);
+  const inline = inlineCode.reduce((sum, code) => sum + code.length, 0);
+  const named = [
+    ...[...html.matchAll(EXTERNAL)].map((m) => m[1]),
+    ...[...html.matchAll(PRELOAD)].map((m) => m[1]),
+    // Inline module code can import files too.
+    ...inlineCode.flatMap((code) =>
+      [...code.matchAll(STATIC_IMPORT)]
+        .map((m) => resolveImport(m[1] ?? m[2], "/"))
+        .filter(Boolean),
+    ),
+  ];
+  const external = loadedFiles(named);
   const budget = route === "/" ? HOMEPAGE_BUDGET : JS_BUDGET;
 
   let externalBytes = 0;

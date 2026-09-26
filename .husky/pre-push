@@ -66,6 +66,13 @@ done
 # sub-second; the build below is what actually costs time here.
 node --run check:pins
 node --run lint:actions
+# The whole tree, not the staged files. lint-staged only lints what a
+# commit touches, so a change to the ESLint or Prettier config, or a
+# type-aware lint that a change elsewhere breaks, passed every hook and
+# failed in CI. About seven seconds, which is what makes "local is a
+# superset of the gate" true rather than a description.
+node --run lint
+node --run format
 
 node --run build
 node --run check:bundles

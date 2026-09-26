@@ -12,7 +12,7 @@ words and different pictures in it:
 
 - `src/components/`, `src/layouts/`, `src/scripts/`, `src/styles/`
 - `src/lib/` — the form pipeline, validation schemas, database access,
-  mailer, runtime config
+  mailer
 - `src/pages/**/*.ts` — the API routes and generated endpoints
 - `scripts/`, `tests/`, `.github/`, and the build configuration
 - the page structure and markup of `src/pages/**/*.astro`
@@ -25,8 +25,12 @@ in turn. That is the whole reason this licence was chosen.
 
 **Brand and imagery.** `src/assets/images/` in full — the VTS logo and
 symbol, the hero image, and every client screenshot under
-`src/assets/images/work/`. Also `public/favicon.ico` and
-`public/icon.svg`, which are the logo in another format.
+`src/assets/images/work/`. Also every file in `public/`, which is the
+logo mark in the formats browsers and home screens ask for:
+`favicon.ico`, `apple-touch-icon.png`, `icon-192.png` and
+`icon-512.png`. Those three PNGs replaced a `public/icon.svg`, which this
+notice went on naming after it was gone, so the files that replaced it
+were reserved nowhere.
 
 These moved from `public/images/` when the site was rebuilt on Astro, so
 that they could be processed at build time. An earlier version of this
