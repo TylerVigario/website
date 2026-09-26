@@ -1,84 +1,30 @@
 import type { APIRoute } from "astro";
-import { insertSubmission } from "@/lib/db";
-import { POTS_AUDIT_MARKER, PotsAuditRequest } from "@/lib/api/pots-audit";
 import { methodNotAllowed, zodError } from "@/lib/api/error";
-import { isTrapped } from "@/lib/api/honeypot";
-import { sendPotsAuditNotification } from "@/lib/email/mailer";
+import { readSubmission, submitPotsAudit } from "@/lib/api/submit";
 
 export const prerender = false;
 
-async function readBody(request: Request): Promise<unknown> {
-  const type = request.headers.get("content-type") ?? "";
-  if (type.includes("application/json")) return await request.json().catch(() => null);
-  const form = await request.formData().catch(() => null);
-  if (!form) return null;
-  // FormData values may be File, which stringifies to "[object File]".
-  // This form has no upload, so a non-string entry is not ours to read.
-  return Object.fromEntries(
-    Array.from(form.keys()).map((k) => {
-      const v = form.get(k);
-      return [k, typeof v === "string" ? v : ""];
-    }),
-  );
-}
-
-export const POST: APIRoute = async ({ request, redirect }) => {
-  const wantsJson = (request.headers.get("content-type") ?? "").includes("application/json");
-  const body = await readBody(request);
-
-  // Dropped before validation and before the database. The reply is the
-  // one a real submission gets — same status, same body, same redirect —
-  // because an error teaches a bot what to change, and a 200 that stores
-  // nothing teaches it that it already succeeded.
-  if (isTrapped(body)) {
-    if (wantsJson) {
-      return new Response(JSON.stringify({ success: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    return redirect("/pots-migration?sent=1", 303);
-  }
-  const parsed = PotsAuditRequest.safeParse(body);
-
-  if (!parsed.success) {
-    if (wantsJson) return zodError(parsed);
-    const values = encodeURIComponent(JSON.stringify(body ?? {}));
-    const errors = encodeURIComponent(
-      JSON.stringify(
-        Object.fromEntries(
-          parsed.error.issues.map((i) => [String(i.path[0] ?? "(root)"), i.message]),
-        ),
-      ),
-    );
-    return redirect(`/pots-migration?v=${values}&e=${errors}#audit`, 303);
+/**
+ * The enhanced path: JSON in, JSON out, Problem Details on failure. The
+ * work itself is submitPotsAudit(), shared with the page that takes the no-JS
+ * submit, so the two cannot disagree.
+ */
+export const POST: APIRoute = async ({ request }) => {
+  // A plain HTML submit belongs to the page, which can re-render the form
+  // with what was typed. 307, not 303: it makes the browser repeat the
+  // POST, body and all, so a page loaded before the forms stopped posting
+  // here still lands its submission, with nothing lost.
+  if (!(request.headers.get("content-type") ?? "").includes("application/json")) {
+    return new Response(null, { status: 307, headers: { Location: "/pots-migration#audit" } });
   }
 
-  const { business, name, contact, bill, details } = parsed.data;
-
-  // Both forms land in the same table; `services` is what distinguishes
-  // them, carrying the literal marker for an audit rather than a list.
-  insertSubmission({
-    name,
-    contact,
-    services: POTS_AUDIT_MARKER,
-    details: [`Business: ${business}`, `Monthly bill: ${bill}`, details].filter(Boolean).join("\n"),
+  const outcome = await submitPotsAudit(await readSubmission(request));
+  if (outcome.kind === "invalid") return zodError(outcome.failure);
+  // "dropped" answers exactly as "saved" does: see submit.ts.
+  return new Response(JSON.stringify({ success: true }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
   });
-
-  try {
-    await sendPotsAuditNotification({ business, name, contact, bill, details });
-  } catch (emailErr) {
-    // Best-effort; the row is already saved. journald has the detail.
-    console.error("Failed to send email notification:", emailErr);
-  }
-
-  if (wantsJson) {
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-  return redirect("/pots-migration?sent=1#audit", 303);
 };
 
 /** Any other method. A specific export wins over ALL in Astro, so POST

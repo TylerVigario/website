@@ -22,7 +22,13 @@ import { RUNTIME_EXTERNALS } from "./runtime-externals.mjs";
 export default defineConfig({
   site: "https://vigario.tech",
   output: "static",
-  adapter: node({ mode: "standalone" }),
+  // bodySizeLimit: 256 KB rather than the adapter's default of 1 GiB,
+  // which let one request store tens of megabytes. The longest valid
+  // submission is 20,000 characters of details (src/lib/forms/limits.ts);
+  // at worst three UTF-8 bytes a character, each percent-encoded, that is
+  // about 180 KB, so no real submission comes near the cap. A body over it
+  // fails to parse and is rejected like any other invalid submission.
+  adapter: node({ mode: "standalone", bodySizeLimit: 256 * 1024 }),
   trailingSlash: "never",
   // No UI framework integration, deliberately, and no carousel library
   // either. Nothing on this site needs one: the animations are

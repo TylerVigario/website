@@ -1,38 +1,42 @@
 ---
 import Base from "@/layouts/Base.astro";
 import QuoteForm from "@/components/QuoteForm.astro";
+import { readSubmission, submitQuote, type Values } from "@/lib/api/submit";
 
-// Rendered per request, not prerendered. The no-JS path redirects back
-// here carrying the submitted values and errors, and a prerendered page
-// reads Astro.url.searchParams at BUILD time — it would be empty and
-// the repopulation would silently do nothing. Pages that accept input
-// are dynamic; the rest of the site stays files on disk.
+// Rendered per request, not prerendered: this page takes the form's
+// no-JS submit, below. Pages that accept input are dynamic; the rest of
+// the site stays files on disk.
 export const prerender = false;
-// These responses carry what someone typed. The no-JS path redirects
-// back here with the submitted values and any errors in the query
-// string, so the HTML contains a real person's name, contact details
-// and message. Nothing may store that: not a browser cache a shared
-// machine can be walked up to, not an intermediary, not the back
-// button restoring it for whoever is next.
+// These responses can carry what someone typed: a submit that fails
+// validation is re-rendered with the values echoed back into the form,
+// so the HTML contains a real person's name, contact details and
+// message. Nothing may store that: not a browser cache a shared machine
+// can be walked up to, not an intermediary, not the back button
+// restoring it for whoever is next.
 //
 // no-store rather than no-cache — no-cache permits storage as long as
 // the cache revalidates, which is the wrong answer when the objection
 // is the storing itself.
 Astro.response.headers.set("Cache-Control", "no-store");
 
-const params = Astro.url.searchParams;
-const parseParam = (key: string) => {
-  const raw = params.get(key);
-  if (!raw) return {};
-  try {
-    return JSON.parse(raw) as Record<string, never>;
-  } catch {
-    return {};
-  }
-};
-const values = parseParam("v");
-const errors = parseParam("e");
-const submitted = params.get("sent") === "1";
+// The no-JS submit lands here, posted by the form to its own page. It
+// used to go to the API, which redirected back with everything typed in
+// the query string: that put names and messages into browser history and
+// access logs, failed outright once the text outgrew a request line, and
+// let anyone put words in the form's alert box through a crafted link.
+// Now a failure re-renders this page, 422, with every value still in the
+// form, and nothing typed is ever in a URL. Success redirects, so a
+// reload cannot submit twice. The work is submitQuote(), the same function
+// the JSON API calls.
+let values: Values = {};
+let errors: Record<string, string> = {};
+if (Astro.request.method === "POST") {
+  const outcome = await submitQuote(await readSubmission(Astro.request, ["services"]));
+  if (outcome.kind !== "invalid") return Astro.redirect("/contact?sent=1", 303);
+  ({ values, errors } = outcome);
+  Astro.response.status = 422;
+}
+const submitted = Astro.url.searchParams.get("sent") === "1";
 ---
 
 <Base title="Contact" description="Get in touch with Vigario Technology Solutions." mainClass="mx-auto max-w-2xl px-6 pt-32 pb-16">

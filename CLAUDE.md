@@ -172,8 +172,8 @@ should not be told something laxer.
 
 ## Core vocabulary
 
-- **Quote** — a "request a quote" submission from the main contact form. Schema in [`src/lib/api/quote.ts`](src/lib/api/quote.ts). Route handler at [`src/pages/api/quote.ts`](src/pages/api/quote.ts).
-- **POTS audit** — a "free phone-bill audit" submission from the `/pots-migration` landing page. Different schema ([`src/lib/api/pots-audit.ts`](src/lib/api/pots-audit.ts)), same destination row.
+- **Quote** — a "request a quote" submission from the main contact form. Schema in [`src/lib/api/quote.ts`](src/lib/api/quote.ts). Submitted through `submitQuote()` in [`src/lib/api/submit.ts`](src/lib/api/submit.ts), which both ways in call: `/api/quote` for JSON, and `/contact` itself for a no-JS form post.
+- **POTS audit** — a "free phone-bill audit" submission from the `/pots-migration` landing page. Different schema ([`src/lib/api/pots-audit.ts`](src/lib/api/pots-audit.ts)), same destination row, submitted through `submitPotsAudit()` the same two ways (`/api/pots-audit`, `/pots-migration`).
 - **`quotes` table** — single SQLite table that holds both kinds of submission. The `services` column distinguishes: a real services array for quote submissions, the literal string `"POTS Migration Audit"` for audit submissions. Schema is `CREATE TABLE IF NOT EXISTS` inside `getDb()` — no migrations.
 - **Problem Details** — the API error shape, per RFC 9457, `application/problem+json`. Validation failures via `zodError()`, an unsupported method via `methodNotAllowed()` (which sets `Allow`), an unclaimed path via `notFound()` from the `[...path].ts` catch-all. Two errors are NOT this shape and cannot be: a cross-site write is refused by Astro before middleware or routes run (`403 text/plain`), and an unhandled route fault returns the site's `500 text/html` — catching that is the blanket try/catch the guardrails forbid. `error.ts` records both, with the measurement. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()`, whose response body is annotated with the `ProblemDetails` type so a change to the shape fails the build. The client does **not** import that schema: [`enhance.ts`](src/lib/forms/enhance.ts) reads the shape by hand, because validating it in the browser would pull zod into a bundle that is otherwise ~2 KB in order to re-check a response this server just produced. See "Form patterns" below.
 
@@ -185,16 +185,16 @@ the URL is the path under `src/pages/`.
 ```text
 src/
 ├── pages/                            # ROUTES. One file, one URL.
-│   ├── index.astro  about.astro  contact.astro  services.astro
+│   ├── index.astro  about.astro  contact.astro  services.astro   # contact takes its own no-JS POST
 │   ├── services/                     # linux, networking, security-cameras, windows
 │   ├── work/                         # case studies: italesowell, pipetree, voip
-│   ├── pots-migration.astro          # the campaign landing page
+│   ├── pots-migration.astro          # the campaign landing page; takes its own no-JS POST
 │   ├── 404.astro  500.astro          # error pages, prerendered to static HTML
 │   ├── robots.txt.ts                 # generated from `site` in astro.config.mjs
 │   ├── manifest.webmanifest.ts       # generated, so icon paths cannot drift
 │   └── api/                          # prerender = false, like contact + pots-migration
-│       ├── quote.ts                  # POST: zod-validated, writes sqlite, optionally emails
-│       ├── pots-audit.ts             # POST: same destination row, different schema
+│       ├── quote.ts                  # POST, JSON: submitQuote(); a form post is 307'd to /contact
+│       ├── pots-audit.ts             # POST, JSON: submitPotsAudit(); a form post is 307'd to the page
 │       └── health.ts                 # GET: open/read/schema/write-probe → 200 or 503
 ├── components/                       # .astro, render to HTML at build time
 │   ├── QuoteForm.astro  PotsAuditForm.astro
@@ -209,7 +209,7 @@ src/
 │   ├── forms/
 │   │   ├── enhance.ts                # progressive enhancement; never erases input
 │   │   └── rules.ts                  # client rules mirroring the schemas
-│   ├── api/                          # error.ts (RFC 9457), quote.ts, pots-audit.ts
+│   ├── api/                          # submit.ts (the one submission path), error.ts (RFC 9457), schemas
 │   └── email/mailer.ts               # nodemailer; best-effort, logged on failure
 ├── emails/templates.ts               # HTML strings, escaped at every interpolation
 ├── scripts/                          # browser-side: reveal.ts, lightbox.ts
@@ -261,25 +261,42 @@ fail.
 
 ## Route handler pattern
 
+One submission path, two ways in. [`submit.ts`](src/lib/api/submit.ts)
+does the work once: honeypot before validation, the zod schema, the
+insert, and the best-effort email. The API route and the page both call
+it, so they cannot disagree about what is trapped, valid or stored.
+
 ```ts
-export const prerender = false; // one of five: the 3 api routes + the 2 input pages
+// src/pages/api/quote.ts: the enhanced path, JSON in and out.
+export const prerender = false; // six opt out: the four api routes + the two input pages
 
 export const POST: APIRoute = async ({ request }) => {
-  // Accepts BOTH application/json (enhanced path) and form-urlencoded
-  // (the no-JS path). The second is why the endpoint exists: a form
-  // that only works with JavaScript silently swallows the one thing
-  // this site is for.
-  const body = await readBody(request);        // malformed → null → 400
-  const parsed = QuoteRequest.safeParse(body);
-  if (!parsed.success) return zodError(parsed); // RFC 9457
+  // A plain form post belongs to the page, which can re-render the form.
+  // 307, not 303, so the browser repeats the POST with its body: a page
+  // loaded before the forms moved still lands its submission.
+  if (!isJson(request)) return new Response(null, { status: 307, headers: { Location: "/contact" } });
 
-  // Do the work. Genuine errors propagate — no top-level try/catch.
-
-  // The email send keeps its own try/catch: the row is already saved,
-  // so SMTP being down must not turn a captured lead into a 500.
-  // A form-urlencoded submit redirects; a JSON submit gets JSON.
+  const outcome = await submitQuote(await readSubmission(request, ["services"]));
+  if (outcome.kind === "invalid") return zodError(outcome.failure); // RFC 9457
+  return json({ success: true }); // "dropped" by the honeypot answers the same
 };
 ```
+
+```astro
+---
+// src/pages/contact.astro: the no-JS path. The form posts to its own page.
+if (Astro.request.method === "POST") {
+  const outcome = await submitQuote(await readSubmission(Astro.request, ["services"]));
+  if (outcome.kind !== "invalid") return Astro.redirect("/contact?sent=1", 303);
+  ({ values, errors } = outcome); // re-rendered into the form; never in a URL
+  Astro.response.status = 422;
+}
+---
+```
+
+Genuine errors propagate: there is no top-level try/catch. The email
+send keeps its own, inside `submit.ts`, because the row is already saved
+by then and SMTP being down must not turn a captured lead into a 500.
 
 ## Commands
 

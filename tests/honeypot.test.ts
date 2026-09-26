@@ -44,11 +44,6 @@ describe("the honeypot", () => {
     expect(rule.slice(0, rule.indexOf("}"))).not.toContain("display: none");
   });
 
-  it("is checked before validation in both routes", () => {
-    // Order matters: a zod error tells a bot which fields to fix.
-    for (const f of ["src/pages/api/quote.ts", "src/pages/api/pots-audit.ts"]) {
-      const src = readFileSync(f, "utf8");
-      expect(src.indexOf("isTrapped")).toBeLessThan(src.indexOf("safeParse"));
-    }
-  });
+  // That it is checked BEFORE validation, and stores nothing, is proved
+  // behaviourally in submit.test.ts rather than by reading source order.
 });
