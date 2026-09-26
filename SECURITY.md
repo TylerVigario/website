@@ -22,7 +22,7 @@ This is a public marketing site with two unauthenticated form endpoints (`/api/q
 
 - **Injection** — SQL injection (the write paths use parameterized statements; novel patterns or any string-built / raw SQL helper warrant scrutiny), or HTML injection through a form field that reaches the notification email. That surface changed and is now worth more scrutiny, not less: `src/emails/templates.ts` builds the message as HTML strings rather than through a component library, so every interpolation of submitter-supplied text goes through the `esc()` helper in that file. A new interpolation that skips it is an injection into an inbox.
 - **Stored or reflected XSS** — script execution via any user-entered field that is later rendered, in the browser or in the notification email an operator opens.
-- **Sensitive data leakage** — SMTP credentials, the Sentry DSN, or submitted PII (names, contacts, free-text details from the `quotes` table) exposed in logs, error responses, or git history. API errors follow RFC 9457 Problem Details and must not leak internals.
+- **Sensitive data leakage** — SMTP credentials or submitted PII (names, contacts, free-text details from the `quotes` table) exposed in logs, error responses, or git history. API errors follow RFC 9457 Problem Details and must not leak internals.
 - **Request-handling bypass** — a malformed request that skips zod validation, or reaches a code path that writes unvalidated data.
 - **Dependency vulnerabilities** that are reachable through the running app.
 

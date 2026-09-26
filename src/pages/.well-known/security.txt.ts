@@ -40,8 +40,10 @@ export const GET: APIRoute = ({ site }) => {
 
   return new Response(body, {
     headers: {
-      // RFC 9116 requires text/plain; a server sniffing this as something
-      // else is the usual reason a valid file is reported as invalid.
+      // Sent only where Node serves this route, which is `astro dev`. It
+      // is prerendered, so in production the web server serves the file
+      // and chooses the headers; the serving contract in CLAUDE.md asks
+      // for text/plain, which RFC 9116 requires.
       "Content-Type": "text/plain; charset=utf-8",
       "Cache-Control": "public, max-age=3600",
     },

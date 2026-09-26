@@ -12,15 +12,19 @@ loses what someone typed is a lead thrown away, and no amount of good
 copy upstream recovers it. `/pots-migration` is one campaign landing
 page among that surface, not the reason the site exists.
 
-Stack: Astro 7 (hybrid — pages prerender, only `/api/*` renders on
-demand), Tailwind v4, better-sqlite3 for quote/audit submissions,
-nodemailer for the optional "someone filled out a form" notification,
-zod for validation shared between the endpoints and the browser.
+Stack: Astro 7 (hybrid — pages prerender; `/api/*` and the two pages
+that take input, `/contact` and `/pots-migration`, render on demand),
+Tailwind v4, better-sqlite3 for quote/audit submissions, nodemailer for
+the optional "someone filled out a form" notification, and zod for
+validation on the server. The browser runs hand-written rules instead,
+which a test holds to the same verdicts and messages as the schemas.
 
-No UI framework. Most pages ship no JavaScript at all; the forms carry
-~2 KB and the case-study viewer ~3 KB, inline. `npm run check:bundles`
-asserts that, so it is a fact about the build rather than a claim in a
-readme. Errors go to stdout, for whatever supervises the process to collect.
+No UI framework. A plain page ships 508 B of JavaScript (the scroll
+reveal), a case study about 4.9 KB with the image viewer, and the two
+input pages about 5.4 KB with the form script, all as files rather than inline.
+`npm run check:bundles` budgets every prerendered page, following
+imports, so the static figures are facts about the build rather than
+claims in a readme. Errors go to stdout, for whatever supervises the process to collect.
 
 ## Local dev
 
@@ -100,9 +104,10 @@ the fast checks (lint-staged, typecheck, test) so committing stays
 quick.
 
 `.github/workflows/ci.yml` is one job, `Gate`, on every PR and every
-push to main. It runs the same steps, plus a Node-major pin check and
-actionlint — actionlint is the one check with no local equivalent,
-since it is a Go binary with no usable npx wrapper.
+push to main, and the first job of every release. It runs the same
+steps, plus a Node-major pin check and actionlint, which
+`npm run lint:actions` also runs locally (actionlint is a Go binary, so
+it is found on your PATH rather than installed by npm).
 
 CHANGELOG is regenerated from commit messages by git-cliff — don't
 hand-edit it. `cliff.toml` and the conventional-commit convention are
@@ -118,8 +123,9 @@ same commits.
   bump — that stopped being a rebuild trigger. It still compiles from
   source where no prebuilt matches the platform, which needs a
   toolchain wherever `npm ci` runs.
-- **SQLITE_PATH must be absolute**. App throws at startup via
-  getDbPath() if unset or relative. No cwd fallback — that bit me
+- **SQLITE_PATH must be absolute**. The app throws via getDbPath() if it
+  is unset or relative, when the database is first opened (the first
+  submission or health check; static pages keep serving). No cwd fallback — that bit me
   when an old deploy wrote `data/quotes.db` inside a release dir that
   got nuked on the next swap.
 - **Health check is `/api/health`**, not `/`. The homepage rendering

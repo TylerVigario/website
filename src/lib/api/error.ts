@@ -11,8 +11,9 @@
  * (Zod failures), each with { field, message }.
  *
  * Server: route handlers return `zodError()` for validation failures.
- * Client: parse responses through `ProblemDetails` to type-check the
- *   shape and surface field-level errors back to the form.
+ * Client: src/lib/forms/enhance.ts reads this shape by hand rather than
+ *   importing it, so zod stays out of the browser, and matches `errors[]`
+ *   back to the form's fields.
  */
 
 /** One field-level validation issue, as it appears in `errors[]`. */
@@ -56,7 +57,7 @@ export function zodError(result: SafeParseFailure): Response {
     message: issue.message,
   }));
 
-  // Typed, not merely shaped like it: the schema below is the single
+  // Typed, not merely shaped like it: the ProblemDetails interface above is the single
   // declaration of this contract, and annotating the body here makes a
   // drift between the two a compile error rather than a surprise for
   // whoever is parsing the response.
