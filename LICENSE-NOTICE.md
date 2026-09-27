@@ -51,6 +51,13 @@ real engagements with named clients, written about work that was
 actually done, and it is not a template. A fork gets the site and writes
 its own.
 
+## Not ours to grant
+
+The GitHub and LinkedIn marks in `src/components/icons/` belong to
+GitHub and LinkedIn. They label links to profiles on those sites, and
+this licence grants neither. The glyph in `LinkedIn.astro` comes from
+Bootstrap Icons, under MIT, and carries that notice in the file.
+
 ## Why the distinction is drawn rather than implied
 
 Copyright in the content is held regardless of what any file says; a

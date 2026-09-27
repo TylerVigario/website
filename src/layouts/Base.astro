@@ -20,7 +20,10 @@ interface Props {
    * unless `bareTitle` is set, matching the old Next title template. */
   title: string;
   description: string;
-  /** Set on the home page, which carried the untemplated default title. */
+  /** Drops the " | Vigario Technology Solutions" suffix. The home page
+   * carried the untemplated default title; the POTS page's own title
+   * already fills the ~60 characters a search result shows, and with
+   * the suffix it ran to 92 and was cut off mid-phrase. */
   bareTitle?: boolean;
   /** Canonical override. Defaults to the current URL, which is what
    * every page wants; only set it where two routes serve one page. */

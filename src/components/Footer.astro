@@ -1,6 +1,7 @@
 ---
 import imgVtsLogo0 from "@/assets/images/vts-logo.png";
 import GitHub from "@/components/icons/GitHub.astro";
+import LinkedIn from "@/components/icons/LinkedIn.astro";
 import MapPin from "@/components/icons/MapPin.astro";
 
 const nav = [
@@ -11,9 +12,10 @@ const nav = [
 ];
 
 const external = [
-  { label: "GitHub", href: "https://github.com/tylervigario", icon: "gh" },
-  { label: "Google Business", href: "https://g.co/kgs/wyVQ2pD", icon: "pin" },
-] as const;
+  { label: "GitHub", href: "https://github.com/tylervigario", Icon: GitHub },
+  { label: "LinkedIn", href: "https://www.linkedin.com/in/tylervigario/", Icon: LinkedIn },
+  { label: "Google Business", href: "https://maps.app.goo.gl/smESWN2tWuZfZzPd7", Icon: MapPin },
+];
 
 // Baked at build time, not evaluated in the browser. A prerendered page
 // would otherwise freeze whatever year the build ran in either way —
@@ -100,17 +102,17 @@ const year = new Date().getFullYear();
         contact@vigario.tech
       </a>
       {
-        external.map((l) => (
+        external.map(({ label, href, Icon }) => (
           <>
             <span class="hidden text-border md:inline">|</span>
             <a
-              href={l.href}
+              href={href}
               target="_blank"
               rel="noopener noreferrer"
               class="inline-flex items-center gap-1.5 py-3 transition-colors hover:text-foreground"
             >
-              {l.icon === "gh" ? <GitHub /> : <MapPin />}
-              {l.label}
+              <Icon />
+              {label}
             </a>
           </>
         ))

@@ -28,6 +28,8 @@ const jsonLd = {
     name: "Tyler Vigario",
   },
   foundingDate: "2021",
+  // The legal business address, public on the Business Profile. On-site
+  // trips start here, and a customer can drop equipment off here instead.
   address: {
     "@type": "PostalAddress",
     streetAddress: "3304 W Tiger Ave",
@@ -36,10 +38,12 @@ const jsonLd = {
     postalCode: "93656",
     addressCountry: "US",
   },
+  // The building's own pin, from Google Maps. Google requires at least
+  // five decimal places; the two this had named the middle of town.
   geo: {
     "@type": "GeoCoordinates",
-    latitude: 36.43,
-    longitude: -119.86,
+    latitude: 36.4257158,
+    longitude: -119.8594136,
   },
   areaServed: [
     { "@type": "City", name: "Fresno" },
@@ -47,8 +51,10 @@ const jsonLd = {
     { "@type": "City", name: "Madera" },
     { "@type": "City", name: "Visalia" },
     { "@type": "City", name: "Riverdale" },
-    { "@type": "GeoShape", name: "Central Valley, CA" },
+    { "@type": "Place", name: "Central Valley, CA" },
   ],
+  // The hours a call is reliably answered. Calls and texts outside them
+  // often are too, but these are the hours worth promising a stranger.
   openingHoursSpecification: {
     "@type": "OpeningHoursSpecification",
     dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
@@ -63,7 +69,7 @@ const jsonLd = {
     "Custom Software Development",
     "IT Strategy & Consulting",
   ],
-  sameAs: ["https://github.com/tylervigario", "https://g.co/kgs/wyVQ2pD"],
+  sameAs: ["https://github.com/tylervigario", "https://maps.app.goo.gl/smESWN2tWuZfZzPd7"],
   slogan: "IT that writes code.",
   knowsAbout: [
     "Network Infrastructure",

@@ -25,7 +25,7 @@ const jsonLd = {
       { "@type": "City", name: "Clovis" },
       { "@type": "City", name: "Madera" },
       { "@type": "City", name: "Visalia" },
-      { "@type": "GeoShape", name: "Central Valley, CA" },
+      { "@type": "Place", name: "Central Valley, CA" },
     ],
   },
   serviceType: [
@@ -78,7 +78,7 @@ if (Astro.request.method === "POST") {
 const submitted = Astro.url.searchParams.get("sent") === "1";
 ---
 
-<Base title="POTS to VoIP Migration | Stop Overpaying for Landline Service" description="Still on AT&T or Verizon copper landlines? Your carrier is charging you 5-20x what modern VoIP costs. Free telecom audit for Central Valley businesses." jsonLd={jsonLd} mainClass="pt-16">
+<Base title="POTS to VoIP Migration | Stop Overpaying for Landline Service" bareTitle description="Still on AT&T or Verizon copper landlines? Your carrier is charging you 5-20x what modern VoIP costs. Free telecom audit for Central Valley businesses." jsonLd={jsonLd} mainClass="pt-16">
   <LandingHeader slot="header" />
   <POTSLanding values={values} errors={errors} submitted={submitted} />
 </Base>
