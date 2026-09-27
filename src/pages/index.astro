@@ -47,8 +47,10 @@ const jsonLd = {
     { "@type": "City", name: "Madera" },
     { "@type": "City", name: "Visalia" },
     { "@type": "City", name: "Riverdale" },
-    { "@type": "GeoShape", name: "Central Valley, CA" },
+    { "@type": "Place", name: "Central Valley, CA" },
   ],
+  // The hours a call is reliably answered. Calls and texts outside them
+  // often are too, but these are the hours worth promising a stranger.
   openingHoursSpecification: {
     "@type": "OpeningHoursSpecification",
     dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
@@ -63,7 +65,7 @@ const jsonLd = {
     "Custom Software Development",
     "IT Strategy & Consulting",
   ],
-  sameAs: ["https://github.com/tylervigario", "https://g.co/kgs/wyVQ2pD"],
+  sameAs: ["https://github.com/tylervigario", "https://maps.app.goo.gl/smESWN2tWuZfZzPd7"],
   slogan: "IT that writes code.",
   knowsAbout: [
     "Network Infrastructure",
