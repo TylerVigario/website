@@ -1,4 +1,10 @@
 # Changelog
+## [1.15.2](https://github.com/TylerVigario/website/compare/v1.15.1...v1.15.2) (2026-09-27)
+
+### Bug Fixes
+
+* **site:** Link the live business profile and LinkedIn, and tidy search metadata 
+
 ## [1.15.1](https://github.com/TylerVigario/website/compare/v1.15.0...v1.15.1) (2026-09-26)
 
 ### Bug Fixes
