@@ -49,7 +49,7 @@ updates:
       # Held deliberately, and Dependabot re-raises both weekly without
       # this. Remove an entry when its blocker clears.
       #
-      # Two independent blockers, both re-verified 2026-09-22:
+      # Two independent blockers, both re-verified 2026-10-01:
       # typescript-eslint peers >=4.8.4 <6.1.0, and @astrojs/check —
       # which is what `npm run typecheck` runs — peers ^5.0.0 ||
       # ^6.0.0. TypeScript 7 has neither a lint path nor a typecheck

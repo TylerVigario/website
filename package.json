@@ -7,11 +7,11 @@
   "engines": {
     "node": "24.x"
   },
-  "packageManager": "npm@11.17.0",
+  "packageManager": "npm@11.19.0",
   "scripts": {
     "build": "astro build",
     "check:bundles": "node scripts/check-bundles.mjs",
-    "ci": "npm run lint && npm run typecheck && npm run format && npm test && npm run build && npm run check:bundles",
+    "ci": "npm run check:install-scripts && npm run lint && npm run typecheck && npm run format && npm test && npm run build && npm run check:bundles",
     "clean": "node -e \"const fs=require('fs'); ['dist','.astro','node_modules/.cache','.eslintcache'].forEach(p=>fs.rmSync(p,{recursive:true,force:true}))\"",
     "dev": "node --env-file-if-exists=.env.local node_modules/astro/bin/astro.mjs dev",
     "format": "prettier --check .",
@@ -29,16 +29,17 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "astro check",
-    "check:pins": "node scripts/check-node-pins.mjs"
+    "check:pins": "node scripts/check-node-pins.mjs",
+    "check:install-scripts": "node scripts/check-install-scripts.mjs"
   },
   "dependencies": {
     "@astrojs/node": "^11.1.6",
     "@astrojs/sitemap": "^3.7.4",
     "@fontsource-variable/geist": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
-    "astro": "^7.3.4",
+    "astro": "^7.3.5",
     "better-sqlite3": "^13.0.3",
-    "nodemailer": "^10.0.10",
+    "nodemailer": "^10.0.13",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -46,23 +47,22 @@
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
     "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^24.13.6",
-    "@types/nodemailer": "^8.0.2",
-    "browserslist": "^4.29.0",
-    "caniuse-lite": "^1.0.30001810",
+    "@types/node": "^24.19.1",
+    "browserslist": "^4.29.3",
+    "caniuse-lite": "^1.0.30001814",
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-astro": "^3.2.1",
     "git-cliff": "^2.14.2",
     "husky": "^9.1.7",
     "jsdom": "^30.1.1",
-    "lint-staged": "^17.5.1",
+    "lint-staged": "^17.6.0",
     "markdownlint-cli2": "^0.23.3",
     "prettier": "^3.9.9",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.70.1",
-    "vitest": "^5.0.1"
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^5.0.3"
   },
   "lint-staged": {
     "*.astro": [
@@ -92,5 +92,10 @@
     "not firefox < 128",
     "not safari < 16.4",
     "not ios_saf < 16.4"
-  ]
+  ],
+  "allowScripts": {
+    "better-sqlite3@13.0.3": true,
+    "esbuild": false,
+    "fsevents": false
+  }
 }

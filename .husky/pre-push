@@ -65,6 +65,7 @@ done
 # broken workflow could only be discovered by pushing. Both are
 # sub-second; the build below is what actually costs time here.
 node --run check:pins
+node --run check:install-scripts
 node --run lint:actions
 # The whole tree, not the staged files. lint-staged only lints what a
 # commit touches, so a change to the ESLint or Prettier config, or a
