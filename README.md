@@ -95,7 +95,7 @@ that runs on a server.
 `npm run ci` is the gate, and it is the same gate CI runs:
 
 ```text
-lint → typecheck → format → test → build → check:bundles
+check:install-scripts → lint → typecheck → format → test → build → check:bundles
 ```
 
 Run it before pushing and CI should hold no surprises. The `pre-push`
