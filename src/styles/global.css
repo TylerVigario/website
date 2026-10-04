@@ -14,38 +14,48 @@
   --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
 }
 
-body {
-  background: var(--color-background);
-  color: var(--color-foreground);
-}
-
-html {
-  scroll-behavior: smooth;
-  overflow-x: hidden;
-  scroll-snap-type: y proximity;
-}
-
-@media (min-width: 640px) {
-  html {
-    scroll-snap-type: none;
+/* Defaults, in Tailwind's base layer so that any utility on an element
+ * overrides them. Outside a layer they outranked every utility: a
+ * component's `focus-visible:outline-white` never applied, and the
+ * outline reset below hid the focus ring on checkboxes, which have no
+ * focus style of their own. */
+@layer base {
+  body {
+    background: var(--color-background);
+    color: var(--color-foreground);
   }
-}
 
-::selection {
-  background: var(--color-accent);
-  color: white;
-}
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+    scroll-snap-type: y proximity;
+  }
 
-:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
+  @media (min-width: 640px) {
+    html {
+      scroll-snap-type: none;
+    }
+  }
 
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline: none;
+  ::selection {
+    background: var(--color-accent);
+    color: white;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Text fields draw their own focus ring (focus:ring-accent), so the
+   * outline would be a second one. Checkboxes and radios draw none and
+   * keep it. */
+  input:not([type="checkbox"], [type="radio"]):focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: none;
+  }
 }
 
 /* Scroll reveal, third attempt, with the failure modes of the first two
