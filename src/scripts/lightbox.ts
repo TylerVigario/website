@@ -254,7 +254,10 @@ export function mountLightbox() {
     const sync = (index: number) => {
       if (index !== current) resetZoom();
       current = index;
-      if (counter) counter.textContent = `${index + 1} / ${slides.length}`;
+      // The counter is a live region: write it only when it changes, or
+      // the same position is announced twice.
+      const position = `${index + 1} / ${slides.length}`;
+      if (counter && counter.textContent !== position) counter.textContent = position;
       if (prev) prev.disabled = index === 0;
       if (next) next.disabled = index === slides.length - 1;
       for (const [i, thumb] of thumbs.entries()) {
@@ -264,25 +267,48 @@ export function mountLightbox() {
       thumbs[index]?.scrollIntoView({ block: "nearest", inline: "nearest" });
     };
 
+    // While a button or thumbnail scrolls the track, every slide it
+    // passes crosses the threshold below, and each one used to be
+    // announced: jumping from 1 to 6 read out 6, 2, 3, 4, 5, 6. Until the
+    // scroll arrives (or a second at most, where scrollend is missing),
+    // only the destination counts.
+    let steeringTo: number | null = null;
+    let release: number | undefined;
+    const arrived = () => {
+      steeringTo = null;
+      clearTimeout(release);
+    };
+    track.addEventListener("scrollend", arrived);
+
     // The scroller is the source of truth for which slide is showing —
     // whether it got there by swipe, arrow key or button.
     const io = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (entry.intersectionRatio > 0.6) {
-            sync(Number((entry.target as HTMLElement).dataset.slide));
-          }
+          if (entry.intersectionRatio <= 0.6) continue;
+          const index = Number((entry.target as HTMLElement).dataset.slide);
+          if (steeringTo !== null && index !== steeringTo) continue;
+          if (index === steeringTo) arrived();
+          sync(index);
         }
       },
       { root: track, threshold: [0.6] },
     );
     for (const slide of slides) io.observe(slide);
 
+    const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
     const goTo = (index: number, smooth = true) => {
       const target = slides[Math.min(slides.length - 1, Math.max(0, index))];
       if (!target) return;
-      track.scrollTo({ left: target.offsetLeft, behavior: smooth ? "smooth" : "instant" });
-      sync(Number(target.dataset.slide));
+      const destination = Number(target.dataset.slide);
+      const animate = smooth && !reduceMotion.matches;
+      if (animate && destination !== current) {
+        steeringTo = destination;
+        clearTimeout(release);
+        release = window.setTimeout(arrived, 1000);
+      }
+      track.scrollTo({ left: target.offsetLeft, behavior: animate ? "smooth" : "instant" });
+      sync(destination);
     };
 
     prev?.addEventListener("click", () => goTo(current - 1));

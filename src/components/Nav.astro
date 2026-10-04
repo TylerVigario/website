@@ -29,7 +29,8 @@ const linkClass = (href: string) =>
   }`;
 ---
 
-<nav class="fixed top-0 right-0 left-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+<header>
+<nav aria-label="Main" class="fixed top-0 right-0 left-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
   <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
     <a href="/" class="flex items-center py-1.5">
       {/* A plain <img>, not Astro's <Image>, and that is load-bearing.
@@ -60,7 +61,7 @@ const linkClass = (href: string) =>
     </a>
 
     <div class="hidden items-center gap-8 md:flex">
-      {links.map((l) => <a href={l.href} class={linkClass(l.href)}>{l.label}</a>)}
+      {links.map((l) => <a href={l.href} class={linkClass(l.href)} aria-current={isActive(l.href) ? "page" : undefined}>{l.label}</a>)}
       <a
         href="tel:+15599001400"
         class="rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-bright"
@@ -87,7 +88,7 @@ const linkClass = (href: string) =>
         <div class="flex flex-col gap-4 px-6 py-6">
           {
             links.map((l) => (
-              <a href={l.href} class={linkClass(l.href).replace("py-3 text-sm", "py-2.5")}>
+              <a href={l.href} class={linkClass(l.href).replace("py-3 text-sm", "py-2.5")} aria-current={isActive(l.href) ? "page" : undefined}>
                 {l.label}
               </a>
             ))
@@ -103,3 +104,4 @@ const linkClass = (href: string) =>
     </details>
   </div>
 </nav>
+</header>

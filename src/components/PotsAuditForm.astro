@@ -19,12 +19,14 @@ const inputClass =
   "w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent aria-invalid:border-red-500";
 
 const fields = [
-  { id: "business", label: "Business name", hint: null },
-  { id: "name", label: "Your name", hint: null },
+  { id: "business", label: "Business name", hint: null, autocomplete: "organization" },
+  { id: "name", label: "Your name", hint: null, autocomplete: "name" },
   {
     id: "contact",
     label: "Phone or email",
     hint: "Either is fine — whichever you'd rather I use.",
+    // No single token means "phone or email", so none is claimed.
+    autocomplete: undefined,
   },
 ] as const;
 ---
@@ -86,6 +88,7 @@ const fields = [
             id={f.id}
             name={f.id}
             type="text"
+            autocomplete={f.autocomplete}
             value={str(f.id)}
             aria-required="true"
             aria-invalid={errors[f.id] ? "true" : undefined}
@@ -165,7 +168,12 @@ const fields = [
         done.innerHTML =
           "<p class=\"font-medium text-foreground\">Got it — I'll take a look.</p>" +
           '<p class="mt-1 text-sm text-muted">I\'ll come back with what your lines actually cost.</p>';
+        // Focus moves to the confirmation: the button that had it is gone
+        // with the form, and focus left on <body> leaves a keyboard or
+        // screen-reader user nowhere.
+        done.tabIndex = -1;
         form.replaceWith(done);
+        done.focus();
       },
     });
   }

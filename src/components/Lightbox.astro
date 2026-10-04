@@ -83,7 +83,7 @@ const ownsDialog = from === 0;
           src={shot.src}
           alt={shot.alt}
           widths={[320, 480, 640, 960]}
-          sizes={shot.sizes ?? "(min-width: 640px) 50vw, 100vw"}
+          sizes={shot.sizes ?? "(min-width: 640px) 50vw, calc(100vw - 3rem)"}
           loading="lazy"
           decoding="async"
           class="h-auto w-full transition-transform duration-300 group-hover:scale-[1.02]"
@@ -97,6 +97,7 @@ const ownsDialog = from === 0;
   ownsDialog && (
     <dialog
       data-lightbox-dialog={id}
+      aria-label="Image viewer"
       class="fixed inset-0 m-0 h-auto max-h-none w-auto max-w-none border-0 bg-transparent p-0 backdrop:bg-black/90"
     >
       <div class="relative flex h-full w-full flex-col">
@@ -148,7 +149,7 @@ const ownsDialog = from === 0;
             native momentum and snapping; no JavaScript drives movement. */}
         <div
           data-track
-          class="flex h-full w-full snap-x snap-mandatory scroll-smooth overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          class="flex h-full w-full snap-x snap-mandatory motion-safe:scroll-smooth overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {shots.map((shot, i) => (
             <div
