@@ -1,0 +1,78 @@
+---
+import Base from "@/layouts/Base.astro";
+import { RETENTION_MONTHS } from "@/lib/retention";
+
+// California's online privacy law (Business and Professions Code §22575)
+// requires a site that collects personal information from California
+// consumers to post this, whatever the size of the business. Every
+// statement here describes what the site and its server actually do; a
+// change to either is a change to this page. The retention period is the
+// number src/lib/db.ts enforces, both read from src/lib/retention.ts.
+const effective = "2026-10-04";
+const effectiveLabel = "October 4, 2026";
+---
+
+<Base title="Privacy" description="What this site collects when you send a form, what it is used for, who else handles it, and how long it is kept." mainClass="mx-auto max-w-3xl px-6 pt-32 pb-24">
+  <h1 class="text-3xl font-bold tracking-tight text-navy sm:text-4xl">Privacy</h1>
+  <p class="mt-3 text-sm text-muted">Effective <time datetime={effective}>{effectiveLabel}</time></p>
+
+  <div class="mt-10 space-y-10 text-lg leading-relaxed text-muted">
+    <section>
+      <h2 class="text-xl font-semibold text-navy">What this site collects</h2>
+      <p class="mt-3">
+        Only what you send in a form. The quote form asks for your name, a phone number or email, the services you're interested in, and anything you want to tell me. The phone-bill audit form asks for your business name, your name, a phone number or email, your monthly bill range, and anything else you add.
+      </p>
+      <p class="mt-3">
+        Nothing else is collected. There are no cookies, no analytics, no ads and no tracking scripts, and every font and image is served from this site rather than a third party.
+      </p>
+      <p class="mt-3">
+        While you fill in a form, what you type is saved in your own browser so a reload or a closed tab doesn't lose it. It stays on your device and is cleared once you send the form.
+      </p>
+      <p class="mt-3">
+        Like any web server, this one keeps a log of requests: the address they came from, the browser, the page and the time. The log is kept for 14 days, to keep the site secure and working.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-xl font-semibold text-navy">How it's used</h2>
+      <p class="mt-3">
+        To reply to you about what you asked, and for nothing else. It is never sold or rented, never shared for marketing, and never added to a mailing list.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-xl font-semibold text-navy">Who else handles it</h2>
+      <p class="mt-3">
+        What you send is stored on Vigario Technology Solutions' own server. A notification with the same details is emailed to me so I can reply, so it also passes through the email providers that deliver, forward and hold my mail. No one else receives it.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-xl font-semibold text-navy">How long it's kept</h2>
+      <p class="mt-3">
+        Submissions are deleted automatically after {RETENTION_MONTHS} months, and backups of the database roll off on their own schedule after that. A copy of each notification stays in my email until I delete it.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-xl font-semibold text-navy">Seeing, correcting or deleting what you sent</h2>
+      <p class="mt-3">
+        Email <a href="mailto:admin@vigario.tech" class="text-accent underline hover:text-navy">admin@vigario.tech</a> and I'll tell you what I have, correct it, or delete it, whichever you ask for.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-xl font-semibold text-navy">Do Not Track</h2>
+      <p class="mt-3">
+        This site doesn't track visitors across other sites or over time, so there is nothing for a Do Not Track signal to turn off. Every visitor is treated the same way, whether or not their browser sends one.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-xl font-semibold text-navy">Changes</h2>
+      <p class="mt-3">
+        If this policy changes, the effective date at the top changes with it, and anything that changes what is collected or how it's used will be described here.
+      </p>
+    </section>
+  </div>
+</Base>

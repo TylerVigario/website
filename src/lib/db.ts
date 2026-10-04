@@ -1,3 +1,4 @@
+import { RETENTION_MONTHS } from "@/lib/retention";
 import Database from "better-sqlite3";
 import path from "node:path";
 
@@ -107,6 +108,10 @@ export function getDb() {
       // gone from both ends. FULL costs an fsync per submission, which a
       // form this size cannot notice.
       db.pragma("synchronous = FULL");
+      // A deleted submission is overwritten with zeros rather than left in
+      // the file's free pages, so a lead removed under the retention rule
+      // below, or on request, is gone from the database file too.
+      db.pragma("secure_delete = ON");
       migrate(db);
     } catch (err) {
       // Nothing caches a handle that failed to set up, so without this
@@ -116,8 +121,40 @@ export function getDb() {
       throw err;
     }
     g.__sqlite__ = db;
+    // Retention runs off the request path, so it can never cost a
+    // submission: a minute after open, then daily, since the process can
+    // run for weeks between releases. A failed sweep is logged with its
+    // stack and tried again at the next one. This is a timer, not a route
+    // handler, so nothing else would see the error, and letting it escape
+    // would take form submission down with the process. unref() so the
+    // timers never keep a process alive.
+    const sweep = () => {
+      try {
+        purgeExpired(db);
+      } catch (err) {
+        console.error("[retention] sweep failed:", err);
+      }
+    };
+    setTimeout(sweep, 60_000).unref();
+    setInterval(sweep, 24 * 60 * 60 * 1000).unref();
   }
   return g.__sqlite__;
+}
+
+export { RETENTION_MONTHS };
+
+/** Deletes submissions older than RETENTION_MONTHS and returns how many
+ *  went. Logs a count, never the content. */
+export function purgeExpired(db: Database.Database): number {
+  const { changes } = db
+    .prepare("DELETE FROM quotes WHERE created_at < datetime('now', ?)")
+    .run(`-${RETENTION_MONTHS} months`);
+  if (changes > 0) {
+    console.log(
+      `[retention] removed ${changes} submission(s) older than ${RETENTION_MONTHS} months`,
+    );
+  }
+  return changes;
 }
 
 /** The columns a submission writes. Named once, here, because both
