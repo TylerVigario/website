@@ -45,6 +45,7 @@ follows the files, not the path.
 - the POTS migration copy in `src/components/POTSLanding.astro` and
   `src/pages/pots-migration.astro`
 - the about, hero, and call-to-action copy
+- the privacy policy's text in `src/pages/privacy.astro`
 
 This is the part that is not code with words in it. It is an account of
 real engagements with named clients, written about work that was
