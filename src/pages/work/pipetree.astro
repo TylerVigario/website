@@ -1,4 +1,5 @@
 ---
+import { businessRef, founderRef } from "@/lib/business";
 import { Image } from "astro:assets";
 import imgAddressesFull0 from "@/assets/images/work/pipetree/addresses-full.webp";
 import Base from "@/layouts/Base.astro";
@@ -6,21 +7,31 @@ import PipetreeScreenshots from "@/components/PipetreeScreenshots.astro";
 
 // Built from Astro.site so the canonical domain lives in one place.
 const site = Astro.site!.href.replace(/\/$/, "");
+// The page is a case study, so it is the Article; Pipetree is what it is
+// about. Marked up as the page itself, the software lacked the price and
+// rating Google requires of an app, and its url was this page rather than
+// the software.
 const jsonLd = {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  "@id": `${site}/work/pipetree#software`,
-  name: "Pipetree",
-  description:
-    "Operations platform for crossbore CCTV pipe inspection. Operators enter typed field data; the system derives a live infrastructure graph; PMs resolve problems inline on the graph.",
+  "@type": "Article",
+  "@id": `${site}/work/pipetree#article`,
+  headline: "Pipetree Case Study",
   url: `${site}/work/pipetree`,
-  applicationCategory: "BusinessApplication",
-  operatingSystem: "Linux (self-hosted)",
-  license: "https://www.gnu.org/licenses/agpl-3.0.html",
-  author: {
-    "@type": "ProfessionalService",
-    "@id": `${site}/#business`,
-    name: "Vigario Technology Solutions",
+  datePublished: "2026-07-22",
+  image: new URL(imgAddressesFull0.src, site).href,
+  author: founderRef(site),
+  publisher: businessRef(site),
+  about: {
+    "@type": "SoftwareApplication",
+    "@id": `${site}/work/pipetree#software`,
+    name: "Pipetree",
+    description:
+      "Operations platform for crossbore CCTV pipe inspection. Operators enter typed field data; the system derives a live infrastructure graph; PMs resolve problems inline on the graph.",
+    url: "https://github.com/TylerVigario/pipetree",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Linux (self-hosted)",
+    license: "https://www.gnu.org/licenses/agpl-3.0.html",
+    author: businessRef(site),
   },
 };
 
@@ -75,7 +86,7 @@ const stack = [
 ];
 ---
 
-<Base title="Pipetree Case Study" description="How VTS built Pipetree — an operations platform for crossbore CCTV pipe inspection. Typed field data in, a live infrastructure graph out, PM review inline." jsonLd={jsonLd}>
+<Base ogType="article" title="Pipetree Case Study" description="How VTS built Pipetree — an operations platform for crossbore CCTV pipe inspection. Typed field data in, a live infrastructure graph out, PM review inline." jsonLd={jsonLd}>
 
     <>
       {/* Hero */}

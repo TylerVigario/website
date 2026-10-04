@@ -1,4 +1,5 @@
 ---
+import { areaServed, businessRef } from "@/lib/business";
 import Base from "@/layouts/Base.astro";
 import POTSLanding from "@/components/POTSLanding.astro";
 import LandingHeader from "@/components/LandingHeader.astro";
@@ -14,20 +15,9 @@ const jsonLd = {
   description:
     "Telecom audit, VoIP migration, and carrier dispute advocacy for small businesses still on legacy copper landlines.",
   url: `${site}/pots-migration`,
-  provider: {
-    "@type": "ProfessionalService",
-    "@id": `${site}/#business`,
-    name: "Vigario Technology Solutions",
-    telephone: "+1-559-900-1400",
-    email: "contact@vigario.tech",
-    areaServed: [
-      { "@type": "City", name: "Fresno" },
-      { "@type": "City", name: "Clovis" },
-      { "@type": "City", name: "Madera" },
-      { "@type": "City", name: "Visalia" },
-      { "@type": "Place", name: "Central Valley, CA" },
-    ],
-  },
+  // The business is defined once, on the home page; this refers to it.
+  provider: businessRef(site),
+  areaServed,
   serviceType: [
     "Telecom Audit",
     "VoIP Migration",

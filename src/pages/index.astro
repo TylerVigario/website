@@ -4,11 +4,11 @@ import Hero from "@/components/Hero.astro";
 import Services from "@/components/Services.astro";
 import About from "@/components/About.astro";
 import vtsLogo from "@/assets/images/vts-logo.png";
+import { areaServed, founderRef } from "@/lib/business";
 
 // Built from Astro.site so the canonical domain lives in one place.
 const site = Astro.site!.href.replace(/\/$/, "");
-const jsonLd = {
-  "@context": "https://schema.org",
+const business = {
   "@type": "ProfessionalService",
   "@id": `${site}/#business`,
   name: "Vigario Technology Solutions",
@@ -23,10 +23,8 @@ const jsonLd = {
   // name has 404'd ever since — silently, because nothing renders it.
   // Google reads this for rich results.
   image: new URL(vtsLogo.src, site).href,
-  founder: {
-    "@type": "Person",
-    name: "Tyler Vigario",
-  },
+  logo: new URL(vtsLogo.src, site).href,
+  founder: founderRef(site),
   foundingDate: "2021",
   // The legal business address, public on the Business Profile. On-site
   // trips start here, and a customer can drop equipment off here instead.
@@ -45,14 +43,7 @@ const jsonLd = {
     latitude: 36.4257158,
     longitude: -119.8594136,
   },
-  areaServed: [
-    { "@type": "City", name: "Fresno" },
-    { "@type": "City", name: "Clovis" },
-    { "@type": "City", name: "Madera" },
-    { "@type": "City", name: "Visalia" },
-    { "@type": "City", name: "Riverdale" },
-    { "@type": "Place", name: "Central Valley, CA" },
-  ],
+  areaServed,
   // The hours a call is reliably answered. Calls and texts outside them
   // often are too, but these are the hours worth promising a stranger.
   openingHoursSpecification: {
@@ -61,15 +52,27 @@ const jsonLd = {
     opens: "07:00",
     closes: "22:00",
   },
-  serviceType: [
-    "Networking & WiFi",
-    "Security & Cameras",
-    "Low-Voltage Cabling",
-    "Computer & Server Support",
-    "Custom Software Development",
-    "IT Strategy & Consulting",
+  // serviceType belongs to Service, not to a business; the offers say the
+  // same thing in a form schema.org defines for one.
+  hasOfferCatalog: {
+    "@type": "OfferCatalog",
+    name: "IT services",
+    itemListElement: [
+      { "@type": "Offer", itemOffered: { "@type": "Service", name: "Networking & WiFi" } },
+      { "@type": "Offer", itemOffered: { "@type": "Service", name: "Security & Cameras" } },
+      { "@type": "Offer", itemOffered: { "@type": "Service", name: "Low-Voltage Cabling" } },
+      { "@type": "Offer", itemOffered: { "@type": "Service", name: "Computer & Server Support" } },
+      { "@type": "Offer", itemOffered: { "@type": "Service", name: "Custom Software Development" } },
+      { "@type": "Offer", itemOffered: { "@type": "Service", name: "IT Strategy & Consulting" } },
+    ],
+  },
+  // The business's own listings. The Business Profile by its stable place
+  // id, not a share link, which redirects through session parameters. The
+  // personal GitHub profile is the founder's, so it is on /about.
+  sameAs: [
+    "https://maps.google.com/?cid=13640068174644655757",
+    "https://www.yelp.com/biz/vigario-technology-solutions-riverdale",
   ],
-  sameAs: ["https://github.com/tylervigario", "https://maps.app.goo.gl/smESWN2tWuZfZzPd7"],
   slogan: "IT that writes code.",
   knowsAbout: [
     "Network Infrastructure",
@@ -82,6 +85,26 @@ const jsonLd = {
     "IT Consulting",
   ],
   priceRange: "$$",
+};
+
+// The site as an entity of its own, beside the business. Google reads the
+// site name it shows in results from a WebSite on the home page, and the
+// name is worked out per domain, so it had to be learned again after the
+// move to vigario.tech.
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${site}/#website`,
+      name: "Vigario Technology Solutions",
+      alternateName: "VTS",
+      url: `${site}/`,
+      inLanguage: "en-US",
+      publisher: { "@id": `${site}/#business` },
+    },
+    business,
+  ],
 };
 ---
 

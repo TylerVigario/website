@@ -1,4 +1,5 @@
 ---
+import { businessRef, founderRef } from "@/lib/business";
 import { Image } from "astro:assets";
 import imgHero0 from "@/assets/images/work/italesowell/hero.webp";
 import Base from "@/layouts/Base.astro";
@@ -6,24 +7,33 @@ import ItalesowellScreenshots from "@/components/ItalesowellScreenshots.astro";
 
 // Built from Astro.site so the canonical domain lives in one place.
 const site = Astro.site!.href.replace(/\/$/, "");
+// The page is the case study (the Article). The site it describes,
+// italesowell.com, is what it is about; it used to be the only thing marked
+// up, so nothing described this page.
 const jsonLd = {
   "@context": "https://schema.org",
-  "@type": "WebSite",
-  "@id": "https://italesowell.com/#website",
-  name: "iTaleSoWell",
-  description:
-    "Dark short fiction by Aniken D. Robinson, presented by a masked host. Twenty tales, each with cover art, a reader and a downloadable ePub.",
-  url: "https://italesowell.com",
-  inLanguage: "en",
-  author: {
-    "@type": "Person",
-    name: "Aniken D. Robinson",
-    alternateName: "iTaleSoWell",
-  },
-  creator: {
-    "@type": "ProfessionalService",
-    "@id": `${site}/#business`,
-    name: "Vigario Technology Solutions",
+  "@type": "Article",
+  "@id": `${site}/work/italesowell#article`,
+  headline: "iTaleSoWell Case Study",
+  url: `${site}/work/italesowell`,
+  datePublished: "2026-08-04",
+  image: new URL(imgHero0.src, site).href,
+  author: founderRef(site),
+  publisher: businessRef(site),
+  about: {
+    "@type": "WebSite",
+    "@id": "https://italesowell.com/#website",
+    name: "iTaleSoWell",
+    description:
+      "Dark short fiction by Aniken D. Robinson, presented by a masked host. Twenty tales, each with cover art, a reader and a downloadable ePub.",
+    url: "https://italesowell.com",
+    inLanguage: "en",
+    author: {
+      "@type": "Person",
+      name: "Aniken D. Robinson",
+      alternateName: "iTaleSoWell",
+    },
+    creator: businessRef(site),
   },
 };
 
@@ -83,7 +93,7 @@ const stack = [
 ];
 ---
 
-<Base title="iTaleSoWell Case Study" description="How VTS built iTaleSoWell — a home for Aniken D. Robinson's dark short fiction. Twenty tales, an ePub for every one, and an audience the author owns." jsonLd={jsonLd}>
+<Base ogType="article" title="iTaleSoWell Case Study" description="How VTS built iTaleSoWell — a home for Aniken D. Robinson's dark short fiction. Twenty tales, an ePub for every one, and an audience the author owns." jsonLd={jsonLd}>
 
     <>
       {/* Hero */}

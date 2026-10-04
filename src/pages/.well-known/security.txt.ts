@@ -16,14 +16,15 @@ import type { APIRoute } from "astro";
  *
  * ON EXPIRES. RFC 9116 makes it mandatory and says a consumer should
  * not trust an expired file — the point being that a stale contact is
- * worse than none. A year from build means every release refreshes it,
- * and a site that has not shipped in a year has a security contact
- * nobody has checked, which is exactly what the field exists to
- * disclose.
+ * worse than none. A year from build, less a day, means every release
+ * refreshes it, and a site that has not shipped in a year has a security
+ * contact nobody has checked, which is exactly what the field exists to
+ * disclose. Less a day because the RFC recommends staying under a year
+ * (RFC 9116, section 2.5.5).
  */
 export const GET: APIRoute = ({ site }) => {
   const origin = (site ?? new URL("https://vigario.tech")).origin;
-  const expires = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+  const expires = new Date(Date.now() + 364 * 24 * 60 * 60 * 1000).toISOString();
 
   const body = [
     "# Reporting a vulnerability in this site or its source.",
