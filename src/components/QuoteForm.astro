@@ -68,6 +68,7 @@ const inputClass =
         <input
           id="name"
           name="name"
+          autocomplete="name"
           type="text"
           value={str("name")}
           aria-required="true"
@@ -178,7 +179,12 @@ const inputClass =
         done.innerHTML =
           '<p class="font-medium text-foreground">Thanks — that\'s through.</p>' +
           '<p class="mt-1 text-sm text-muted">I\'ll get back to you shortly.</p>';
+        // Focus moves to the confirmation: the button that had it is gone
+        // with the form, and focus left on <body> leaves a keyboard or
+        // screen-reader user nowhere.
+        done.tabIndex = -1;
         form.replaceWith(done);
+        done.focus();
       },
     });
   }

@@ -178,9 +178,9 @@ const capabilities = [
                 <table class="w-full text-left text-sm">
                   <thead>
                     <tr class="border-b border-border">
-                      <th class="pb-3 pr-6 font-medium text-muted" />
-                      <th class="pb-3 pr-6 font-semibold text-navy">Local (Frigate)</th>
-                      <th class="pb-3 font-semibold text-muted">Typical Cloud</th>
+                      <th scope="col" class="pb-3 pr-6 font-medium text-muted"><span class="sr-only">Feature</span></th>
+                      <th scope="col" class="pb-3 pr-6 font-semibold text-navy">Local (Frigate)</th>
+                      <th scope="col" class="pb-3 font-semibold text-muted">Typical Cloud</th>
                     </tr>
                   </thead>
                   <tbody class="text-muted">
@@ -193,7 +193,7 @@ const capabilities = [
                       ["Smart notifications", "Fully customizable", "Limited"],
                     ].map(([feature, local, cloud]) => (
                       <tr class="border-b border-border/50">
-                        <td class="py-3 pr-6 font-medium text-foreground">{feature}</td>
+                        <th scope="row" class="py-3 pr-6 text-left font-medium text-foreground">{feature}</th>
                         <td class="py-3 pr-6 text-accent font-medium">{local}</td>
                         <td class="py-3">{cloud}</td>
                       </tr>

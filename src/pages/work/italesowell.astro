@@ -109,8 +109,9 @@ const stack = [
                   alt="The iTaleSoWell landing page — a darkened cinema seen from the back row, a cursed reel playing on the screen, and the marquee below it"
                   width={2400}
                   height={1500}
-                  fetchpriority="high"
-                  sizes="(min-width: 1024px) 55vw, 100vw"
+                  priority
+                  widths={[640, 960, 1280, 1600, 2400]}
+                  sizes="(min-width: 1024px) 55vw, calc(100vw - 3rem)"
                   class="w-full" />
               </div>
             </div>

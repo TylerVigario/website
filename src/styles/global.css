@@ -26,14 +26,19 @@
   }
 
   html {
-    scroll-behavior: smooth;
     overflow-x: hidden;
-    scroll-snap-type: y proximity;
+    /* Clears the fixed header (77px at its tallest) wherever the
+     * browser scrolls something into view for you: a focused field
+     * reached by Shift+Tab, the skip link's target, an in-page anchor
+     * such as #audit. One rule instead of a scroll-mt class on each. */
+    scroll-padding-top: 5rem;
   }
 
-  @media (min-width: 640px) {
+  /* Smooth scrolling is motion, so it follows the reduced-motion
+   * setting like the reveal does. */
+  @media (prefers-reduced-motion: no-preference) {
     html {
-      scroll-snap-type: none;
+      scroll-behavior: smooth;
     }
   }
 
@@ -73,11 +78,20 @@
  * to remove it. No script, no arming, no hiding — the page renders
  * fully. And it is one-shot: once shown, an element never returns to a
  * transparent state, so scrolling cannot fade text back out.
+ *
+ * Screen only. Print has no scrolling to undo the hiding, so printing or
+ * saving a page as PDF used to drop every block below the fold. And an
+ * armed block that receives focus shows at once: keyboard focus must
+ * never land on something invisible.
  */
-@media (prefers-reduced-motion: no-preference) {
+@media screen and (prefers-reduced-motion: no-preference) {
   [data-reveal][data-reveal-armed] {
     opacity: 0;
     transform: translateY(20px);
+  }
+  [data-reveal][data-reveal-armed]:focus-within {
+    opacity: 1;
+    transform: none;
   }
   [data-reveal="up"][data-reveal-armed] {
     transform: translateY(30px);
