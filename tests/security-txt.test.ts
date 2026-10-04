@@ -39,6 +39,11 @@ describe("security.txt", () => {
     expect(when.getTime()).toBeGreaterThan(Date.now());
   });
 
+  it("expires within a year, as RFC 9116 recommends", async () => {
+    const [expires] = field(await render(), "Expires");
+    expect(new Date(expires).getTime() - Date.now()).toBeLessThan(365 * 24 * 60 * 60 * 1000);
+  });
+
   it("is served as text/plain, which the RFC requires", async () => {
     const res = await (GET as (ctx: { site: URL }) => Response | Promise<Response>)({
       site: new URL("https://vigario.tech"),

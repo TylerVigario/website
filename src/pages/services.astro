@@ -1,4 +1,5 @@
 ---
+import { areaServed } from "@/lib/business";
 import Base from "@/layouts/Base.astro";
 import ServiceIcon from "@/components/ServiceIcon.astro";
 import { services } from "@/lib/services";
@@ -22,12 +23,7 @@ const jsonLd = {
     "Windows Systems Management",
     "Linux Server Administration",
   ],
-  areaServed: [
-    { "@type": "City", name: "Fresno" },
-    { "@type": "City", name: "Clovis" },
-    { "@type": "City", name: "Visalia" },
-    { "@type": "Place", name: "Central Valley, CA" },
-  ],
+  areaServed,
 };
 
 /* Featured service pages — these have dedicated pages */

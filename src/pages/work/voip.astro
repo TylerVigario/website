@@ -1,4 +1,5 @@
 ---
+import { businessRef, founderRef } from "@/lib/business";
 import Base from "@/layouts/Base.astro";
 
 // Built from Astro.site so the canonical domain lives in one place.
@@ -11,12 +12,10 @@ const jsonLd = {
   description:
     "A telecom-advocacy and VoIP-migration case study — auditing a legacy POTS account, defeating an unauthorized contract via an FCC complaint, and migrating to VoIP.",
   url: `${site}/work/voip`,
-  author: {
-    "@type": "ProfessionalService",
-    "@id": `${site}/#business`,
-    name: "Vigario Technology Solutions",
-  },
-  about: "POTS to VoIP migration and telecom carrier advocacy",
+  datePublished: "2026-07-22",
+  author: founderRef(site),
+  publisher: businessRef(site),
+  about: { "@type": "Thing", name: "POTS to VoIP migration and telecom carrier advocacy" },
 };
 
 const stats = [
@@ -52,7 +51,7 @@ const services = [
 ];
 ---
 
-<Base title="POTS-to-VoIP Migration Case Study" description="How a 47-year AT&T customer beat an unauthorized $5,000 contract, won an FCC complaint in 15 days, and cut a $945/month POTS bill to under $50." jsonLd={jsonLd}>
+<Base ogType="article" title="POTS-to-VoIP Migration Case Study" description="How a 47-year AT&T customer beat an unauthorized $5,000 contract, won an FCC complaint in 15 days, and cut a $945/month POTS bill to under $50." jsonLd={jsonLd}>
 
     <>
       {/* Hero */}

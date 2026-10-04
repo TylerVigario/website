@@ -35,9 +35,25 @@ interface Props {
   /** Classes for the page's <main>, for pages whose content is laid
    * out on the landmark itself rather than on sections inside it. */
   mainClass?: string;
+  /** Open Graph type. "article" for the case studies, which are written
+   * pieces with a date; everything else is the site. */
+  ogType?: "website" | "article";
+  /** For pages that must never appear in search: the error pages, which
+   * are also reachable as /404.html and /500.html with a 200. Drops the
+   * canonical too, since there is no indexable URL to point at. */
+  noindex?: boolean;
 }
 
-const { title, description, bareTitle = false, canonical, jsonLd, mainClass } = Astro.props;
+const {
+  title,
+  description,
+  bareTitle = false,
+  canonical,
+  jsonLd,
+  mainClass,
+  ogType = "website",
+  noindex = false,
+} = Astro.props;
 
 const fullTitle = bareTitle ? title : `${title} | Vigario Technology Solutions`;
 
@@ -67,7 +83,7 @@ const canonicalURL = canonical ?? new URL(Astro.url.pathname, Astro.site).href;
         own unicode-range and are never fetched for English text —
         preloading them would be pure waste. */}
     <link rel="preload" href={geistLatin} as="font" type="font/woff2" crossorigin />
-    <link rel="canonical" href={canonicalURL} />
+    {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonicalURL} />}
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     {/* apple-touch-icon must be a PNG. iOS does not render SVG here, so
         the SVG this used to point at produced a blank home-screen icon.
@@ -77,7 +93,7 @@ const canonicalURL = canonical ?? new URL(Astro.url.pathname, Astro.site).href;
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="sitemap" href="/sitemap-index.xml" />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalURL} />

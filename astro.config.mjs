@@ -59,7 +59,11 @@ export default defineConfig({
   // JavaScript, the homepage at 1 KB, so doing it would fail the build
   // rather than quietly regress. If something ever genuinely needs one, that is the
   // moment to argue for it — not before.
-  integrations: [sitemap()],
+  // The sitemap lists pages only, so it does not declare the news, image,
+  // video and hreflang vocabularies it never uses.
+  integrations: [
+    sitemap({ namespaces: { news: false, image: false, video: false, xhtml: false } }),
+  ],
   vite: {
     plugins: [
       tailwindcss(),
