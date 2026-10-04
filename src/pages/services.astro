@@ -86,12 +86,12 @@ const general = services.filter(
                   href={s.href}
                   class="group flex h-full flex-col rounded-2xl border border-border bg-surface-light p-6 transition-all sm:p-8 hover:border-accent/30 hover:-translate-y-1 hover:shadow-lg"
                 >
-                  <div class="mb-5 inline-flex rounded-xl bg-accent-soft p-3 text-accent">
+                  <div class="mb-5 inline-flex rounded-xl bg-accent-soft p-3 text-accent-ink">
                     <ServiceIcon slug={s.slug} />
                   </div>
                   <h2 class="mb-3 text-xl font-semibold text-navy">{s.title}</h2>
                   <p class="leading-relaxed text-muted">{s.desc}</p>
-                  <span class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent opacity-0 transition-opacity group-hover:opacity-100">
+                  <span class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent-ink opacity-0 transition-opacity group-hover:opacity-100">
                     Learn more
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -129,12 +129,12 @@ const general = services.filter(
                   href={`/contact?service=${encodeURIComponent(s.title)}`}
                   class="group flex h-full flex-col rounded-2xl border border-border bg-surface-light p-6 transition-all sm:p-8 hover:border-accent/30 hover:-translate-y-1 hover:shadow-lg"
                 >
-                  <div class="mb-5 inline-flex rounded-xl bg-accent-soft p-3 text-accent">
+                  <div class="mb-5 inline-flex rounded-xl bg-accent-soft p-3 text-accent-ink">
                     <ServiceIcon slug={s.slug} />
                   </div>
                   <h2 class="mb-3 text-xl font-semibold text-navy">{s.title}</h2>
                   <p class="leading-relaxed text-muted">{s.desc}</p>
-                  <span class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent opacity-0 transition-opacity group-hover:opacity-100">
+                  <span class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent-ink opacity-0 transition-opacity group-hover:opacity-100">
                     Get a quote
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -173,7 +173,7 @@ const general = services.filter(
               <div class="mt-8">
                 <a
                   href="/contact"
-                  class="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-base font-semibold text-white transition-all hover:bg-accent-bright hover:shadow-lg hover:shadow-accent/15"
+                  class="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-base font-semibold text-white transition-all hover:bg-accent-ink hover:shadow-lg hover:shadow-accent/15"
                 >
                   Get a free quote
                   <svg
