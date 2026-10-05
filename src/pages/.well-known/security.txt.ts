@@ -21,10 +21,27 @@ import type { APIRoute } from "astro";
  * contact nobody has checked, which is exactly what the field exists to
  * disclose. Less a day because the RFC recommends staying under a year
  * (RFC 9116, section 2.5.5).
+ *
+ * "From build" means from SOURCE_DATE_EPOCH when it is set, which
+ * make-release.mjs sets to the commit's time. That is the
+ * reproducible-builds convention, and it is what lets two builds of one
+ * commit write the same date: with the clock, every build of the same
+ * source differed in this one line. A release is cut from the latest
+ * merge, so the two are days apart, not months.
  */
+function buildTime(): number {
+  const epoch = process.env.SOURCE_DATE_EPOCH;
+  if (epoch === undefined || epoch === "") return Date.now();
+  // A malformed value is a broken build environment, and an Expires
+  // computed from it would be a date nobody chose.
+  if (!/^\d+$/.test(epoch))
+    throw new Error(`SOURCE_DATE_EPOCH=${epoch} is not a number of seconds`);
+  return Number(epoch) * 1000;
+}
+
 export const GET: APIRoute = ({ site }) => {
   const origin = (site ?? new URL("https://vigario.tech")).origin;
-  const expires = new Date(Date.now() + 364 * 24 * 60 * 60 * 1000).toISOString();
+  const expires = new Date(buildTime() + 364 * 24 * 60 * 60 * 1000).toISOString();
 
   const body = [
     "# Reporting a vulnerability in this site or its source.",

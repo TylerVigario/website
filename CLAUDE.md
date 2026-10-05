@@ -100,6 +100,22 @@ repository. `--signer-workflow` narrows it to this one, `--source-ref` to
 a run from `main`, and `--deny-self-hosted-runners` to a GitHub-hosted
 machine, which is the only kind this workflow uses.
 
+The tarball is meant to be a function of its commit, so a rebuild can be
+compared with the attested sha256 instead of trusting the attestation's
+account of what was built. `make-release.mjs` dates everything from the
+commit (`SOURCE_DATE_EPOCH`), pins the runtime tree from the lockfile and
+writes the archive deterministically with GNU tar. A rebuild needs the
+same Node, Linux x64, and the same checkout path, because Astro writes
+absolute source paths into the server bundle. Two fields in
+`dist/server/entry.mjs` still differ between builds, both Astro's: the
+order of the manifest's `assets` (sorted upstream in withastro/astro#18155,
+not yet in a release), and `key`. The key stays random per build on
+purpose. It encrypts the props of server islands, so a key fixed in
+public would make any future island's props readable and forgeable; a
+matching hash is not worth that. Once the upstream sort ships, a rebuild
+matches a release in every byte but that field (measured with the fix
+applied).
+
 What is true about the app regardless of what ships it: `astro build`
 emits `dist/client/` (the static tree, which a web server serves
 directly) and `dist/server/entry.mjs` (the Node process, which exists

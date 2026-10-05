@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { GET } from "../src/pages/.well-known/security.txt";
 
@@ -64,5 +64,21 @@ describe("security.txt", () => {
   it("points Canonical at the site it is served from", async () => {
     const [canonical] = field(await render(), "Canonical");
     expect(canonical).toBe("https://vigario.tech/.well-known/security.txt");
+  });
+});
+
+describe("security.txt in a reproducible build", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("dates Expires from SOURCE_DATE_EPOCH, so two builds of a commit agree", async () => {
+    vi.stubEnv("SOURCE_DATE_EPOCH", "1790000000");
+    const [expires] = field(await render(), "Expires");
+    expect(expires).toBe(new Date((1790000000 + 364 * 24 * 60 * 60) * 1000).toISOString());
+    expect(field(await render(), "Expires")).toEqual([expires]);
+  });
+
+  it("refuses a SOURCE_DATE_EPOCH that is not a number of seconds", async () => {
+    vi.stubEnv("SOURCE_DATE_EPOCH", "yesterday");
+    await expect(render()).rejects.toThrow(/SOURCE_DATE_EPOCH/);
   });
 });
