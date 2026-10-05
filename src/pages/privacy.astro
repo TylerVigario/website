@@ -1,15 +1,16 @@
 ---
 import Base from "@/layouts/Base.astro";
-import { RETENTION_MONTHS } from "@/lib/retention";
+import { DRAFT_DAYS, RETENTION_MONTHS } from "@/lib/retention";
 
 // California's online privacy law (Business and Professions Code §22575)
 // requires a site that collects personal information from California
 // consumers to post this, whatever the size of the business. Every
 // statement here describes what the site and its server actually do; a
-// change to either is a change to this page. The retention period is the
-// number src/lib/db.ts enforces, both read from src/lib/retention.ts.
-const effective = "2026-10-04";
-const effectiveLabel = "October 4, 2026";
+// change to either is a change to this page. Both periods below are the
+// numbers the code enforces, read from src/lib/retention.ts: submissions
+// by src/lib/db.ts, drafts by src/lib/forms/enhance.ts.
+const effective = "2026-10-05";
+const effectiveLabel = "October 5, 2026";
 ---
 
 <Base title="Privacy" description="What this site collects when you send a form, what it is used for, who else handles it, and how long it is kept." mainClass="mx-auto max-w-3xl px-6 pt-32 pb-24">
@@ -26,7 +27,7 @@ const effectiveLabel = "October 4, 2026";
         Nothing else is collected. There are no cookies, no analytics, no ads and no tracking scripts, and every font and image is served from this site rather than a third party.
       </p>
       <p class="mt-3">
-        While you fill in a form, what you type is saved in your own browser so a reload or a closed tab doesn't lose it. It stays on your device and is cleared once you send the form.
+        While you fill in a form, what you type is saved in your own browser so a reload or a closed tab doesn't lose it. It stays on your device and is cleared once you send the form. If it sits untouched for {DRAFT_DAYS} days, it is discarded the next time you open that form instead of being filled back in.
       </p>
       <p class="mt-3">
         Like any web server, this one keeps a log of requests: the address they came from, the browser, the page and the time. The log is kept for 14 days, to keep the site secure and working.

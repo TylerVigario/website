@@ -264,7 +264,8 @@ in the restore, guarded on an empty field; no `form.reset()`;
 [`draft-persistence.test.ts`](tests/draft-persistence.test.ts) is
 behavioural and proves the constructive half actually works — a draft
 saves, comes back into a form built from scratch, restores checkbox
-groups, refuses to overwrite live input, and shrugs off corrupt JSON.
+groups, refuses to overwrite live input, and shrugs off corrupt JSON —
+and that it ends: cleared on a send, discarded unrestored past its age.
 
 That split matters: losing input by erasing it and losing it by never
 saving it cost the same, but only the first is loud. Every guard in
@@ -272,7 +273,7 @@ both was verified by breaking the behaviour and watching the right test
 fail.
 
 - Fields validate on blur, then continuously once touched. Validating from the first keystroke tells someone their email is invalid while they are still typing the `@`.
-- Drafts persist to `localStorage` on input and survive a reload, a crash, or a closed tab. The data is the user's, kept on the user's machine, cleared only on a successful submit.
+- Drafts persist to `localStorage` on input and survive a reload, a crash, or a closed tab. The data is the user's, kept on the user's machine, cleared on a successful submit — and discarded rather than restored once untouched for `DRAFT_DAYS` (`src/lib/retention.ts`, stated on /privacy), because on a shared machine a month-old draft is a stranger's name and number. Its age is kept under `<draftKey>:savedAt`, beside the draft rather than inside it, so a draft saved before ages existed still reads; it is stamped when restored.
 - Errors render as sibling nodes next to the field. The form is never re-rendered, so the DOM the user is typing into is never replaced underneath them.
 - On `!res.ok` the response is parsed as Problem Details and each `errors[]` entry is matched to its field by name. Unmatched or top-level failures render in a form-level `role="alert"`.
 - Client rules live in [`rules.ts`](src/lib/forms/rules.ts), hand-written and deliberately more permissive than the schema, so the browser never rejects something the server would have accepted. [`tests/form-rules.test.ts`](tests/form-rules.test.ts) proves the two agree in both directions, including field-set equality — it already caught two fields missing from the POTS rules.
@@ -342,7 +343,8 @@ npm test                          # vitest run
 npm run lint                      # eslint (js) + markdownlint (md)
 npm run format                    # prettier --check
 npm run format:fix                # prettier --write
-npm run ci                        # check:install-scripts + lint + typecheck + format + test + build + check:bundles
+npm run ci                        # check:install-scripts + lint + typecheck + format + test + build + check:bundles + check:forms
+npm run check:forms               # both forms, no JS, against the built server on a scratch database
 npm run lint:actions              # actionlint over .github/workflows
 npm run clean                     # rm dist, .astro, node_modules/.cache, .eslintcache
 npm run check:pins                # .nvmrc and engines.node agree (also in pre-push)
@@ -355,7 +357,7 @@ npm run check:install-scripts     # every dependency install script is approved 
 - ESLint flat config with type-aware rules (`recommendedTypeChecked`). `req.json()` returns `any` — always parse through a zod schema.
 - Path alias: `@/*` → `src/*`.
 - **Conventional Commits** — Angular type set, inherited from `@commitlint/config-conventional` rather than declared. The line the types draw is **did the artifact change**, because the version names a tarball: `feat` (minor bump), `fix` / `revert` / `perf` / `refactor` / `build` (patch bump), all six in the changelog; `ci` / `docs` / `test` / `chore` / `style` reach no artifact, so no bump and no changelog entry. **Type = release impact, not change-nature** — a bug fix inside CI infra is `ci:` (no release), not `fix(ci):`. Matches pipetree's set (the canonical sibling). `.commitlintrc.js` carries only genuine overrides — the type set, type-case and subject rules come from the extended config, so there is no second copy to drift. The bump matrix lives in `cliff.toml`'s `commit_parsers`. `footer-leading-blank` is deliberately off (the conventional-changelog parser greedy-detected mid-body `Word:` line starts as the footer boundary and false-fired on natural prose like "What landed:" / "Why:"; the comment in `.commitlintrc.js` records why).
-- Husky hooks: `pre-commit` runs `lint-staged` (plus a Windows guard that re-stages what the formatters changed, for files staged whole only, so a hunk left unstaged is never committed) → `typecheck` → `test`; `commit-msg` runs `commitlint`; `pre-push` enforces the `<type>/<slug>` branch-name convention, then `check:pins` → `check:install-scripts` → `lint:actions` → `lint` → `format` (both over the whole tree) → `build` → `check:bundles`. Local is a superset of the gate: everything CI checks is checked here first, except the dev-server smoke test, which needs a disposable machine.
+- Husky hooks: `pre-commit` runs `lint-staged` (plus a Windows guard that re-stages what the formatters changed, for files staged whole only, so a hunk left unstaged is never committed) → `typecheck` → `test`; `commit-msg` runs `commitlint`; `pre-push` enforces the `<type>/<slug>` branch-name convention, then `check:pins` → `check:install-scripts` → `lint:actions` → `lint` → `format` (both over the whole tree) → `build` → `check:bundles` → `check:forms`. Local is a superset of the gate: everything CI checks is checked here first, except the dev-server smoke test, which needs a disposable machine.
 - `CHANGELOG.md` is regenerated from commits by git-cliff at release time — never hand-edit. Fix the commit message, not the changelog. (Because `ci`/`docs`/`test`/`chore`/`style` are skipped, a regeneration drops those entries — the changelog reflects what changed in the artifact, not every commit. One parser list drives the changelog **and** `--bumped-version`, so a type cannot be recorded without also bumping; that coupling is why "every commit in the changelog" is not on the table. It ships inside the release tarball, so it is read on the host, not only on GitHub.)
 
 ## Git + PR workflow

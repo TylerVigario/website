@@ -1,4 +1,5 @@
 import type { Rules } from "@/lib/forms/rules";
+import { DRAFT_DAYS } from "@/lib/retention";
 
 /**
  * Progressive enhancement for the site's forms.
@@ -117,24 +118,60 @@ export function enhance({
   // with the tab fails the case that matters, which is someone coming
   // back tomorrow. Nothing here is transmitted — it is the user's own
   // work, kept on the user's own machine, until they submit or clear it.
+  //
+  // But not forever. A draft left untouched for DRAFT_DAYS is discarded
+  // rather than restored: on a shared machine, a front desk or a library,
+  // the next person to open the form would otherwise find a stranger's
+  // name and number already in it. Its age is kept under a key of its
+  // own beside the draft, not inside it, so a draft saved before ages
+  // were kept still reads. One without an age is restored and stamped
+  // now, and expires on the same terms from here.
+
+  const savedAtKey = `${draftKey}:savedAt`;
 
   const saveDraft = () => {
     try {
       localStorage.setItem(draftKey, JSON.stringify(read(form, arrayFields)));
+      localStorage.setItem(savedAtKey, String(Date.now()));
     } catch {
       // Private mode, quota, storage disabled. A draft is a courtesy;
       // failing to store one must never break the form.
     }
   };
 
+  const clearDraft = () => {
+    try {
+      localStorage.removeItem(draftKey);
+      localStorage.removeItem(savedAtKey);
+    } catch {
+      /* nothing to do */
+    }
+  };
+
   const restoreDraft = () => {
     let raw: string | null = null;
+    let stamp: string | null = null;
     try {
       raw = localStorage.getItem(draftKey);
+      stamp = localStorage.getItem(savedAtKey);
     } catch {
       return;
     }
     if (!raw) return;
+    // Only an age that reads as one can expire a draft. A missing or
+    // unreadable age is restamped, which can only ever delay a deletion;
+    // Number() alone would read "" as 0, the epoch, and delete it.
+    const savedAt = stamp && /^\d+$/.test(stamp) ? Number(stamp) : NaN;
+    if (!Number.isFinite(savedAt)) {
+      try {
+        localStorage.setItem(savedAtKey, String(Date.now()));
+      } catch {
+        /* restored all the same */
+      }
+    } else if (Date.now() - savedAt > DRAFT_DAYS * 24 * 60 * 60 * 1000) {
+      clearDraft();
+      return;
+    }
     let saved: unknown;
     try {
       saved = JSON.parse(raw);
@@ -291,11 +328,7 @@ export function enhance({
         });
 
         if (res.ok) {
-          try {
-            localStorage.removeItem(draftKey);
-          } catch {
-            /* nothing to do */
-          }
+          clearDraft();
           onSuccess();
           return;
         }
