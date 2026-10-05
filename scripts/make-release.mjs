@@ -20,6 +20,19 @@
  * stops being true this script fails rather than shipping something
  * that cannot open its database.
  *
+ * WHY IT IS A FUNCTION OF THE COMMIT. Two builds of one commit, on the
+ * same platform, Node and checkout path, should produce the same bytes,
+ * so that anyone can rebuild a release and compare its sha256 with the
+ * attested one rather than taking the attestation's word for what was
+ * built. Three things here used to vary with the moment of the build and
+ * no longer do: the clock (SOURCE_DATE_EPOCH, the commit's time, feeds
+ * security.txt's Expires and every timestamp in the archive), the runtime
+ * dependencies' own dependencies (pinned from the lockfile, not resolved
+ * from the registry on the day), and the archive itself (entries sorted,
+ * owners and modes normalised, gzip without its timestamp). The path is
+ * the caveat: Astro writes absolute source paths into the server bundle,
+ * so a rebuild has to happen at the same path the release used.
+ *
  * Usage:
  *   node scripts/make-release.mjs                 # version from package.json
  *   node scripts/make-release.mjs --version 1.2.3
@@ -58,6 +71,9 @@ if (dirty && !process.argv.includes("--allow-dirty")) {
   process.exit(1);
 }
 
+// The build's clock is the commit's. See the header.
+const epoch = run("git", ["log", "-1", "--format=%ct", "HEAD"]).trim();
+
 console.log(`building ${name} from ${commit.slice(0, 8)}${dirty ? " (DIRTY)" : ""}`);
 
 fs.rmSync(staging, { recursive: true, force: true });
@@ -66,7 +82,10 @@ fs.mkdirSync(staging, { recursive: true });
 // The build must exist and must be current. Rebuilding here rather than
 // trusting whatever dist/ happens to hold keeps the artifact honest.
 console.log("  astro build");
-run("npx", ["astro", "build"], { stdio: "inherit" });
+run("npx", ["astro", "build"], {
+  stdio: "inherit",
+  env: { ...process.env, SOURCE_DATE_EPOCH: epoch },
+});
 
 fs.cpSync("dist", path.join(staging, "dist"), { recursive: true });
 
@@ -90,30 +109,54 @@ fs.writeFileSync(
 //
 // So rather than install everything and try to prune, read the answer
 // off the artifact itself: scan the emitted server for bare specifiers
-// and install exactly those, each at the version the lockfile records.
-// Their own dependencies resolve from the registry at release time; for
-// better-sqlite3 13 that is node-addon-api alone, a header library for
-// compiling the addon that the running server never loads. If a
-// future dependency has to stay external, it appears here on its own —
-// nothing to remember to update.
+// and install exactly those. If a future dependency has to stay external,
+// it appears here on its own — nothing to remember to update.
+//
+// Each is installed at the version the lockfile records, and so is
+// everything it depends on in turn. Naming only the externals left their
+// dependencies to resolve from the registry on the day — for
+// better-sqlite3 13, node-addon-api, a header library the running server
+// never loads — so the same commit released a month apart could ship
+// different trees.
 const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
-const pinned = RUNTIME_EXTERNALS.map((name) => {
-  const entry = lock.packages?.[`node_modules/${name}`];
+const pinned = new Map();
+function pin(name, from = "") {
+  // npm's own lookup: the nearest node_modules/<name> walking up from the
+  // dependent's location.
+  let base = from;
+  let key;
+  for (;;) {
+    key = `${base ? `${base}/` : ""}node_modules/${name}`;
+    if (lock.packages?.[key] || !base) break;
+    const up = base.lastIndexOf("/node_modules/");
+    base = up === -1 ? "" : base.slice(0, up);
+  }
+  const entry = lock.packages?.[key];
   if (!entry?.version) {
-    console.error(`error: ${name} is imported by the server bundle but absent from the lockfile.`);
+    console.error(`error: ${name} is needed at runtime but absent from the lockfile.`);
     process.exit(1);
   }
-  return `${name}@${entry.version}`;
-});
-console.log(`  runtime externals: ${pinned.join(", ") || "(none)"}`);
+  // A nested copy would need a nested install, which `npm install a@1 b@2`
+  // cannot express. None exists today; refuse rather than flatten one.
+  if (key.includes("/node_modules/")) {
+    console.error(`error: ${key} is a nested runtime dependency; make-release cannot pin it.`);
+    process.exit(1);
+  }
+  if (pinned.has(name)) return;
+  pinned.set(name, entry.version);
+  for (const dep of Object.keys(entry.dependencies ?? {})) pin(dep, key);
+}
+for (const name of RUNTIME_EXTERNALS) pin(name);
+const specs = [...pinned].map(([n, v]) => `${n}@${v}`).sort();
+console.log(`  runtime tree: ${specs.join(", ") || "(none)"}`);
 
 // --ignore-scripts because a release build should not execute package
 // lifecycle scripts, and nothing here needs them: better-sqlite3 ships
 // its prebuilt binaries inside the published package rather than
 // fetching one in a postinstall. The assertion below fails the build if
 // that ever stops being true.
-if (pinned.length) {
-  run("npm", ["install", ...pinned, "--ignore-scripts", "--no-audit", "--no-fund", "--no-save"], {
+if (specs.length) {
+  run("npm", ["install", ...specs, "--ignore-scripts", "--no-audit", "--no-fund", "--no-save"], {
     cwd: staging,
     stdio: "inherit",
   });
@@ -235,7 +278,31 @@ console.log(`  manifest: ${lines.length} files`);
 
 const tarball = path.join(outDir, `${name}.tar.gz`);
 fs.rmSync(tarball, { force: true });
-run("tar", ["-czf", tarball, "-C", outDir, name]);
+// GNU tar can write an archive that depends only on its contents:
+// entries in name order rather than the filesystem's, every timestamp
+// the commit's, no builder's uid or umask, and gzip without its own
+// timestamp. Elsewhere (bsdtar on Windows or macOS) the archive is
+// correct but not reproducible, and says so.
+if (run("tar", ["--version"]).includes("GNU tar")) {
+  run("tar", [
+    "--sort=name",
+    `--mtime=@${epoch}`,
+    "--owner=0",
+    "--group=0",
+    "--numeric-owner",
+    "--mode=go-w",
+    "--format=gnu",
+    "--use-compress-program=gzip -n",
+    "-cf",
+    tarball,
+    "-C",
+    outDir,
+    name,
+  ]);
+} else {
+  console.warn("  warning: not GNU tar, so this archive is not reproducible");
+  run("tar", ["-czf", tarball, "-C", outDir, name]);
+}
 
 const size = fs.statSync(tarball).size;
 console.log(`\n  ${tarball}`);
