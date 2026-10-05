@@ -26,7 +26,7 @@ const inputClass =
       <p class="font-medium text-foreground">Thanks — that's through.</p>
       <p class="mt-1 text-sm text-muted">
         I'll get back to you shortly. If it's urgent, call{" "}
-        <a href="tel:+15599001400" class="text-accent underline">(559) 900-1400</a>.
+        <a href="tel:+15599001400" class="text-accent-ink underline">(559) 900-1400</a>.
       </p>
     </div>
   ) : (
@@ -127,7 +127,7 @@ const inputClass =
                 aria-describedby={errors.services ? "services-error services-hint" : "services-hint"}
                 class="peer sr-only"
               />
-              <span class="inline-block rounded-full border border-border px-4 py-2 text-sm transition-colors peer-checked:border-accent peer-checked:bg-accent-soft peer-checked:text-accent peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent">
+              <span class="inline-block rounded-full border border-border px-4 py-2 text-sm transition-colors peer-checked:border-accent peer-checked:bg-accent-soft peer-checked:text-accent-ink peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-accent">
                 {service}
               </span>
             </label>
@@ -149,7 +149,7 @@ const inputClass =
 
       <button
         type="submit"
-        class="w-full rounded-lg bg-accent px-6 py-3 font-semibold text-white transition-colors hover:bg-accent-bright disabled:opacity-70 group-data-[submitting]:cursor-progress"
+        class="w-full rounded-lg bg-accent px-6 py-3 font-semibold text-white transition-colors hover:bg-accent-ink disabled:opacity-70 group-data-[submitting]:cursor-progress"
       >
         <span class="group-data-[submitting]:hidden">Send it over</span>
         <span class="hidden group-data-[submitting]:inline">Sending…</span>

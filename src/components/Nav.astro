@@ -25,7 +25,7 @@ const path = Astro.url.pathname;
 const isActive = (href: string) => path === href || path.startsWith(href + "/");
 const linkClass = (href: string) =>
   `py-3 text-sm transition-colors hover:text-foreground ${
-    isActive(href) ? "text-accent font-medium" : "text-muted"
+    isActive(href) ? "text-accent-ink font-medium" : "text-muted"
   }`;
 ---
 
@@ -64,7 +64,7 @@ const linkClass = (href: string) =>
       {links.map((l) => <a href={l.href} class={linkClass(l.href)} aria-current={isActive(l.href) ? "page" : undefined}>{l.label}</a>)}
       <a
         href="tel:+15599001400"
-        class="rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-bright"
+        class="rounded-lg bg-accent px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-accent-ink"
       >
         (559) 900-1400
       </a>

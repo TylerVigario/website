@@ -6,6 +6,11 @@
   --color-accent: #2563eb;
   --color-accent-bright: #3b82f6;
   --color-accent-soft: #dbeafe;
+  /* Accent for text and for button hovers. --color-accent is 4.50:1 on
+   * the surface grey and 4.24:1 on accent-soft, just under the 4.5:1
+   * WCAG AA asks of body text; this is 5.83:1 and 5.49:1, and 6.70:1
+   * under white button text. Buttons, rings and fills keep the accent. */
+  --color-accent-ink: #1d4ed8;
   --color-surface: #f0efed;
   --color-surface-light: #ffffff;
   --color-muted: #57534e;
