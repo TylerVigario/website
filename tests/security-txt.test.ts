@@ -33,14 +33,14 @@ describe("security.txt", () => {
   });
 
   it("does not ship already expired", async () => {
-    const [expires] = field(await render(), "Expires");
+    const [expires = ""] = field(await render(), "Expires");
     const when = new Date(expires);
     expect(Number.isNaN(when.getTime())).toBe(false);
     expect(when.getTime()).toBeGreaterThan(Date.now());
   });
 
   it("expires within a year, as RFC 9116 recommends", async () => {
-    const [expires] = field(await render(), "Expires");
+    const [expires = ""] = field(await render(), "Expires");
     expect(new Date(expires).getTime() - Date.now()).toBeLessThan(365 * 24 * 60 * 60 * 1000);
   });
 

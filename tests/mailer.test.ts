@@ -153,7 +153,7 @@ describe("a notification", () => {
       contact,
       bill: "$100–$300",
     });
-    const sent = sendMail.mock.calls[0][0] as Record<string, unknown>;
+    const sent = sendMail.mock.calls[0]![0] as Record<string, unknown>;
     expect(sent.subject).toBe("POTS Audit Request #8 from Acme");
     expect(sent).not.toHaveProperty("replyTo");
   });

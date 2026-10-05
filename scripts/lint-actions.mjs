@@ -42,6 +42,7 @@ for (const c of candidates) {
 
 const inCI = process.env.CI === "true";
 
+/** @param {string} cmd */
 const found = (cmd) => {
   try {
     execFileSync(cmd, ["--version"], { stdio: "ignore" });

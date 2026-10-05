@@ -33,7 +33,7 @@ describe("the audit row marker", () => {
     insertSubmission.mockClear();
     await submitPotsAudit({ business: "Acme", name: "Dana", contact: "x", bill: BILL_RANGES[0] });
     expect(insertSubmission).toHaveBeenCalledOnce();
-    expect(insertSubmission.mock.calls[0][0].services).toBe(POTS_AUDIT_MARKER);
+    expect(insertSubmission.mock.calls[0]?.[0].services).toBe(POTS_AUDIT_MARKER);
   });
 
   it("is not what a quote stores, which is the services chosen", async () => {
@@ -43,7 +43,9 @@ describe("the audit row marker", () => {
       contact: "x",
       services: ["Custom Software", "Low-Voltage Cabling"],
     });
-    expect(insertSubmission.mock.calls[0][0].services).toBe("Custom Software, Low-Voltage Cabling");
+    expect(insertSubmission.mock.calls[0]?.[0].services).toBe(
+      "Custom Software, Low-Voltage Cabling",
+    );
   });
 
   it("cannot be claimed by a quote", async () => {

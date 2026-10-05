@@ -14,7 +14,7 @@ describe("the scroll reveal hides content only on screen", () => {
   it("puts every hiding rule inside a screen-only media query", () => {
     const blocks = [...css.matchAll(/@media([^{]*)\{((?:[^{}]*\{[^{}]*\})*[^{}]*)\}/g)];
     const hiding = blocks.filter(([, , body]) =>
-      /\[data-reveal-armed\][^{]*\{[^}]*opacity:\s*0/.test(body),
+      /\[data-reveal-armed\][^{]*\{[^}]*opacity:\s*0/.test(body ?? ""),
     );
     expect(hiding.length).toBeGreaterThan(0);
     for (const [, query] of hiding) expect(query).toMatch(/\bscreen\b/);

@@ -374,7 +374,7 @@ npm run dev                       # astro dev
 npm run preview                   # serve the built output
 npm run build                     # astro build → dist/client (static) + dist/server (the /api process)
 npm start                         # node dist/server/entry.mjs (after build)
-npm run typecheck                 # astro check — sees .astro templates; tsc alone does not
+npm run typecheck                 # astro check — sees .astro templates (tsc alone does not) and the .mjs scripts
 npm test                          # vitest run
 npm run lint                      # eslint (js) + markdownlint (md)
 npm run format                    # prettier --check
@@ -391,6 +391,7 @@ npm run check:install-scripts     # every dependency install script is approved 
 ## Code style & conventions
 
 - Prettier: 100 col, double quotes, trailing commas, semicolons.
+- TypeScript `strict` plus `noUncheckedIndexedAccess`: an index into an array or record is possibly `undefined`, so a guard has to be one the compiler can see. The `.mjs` scripts and configs are typechecked as well (`checkJs`), with JSDoc types, and still run as plain JavaScript.
 - ESLint flat config with type-aware rules (`recommendedTypeChecked`). `req.json()` returns `any` — always parse through a zod schema.
 - Path alias: `@/*` → `src/*`.
 - **Conventional Commits** — Angular type set, inherited from `@commitlint/config-conventional` rather than declared. The line the types draw is **did the artifact change**, because the version names a tarball: `feat` (minor bump), `fix` / `revert` / `perf` / `refactor` / `build` (patch bump), all six in the changelog; `ci` / `docs` / `test` / `chore` / `style` reach no artifact, so no bump and no changelog entry. **Type = release impact, not change-nature** — a bug fix inside CI infra is `ci:` (no release), not `fix(ci):`. Matches pipetree's set (the canonical sibling). `.commitlintrc.js` carries only genuine overrides — the type set, type-case and subject rules come from the extended config, so there is no second copy to drift. The bump matrix lives in `cliff.toml`'s `commit_parsers`. `footer-leading-blank` is deliberately off (the conventional-changelog parser greedy-detected mid-body `Word:` line starts as the footer boundary and false-fired on natural prose like "What landed:" / "Why:"; the comment in `.commitlintrc.js` records why).

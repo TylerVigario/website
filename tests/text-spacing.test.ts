@@ -30,10 +30,10 @@ const astroFiles = (dir: string): string[] =>
 function brokenJoins(file: string): string[] {
   const lines = readFileSync(file, "utf8").split("\n");
   const fences = lines.flatMap((l, i) => (l.trim() === "---" ? [i] : []));
-  const start = fences[0] === 0 && fences.length > 1 ? fences[1] + 1 : 0;
+  const start = fences[0] === 0 && fences[1] !== undefined ? fences[1] + 1 : 0;
   const found: string[] = [];
   for (let i = start; i < lines.length - 1; i++) {
-    const [a, b] = [lines[i], lines[i + 1]];
+    const [a = "", b = ""] = [lines[i], lines[i + 1]];
     if (/^\s*(\/\/|\{\/\*|\*)/.test(a)) continue;
     const afterClose = endsWithClose.test(a) && startsWithText.test(b);
     const beforeOpen = endsWithText.test(a) && !a.trimEnd().endsWith(">") && startsWithOpen.test(b);

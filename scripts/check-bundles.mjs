@@ -65,6 +65,7 @@ const HOMEPAGE_BUDGET = 1024;
  *  needs. */
 const LOCAL_PREFIX = "/_astro/";
 
+/** @param {string} dir @returns {string[]} */
 function htmlFiles(dir) {
   if (!fs.existsSync(dir)) {
     console.error(`error: ${dir} does not exist — run \`npm run build\` first.`);
@@ -90,7 +91,8 @@ const PRELOAD = /<link[^>]*\brel="modulepreload"[^>]*\bhref="([^"]+)"/g;
 const STATIC_IMPORT = /\bimport\s*["']([^"']+)["']|\bfrom\s*["']([^"']+)["']/g;
 
 /** Local specifiers only: relative to the importing file, or rooted. A
- *  bare one cannot load in a browser at all, so it is not ours to count. */
+ *  bare one cannot load in a browser at all, so it is not ours to count.
+ *  @param {string} spec @param {string} fromUrl @returns {string | null} */
 function resolveImport(spec, fromUrl) {
   if (spec.startsWith("/")) return spec;
   if (spec.startsWith("./") || spec.startsWith("../")) {
@@ -99,19 +101,21 @@ function resolveImport(spec, fromUrl) {
   return null;
 }
 
-/** Every file the given entry URLs load, following static imports. */
+/** Every file the given entry URLs load, following static imports.
+ *  @param {Iterable<string>} entries */
 function loadedFiles(entries) {
+  /** @type {Set<string>} */
   const seen = new Set();
   const queue = [...entries];
   while (queue.length) {
     const url = queue.pop();
-    if (seen.has(url)) continue;
+    if (url === undefined || seen.has(url)) continue;
     seen.add(url);
     const onDisk = path.join(ROOT, url);
     if (!url.startsWith(LOCAL_PREFIX) || !fs.existsSync(onDisk)) continue;
     const code = fs.readFileSync(onDisk, "utf8");
     for (const m of code.matchAll(STATIC_IMPORT)) {
-      const next = resolveImport(m[1] ?? m[2], url);
+      const next = resolveImport(m[1] ?? m[2] ?? "", url);
       if (next && !seen.has(next)) queue.push(next);
     }
   }
@@ -128,16 +132,17 @@ for (const file of htmlFiles(ROOT).sort()) {
     .replace(/\\/g, "/")
     .replace(/\/index\.html$/, "/");
 
-  const inlineCode = [...html.matchAll(INLINE)].map((m) => m[1]);
+  const inlineCode = [...html.matchAll(INLINE)].map((m) => m[1] ?? "");
   const inline = inlineCode.reduce((sum, code) => sum + code.length, 0);
   const named = [
-    ...[...html.matchAll(EXTERNAL)].map((m) => m[1]),
-    ...[...html.matchAll(PRELOAD)].map((m) => m[1]),
+    ...[...html.matchAll(EXTERNAL)].flatMap((m) => (m[1] ? [m[1]] : [])),
+    ...[...html.matchAll(PRELOAD)].flatMap((m) => (m[1] ? [m[1]] : [])),
     // Inline module code can import files too.
     ...inlineCode.flatMap((code) =>
-      [...code.matchAll(STATIC_IMPORT)]
-        .map((m) => resolveImport(m[1] ?? m[2], "/"))
-        .filter(Boolean),
+      [...code.matchAll(STATIC_IMPORT)].flatMap((m) => {
+        const local = resolveImport(m[1] ?? m[2] ?? "", "/");
+        return local ? [local] : [];
+      }),
     ),
   ];
   const external = loadedFiles(named);

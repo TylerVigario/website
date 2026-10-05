@@ -56,6 +56,7 @@ describe("nothing erases what someone typed", () => {
 
   it("puts that assignment in the draft restore, guarded on an empty field", () => {
     const [only] = hits(ASSIGN);
+    if (!only) throw new Error("no assignment to .value at all, so no restore");
     expect(only.file).toBe(path.join("src", "lib", "forms", "enhance.ts"));
 
     // The guard must be within a few lines above it — restoring into a
@@ -98,7 +99,7 @@ describe("nothing erases what someone typed", () => {
   it("never pads a textarea's content", () => {
     const padded = sourceFiles(SRC).flatMap((f) =>
       [...readFileSync(f, "utf8").matchAll(/<textarea\b[^>]*>([\s\S]*?)<\/textarea>/g)]
-        .filter((m) => /^\s|\s$/.test(m[1]))
+        .filter((m) => /^\s|\s$/.test(m[1] ?? ""))
         .map(() => f),
     );
     expect(padded, "a textarea whose content is padded with whitespace").toEqual([]);
