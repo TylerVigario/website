@@ -109,9 +109,12 @@ same Node, Linux x64, and the same checkout path, because Astro writes
 absolute source paths into the server bundle. Two fields in
 `dist/server/entry.mjs` still differ between builds, both Astro's: the
 order of the manifest's `assets` (sorted upstream in withastro/astro#18155,
-not yet in a release), and `key`, generated per build unless `ASTRO_KEY`
-is set. Measured: with that one upstream line and a fixed key, two
-release builds of one commit are byte-identical.
+not yet in a release), and `key`. The key stays random per build on
+purpose. It encrypts the props of server islands, so a key fixed in
+public would make any future island's props readable and forgeable; a
+matching hash is not worth that. Once the upstream sort ships, a rebuild
+matches a release in every byte but that field (measured with the fix
+applied).
 
 What is true about the app regardless of what ships it: `astro build`
 emits `dist/client/` (the static tree, which a web server serves
