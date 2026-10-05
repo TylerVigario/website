@@ -211,9 +211,9 @@ Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(),
 things would force one, and all three are currently zero across every
 page including the two that render at request time: inline `<script>`
 (scripts are emitted as files — `build.assetsInlineLimit: 0` in
-`astro.config.ts`), inline `<style>`, and `style=` attributes. The hero's
-grid pattern was the only one of the last kind and now lives in
-`global.css` as `.hero-grid`.
+`astro.config.ts`), inline `<style>`, and `style=` attributes. The last
+`style=` the build had was a decorative grid in the hero, moved to a class
+and since removed with it.
 
 Adding any of them does not fail the build — it silently requires the
 policy to be weakened, which is the sort of thing that gets done in a

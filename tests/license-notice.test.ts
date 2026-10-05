@@ -21,4 +21,19 @@ describe("LICENSE-NOTICE.md", () => {
   it("reserves src/assets/images/ in full", () => {
     expect(notice).toContain("`src/assets/images/` in full");
   });
+
+  // The one exception to "in full": a photograph that is not ours to
+  // reserve. Each is credited by path, so one added without a credit, or
+  // left credited after it is gone, fails here.
+  const stock = readdirSync("src/assets/images/stock");
+  it.each(stock)("credits stock/%s, and does not reserve it", (file) => {
+    expect(notice).toContain(`\`src/assets/images/stock/${file}\``);
+  });
+
+  it("credits no stock photo that is gone", () => {
+    const credited = [...notice.matchAll(/`src\/assets\/images\/stock\/([^`]+)`/g)].map(
+      (m) => m[1],
+    );
+    expect(credited.sort()).toEqual([...stock].sort());
+  });
 });

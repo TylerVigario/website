@@ -23,8 +23,9 @@ in turn. That is the whole reason this licence was chosen.
 
 ## Reserved — © Vigario Technology Solutions, All Rights Reserved
 
-**Brand and imagery.** `src/assets/images/` in full — the VTS logo and
-symbol, the hero image, and every client screenshot under
+**Brand and imagery.** `src/assets/images/` in full, apart from the
+stock photograph under `stock/` (below) — the VTS logo and symbol, the
+social-sharing card, and every client screenshot under
 `src/assets/images/work/`. Also every file in `public/`, which is the
 logo mark in the formats browsers and home screens ask for:
 `favicon.ico`, `apple-touch-icon.png`, `icon-192.png` and
@@ -58,6 +59,13 @@ The GitHub and LinkedIn marks in `src/components/icons/` belong to
 GitHub and LinkedIn. They label links to profiles on those sites, and
 this licence grants neither. The glyph in `LinkedIn.astro` comes from
 Bootstrap Icons, under MIT, and carries that notice in the file.
+
+The photograph behind the homepage hero,
+`src/assets/images/stock/blue-cables-switch.jpg`, is by Scott Rodgerson
+(<https://unsplash.com/photos/PSpf_XgOM5w>), used under the Unsplash
+License (<https://unsplash.com/license>), which allows commercial use
+without credit. It is credited here anyway, it is not reserved above,
+and this licence grants nothing in it.
 
 ## Why the distinction is drawn rather than implied
 

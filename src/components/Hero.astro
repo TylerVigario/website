@@ -1,4 +1,7 @@
 ---
+import { Image } from "astro:assets";
+import cables from "@/assets/images/stock/blue-cables-switch.jpg";
+
 const stats = [
   { value: "20+", label: "Years in Tech" },
   { value: "Full Stack", label: "Cable to Code" },
@@ -7,36 +10,47 @@ const stats = [
 ---
 
 
-    <section class="relative overflow-hidden">
-      {/* Background */}
-      <div class="absolute inset-0 -z-10">
-        <div class="absolute inset-0 bg-navy" />
-        {/* Grid pattern. Defined in global.css rather than a style
-            attribute: it is decorative and unchanging, so a per-element
-            style buys nothing — and it was the only inline style in the
-            build, which is the difference between serving under
-            style-src 'self' and having to allow 'unsafe-inline' for one
-            grid. */}
-        <div class="hero-grid absolute inset-0 opacity-[0.07]" />
-        {/* Gradient accents */}
-        <div class="pointer-events-none absolute -top-40 -right-40 h-150 w-150 rounded-full bg-accent/20 blur-[120px]" />
-        <div class="pointer-events-none absolute -bottom-40 -left-40 h-125 w-125 rounded-full bg-accent/10 blur-[120px]" />
+    {/* The first screen, on every device: at least the visible viewport
+        (svh, which leaves out a phone's address bar and does not change
+        as it slides away), taller only when the content needs it. The
+        fixed header covers the top 5rem, so the top padding is that much
+        more than the bottom and the content centres in what shows. */}
+    <section class="relative flex min-h-svh items-center overflow-hidden">
+      {/* Background: the photo, then navy over it. Text over a photo has to
+          clear WCAG AA where the photo is brightest, a white cable label
+          behind it: 80% navy keeps the paragraph at 5.5:1 and the stat
+          labels at 4.6:1 even there. Phones get 80% throughout. Desktop
+          is solid to 40% of the width and at least 85% to 60%, which is
+          past the paragraph's right edge at 1024px (59%), then thins so
+          the cables show on the right. */}
+      <div class="absolute inset-0 -z-10 bg-navy">
+        <Image
+          src={cables}
+          alt=""
+          width={2400}
+          height={1600}
+          priority
+          widths={[640, 960, 1280, 1600, 2400]}
+          sizes="100vw"
+          class="h-full w-full object-cover object-[70%_center]"
+        />
+        <div class="absolute inset-0 bg-navy/80 lg:bg-transparent lg:bg-linear-to-r lg:from-navy lg:from-40% lg:via-navy/85 lg:via-60% lg:to-navy/10" />
       </div>
 
-      <div class="relative mx-auto max-w-6xl px-6 pt-32 pb-20 sm:pt-36 sm:pb-24 lg:pt-44 lg:pb-32">
+      <div class="relative mx-auto w-full max-w-6xl px-6 pt-26 pb-8 sm:pt-32 sm:pb-12 lg:pb-10">
         <div data-reveal="up">
-          <div class="mx-auto max-w-3xl text-center">
-            <h1 class="text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
+          <div class="mx-auto max-w-3xl text-center lg:mx-0 lg:max-w-2xl lg:text-left">
+            <h1 class="text-4xl font-bold leading-tight tracking-tight text-white sm:text-5xl md:text-6xl">
               Your IT shop that <span class="text-accent-bright">actually picks up</span>
             </h1>
 
-            <p class="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-white/70 sm:text-lg sm:mt-8">
+            <p class="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-white/80 sm:text-lg lg:mx-0 lg:max-w-xl">
               From pulling cable to writing custom software, I handle the full stack for small
               businesses in the Central Valley. No ticket queues, no runaround &mdash; just 20+
               years of hands-on experience and a direct line.
             </p>
 
-            <div class="mt-8 flex flex-col items-center gap-3 sm:mt-10 sm:flex-row sm:justify-center sm:gap-4">
+            <div class="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4 lg:justify-start">
               <a
                 href="/contact"
                 class="flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-base font-semibold text-white transition-all sm:w-auto sm:px-8 sm:py-4 sm:text-lg hover:bg-accent-ink hover:shadow-lg hover:shadow-accent/25 focus-visible:outline-white"
@@ -81,11 +95,11 @@ const stats = [
 
         {/* Stats bar */}
         <div data-reveal>
-          <div class="mx-auto mt-16 flex max-w-2xl flex-wrap items-center justify-center gap-x-12 gap-y-6 sm:mt-20">
+          <div class="mx-auto mt-10 flex max-w-2xl flex-wrap items-center justify-center gap-x-12 gap-y-6 sm:mt-14 lg:mx-0 lg:mt-10 lg:justify-start">
             {stats.map((s, i) => (
               <div class="flex items-center gap-x-12">
                 {i > 0 && <div class="hidden h-8 w-px bg-white/15 sm:block" />}
-                <div class="text-center">
+                <div class="text-center lg:text-left">
                   <div class="text-xl font-bold text-accent-bright sm:text-2xl">{s.value}</div>
                   <div class="mt-1 text-xs text-white/70 sm:text-sm">{s.label}</div>
                 </div>
