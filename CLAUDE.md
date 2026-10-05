@@ -53,12 +53,18 @@ request is not a licence term.
 This repository builds, gates and **releases**. It does not install
 anything anywhere, and it holds no tool that runs on a server.
 
-`Release` (`workflow_dispatch`) computes the version from the commits,
-runs the same gate every pull request runs (`ci.yml`, called), builds one
-self-contained tarball, attests it through Sigstore, writes the version
-and changelog to `main` as a forge-signed commit, and publishes: a draft
-release, the artifact attached, then published, which is what creates the
-tag. Nothing is written until the artifact is built and attested, so a
+`Release` (`workflow_dispatch`, from `main` only) computes the version
+from the commits, runs the same gate every pull request runs (`ci.yml`,
+called), then splits in two. `build` makes one self-contained tarball
+and proves it runs (`check:release`: unpacked, checked against its
+manifest, booted from its own `node_modules` and posted to by
+`check:forms`). It runs the whole dependency tree, so it holds no secret
+and no signing identity. `publish`, in the `release` environment, runs
+nothing from `node_modules`: it checks the tarball is the one `build`
+checked, attests it through Sigstore, writes the version and changelog to
+`main` as a forge-signed commit, and publishes: a draft release, the
+artifact attached, then published, which is what creates the tag.
+Nothing is written until the artifact is built, run and attested, so a
 failure up to then leaves no commit, no tag and no release. A failure
 while publishing leaves the release commit on `main` without a tag;
 dispatching again with that version completes it. A version whose tag
@@ -75,10 +81,24 @@ toolchain and no network, and is about 10 MB.
 host.** Fetching, verifying and swapping a release are operations on a
 machine, not on this codebase — and a verifier shipped from the
 repository it verifies proves nothing about the artifact it checks. What
-this repo owes an installer is the contract above plus the attestation:
-`gh attestation verify` establishes the tarball came from this workflow,
-and `MANIFEST.sha256` inside it answers "is the installed tree still what
-was built" at any time afterwards, which a whole-archive checksum cannot.
+this repo owes an installer is the contract above plus the attestation,
+and `MANIFEST.sha256` inside the tarball, which answers "is the installed
+tree still what was built" at any time afterwards, as a whole-archive
+checksum cannot. Everything the attestation can vouch for is only vouched
+for if the verifier asks:
+
+```bash
+gh attestation verify vigario-website-X.Y.Z.tar.gz \
+  --repo TylerVigario/website \
+  --signer-workflow TylerVigario/website/.github/workflows/release.yml \
+  --source-ref refs/heads/main \
+  --deny-self-hosted-runners
+```
+
+`--repo` alone accepts an attestation from any workflow in the
+repository. `--signer-workflow` narrows it to this one, `--source-ref` to
+a run from `main`, and `--deny-self-hosted-runners` to a GitHub-hosted
+machine, which is the only kind this workflow uses.
 
 What is true about the app regardless of what ships it: `astro build`
 emits `dist/client/` (the static tree, which a web server serves
@@ -345,6 +365,7 @@ npm run format                    # prettier --check
 npm run format:fix                # prettier --write
 npm run ci                        # check:install-scripts + lint + typecheck + format + test + build + check:bundles + check:forms
 npm run check:forms               # both forms, no JS, against the built server on a scratch database
+npm run check:release -- <tarball> # unpack a release, check its manifest, run check:forms in it (linux-x64)
 npm run lint:actions              # actionlint over .github/workflows
 npm run clean                     # rm dist, .astro, node_modules/.cache, .eslintcache
 npm run check:pins                # .nvmrc and engines.node agree (also in pre-push)
@@ -357,7 +378,7 @@ npm run check:install-scripts     # every dependency install script is approved 
 - ESLint flat config with type-aware rules (`recommendedTypeChecked`). `req.json()` returns `any` — always parse through a zod schema.
 - Path alias: `@/*` → `src/*`.
 - **Conventional Commits** — Angular type set, inherited from `@commitlint/config-conventional` rather than declared. The line the types draw is **did the artifact change**, because the version names a tarball: `feat` (minor bump), `fix` / `revert` / `perf` / `refactor` / `build` (patch bump), all six in the changelog; `ci` / `docs` / `test` / `chore` / `style` reach no artifact, so no bump and no changelog entry. **Type = release impact, not change-nature** — a bug fix inside CI infra is `ci:` (no release), not `fix(ci):`. Matches pipetree's set (the canonical sibling). `.commitlintrc.js` carries only genuine overrides — the type set, type-case and subject rules come from the extended config, so there is no second copy to drift. The bump matrix lives in `cliff.toml`'s `commit_parsers`. `footer-leading-blank` is deliberately off (the conventional-changelog parser greedy-detected mid-body `Word:` line starts as the footer boundary and false-fired on natural prose like "What landed:" / "Why:"; the comment in `.commitlintrc.js` records why).
-- Husky hooks: `pre-commit` runs `lint-staged` (plus a Windows guard that re-stages what the formatters changed, for files staged whole only, so a hunk left unstaged is never committed) → `typecheck` → `test`; `commit-msg` runs `commitlint`; `pre-push` enforces the `<type>/<slug>` branch-name convention, then `check:pins` → `check:install-scripts` → `lint:actions` → `lint` → `format` (both over the whole tree) → `build` → `check:bundles` → `check:forms`. Local is a superset of the gate: everything CI checks is checked here first, except the dev-server smoke test, which needs a disposable machine.
+- Husky hooks: `pre-commit` runs `lint-staged` (plus a Windows guard that re-stages what the formatters changed, for files staged whole only, so a hunk left unstaged is never committed) → `typecheck` → `test`; `commit-msg` runs `commitlint`; `pre-push` enforces the `<type>/<slug>` branch-name convention, then `check:pins` → `check:install-scripts` → `lint:actions` → `lint` → `format` (both over the whole tree) → `build` → `check:bundles` → `check:forms`. Local is a superset of the gate: everything CI checks is checked here first, except the dev-server smoke test, which needs a disposable machine, and the release-artifact check, which needs the registry and runs only where the artifact does (linux-x64).
 - `CHANGELOG.md` is regenerated from commits by git-cliff at release time — never hand-edit. Fix the commit message, not the changelog. (Because `ci`/`docs`/`test`/`chore`/`style` are skipped, a regeneration drops those entries — the changelog reflects what changed in the artifact, not every commit. One parser list drives the changelog **and** `--bumped-version`, so a type cannot be recorded without also bumping; that coupling is why "every commit in the changelog" is not on the table. It ships inside the release tarball, so it is read on the host, not only on GitHub.)
 
 ## Git + PR workflow
@@ -400,4 +421,4 @@ Don't introduce a permanent `develop` branch — the ceremony outweighs the bene
 - **`HOST`, not `HOSTNAME`.** `@astrojs/node` reads `HOST` and `PORT`. `HOSTNAME` — which the Next-era env template documented — is read by nothing and fails silently. Unset, the server listens on `localhost:4321`.
 - **Don't wrap route handlers in top-level try/catch.** A blanket catch turns a real fault into a generic 500 and drops the stack, which is the difference between a fixable report and "the form is broken sometimes." Let errors propagate; the adapter logs them with the stack intact. The email-send `try/catch` is the one legitimate catch — the row is already saved by then, so SMTP being down must not fail a submission that actually succeeded.
 - **Bump Node major across both pins together.** `.nvmrc` and `package.json#engines.node` must agree; CI reads `.nvmrc` directly via `node-version-file`, so there is no third pin. The gate's "Verify Node major pins agree" step enforces it.
-- **`better-sqlite3` is a native module.** Declared in [`astro.config.mjs`](astro.config.mjs)'s `vite.ssr.external` so the SSR build resolves it at runtime instead of trying to bundle it. Since v13 it is built on the N-API, so the prebuilt binary published with the package is ABI-stable across Node majors — bumping Node no longer invalidates the binding, which it did up to v12. Binaries for eight platforms ship inside the package; anywhere else its install script compiles from source, so a toolchain is needed there. npm 12 runs that script only if `package.json#allowScripts` approves it, so the approval is pinned to the reviewed version, and a version bump fails `check:install-scripts` until someone reviews the new version's script and re-approves it (`npm install-scripts approve better-sqlite3`).
+- **`better-sqlite3` is a native module.** Declared in [`astro.config.mjs`](astro.config.mjs)'s `vite.ssr.external` so the SSR build resolves it at runtime instead of trying to bundle it. Since v13 it is built on the N-API, so the prebuilt binary published with the package is ABI-stable across Node majors — bumping Node no longer invalidates the binding, which it did up to v12. Binaries for eight platforms ship inside the package; anywhere else its install script compiles from source, so a toolchain is needed there. npm 12 runs that script only if `package.json#allowScripts` approves it, so the approval is pinned to the reviewed version, and a version bump fails `check:install-scripts` until someone reviews the new version's script and re-approves it (`npm install-scripts approve better-sqlite3`). CI and the release install with `--ignore-scripts` regardless: the script compiles nothing where a prebuild exists, so tests and the tarball load the same published binary.
