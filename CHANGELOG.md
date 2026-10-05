@@ -1,4 +1,21 @@
 # Changelog
+## [1.16.0](https://github.com/TylerVigario/website/compare/v1.15.2...v1.16.0) (2026-10-05)
+
+### Features
+
+* **site:** Publish a privacy policy, and delete submissions after 24 months 
+
+### Bug Fixes
+
+* **site:** Show the keyboard focus ring where the global reset hid it 
+* **site:** Make printing, the image viewer, the forms and the nav work for everyone 
+* **site:** Describe the business, its site and its case studies correctly to search engines 
+* **site:** Bring every text colour up to WCAG AA contrast 
+
+### Build & Packaging
+
+* **deps:** Update every dependency, and review which install scripts may run 
+
 ## [1.15.2](https://github.com/TylerVigario/website/compare/v1.15.1...v1.15.2) (2026-09-27)
 
 ### Bug Fixes
