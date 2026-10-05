@@ -138,6 +138,13 @@ jobs:
         # under `set -u` the first time it ran.
         run: npm run check:bundles
 
+      - name: The forms work without JavaScript
+        # The built server on a scratch database, posted to the way a
+        # browser behind the proxy posts: both pages, the API, the origin
+        # check, the body limit, and what ends up stored. The same script
+        # as `npm run check:forms`, so it fails locally first.
+        run: npm run check:forms
+
       - name: The dev server boots
         # Everything above tests the BUILT output. Nothing tested the
         # thing developers actually run, which is how `ssr.noExternal:

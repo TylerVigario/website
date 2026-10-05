@@ -77,3 +77,7 @@ node --run format
 
 node --run build
 node --run check:bundles
+# Both forms, posted without JavaScript to the server just built. About a
+# second, and the only check that goes through the adapter, the origin
+# check and the body limit the way a browser does.
+node --run check:forms

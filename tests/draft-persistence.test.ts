@@ -1,8 +1,9 @@
 /**
  * @vitest-environment jsdom
  */
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { enhance } from "../src/lib/forms/enhance";
+import { DRAFT_DAYS } from "../src/lib/retention";
 
 /**
  * The other half of the never-erase invariant.
@@ -180,5 +181,76 @@ describe("a draft survives the tab closing", () => {
     field<HTMLInputElement>(form, "name").value = "Typed";
     expect(() => mount(form)).not.toThrow();
     expect(field<HTMLInputElement>(form, "name").value).toBe("Typed");
+  });
+});
+
+describe("a draft does not outlive its use", () => {
+  const AGE = `${KEY}:savedAt`;
+  const DAY = 24 * 60 * 60 * 1000;
+  const draft = JSON.stringify({ name: "Dana", contact: "559 555 0100" });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("keeps its age current while someone types", () => {
+    const form = buildForm();
+    mount(form);
+    type(field<HTMLInputElement>(form, "name"), "Dana");
+    expect(Date.now() - Number(localStorage.getItem(AGE))).toBeLessThan(1000);
+  });
+
+  it(`is restored just inside ${DRAFT_DAYS} days`, () => {
+    localStorage.setItem(KEY, draft);
+    localStorage.setItem(AGE, String(Date.now() - DRAFT_DAYS * DAY + 60_000));
+    const form = buildForm();
+    mount(form);
+    expect(field<HTMLInputElement>(form, "name").value).toBe("Dana");
+  });
+
+  it(`is discarded, not restored, once untouched for longer than ${DRAFT_DAYS} days`, () => {
+    // On a shared machine the next person would find a stranger's name
+    // and number already in the form.
+    localStorage.setItem(KEY, draft);
+    localStorage.setItem(AGE, String(Date.now() - DRAFT_DAYS * DAY - 60_000));
+    const form = buildForm();
+    mount(form);
+    expect(field<HTMLInputElement>(form, "name").value).toBe("");
+    expect(localStorage.getItem(KEY)).toBeNull();
+    expect(localStorage.getItem(AGE)).toBeNull();
+  });
+
+  it.each([
+    ["saved before ages were kept", null],
+    ["with an empty age", ""],
+    ["with an unreadable age", "yesterday"],
+  ])("is restored, and its clock started, when %s", (_label, age) => {
+    localStorage.setItem(KEY, draft);
+    if (age !== null) localStorage.setItem(AGE, age);
+    const form = buildForm();
+    mount(form);
+    expect(field<HTMLInputElement>(form, "name").value).toBe("Dana");
+    expect(Date.now() - Number(localStorage.getItem(AGE))).toBeLessThan(1000);
+  });
+
+  it("is cleared, age and all, once the form is sent", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) })),
+    );
+    const form = buildForm();
+    let sent = false;
+    enhance({
+      form,
+      rules: {},
+      endpoint: "/api/test",
+      arrayFields: ["services"],
+      draftKey: KEY,
+      onSuccess: () => (sent = true),
+    });
+    type(field<HTMLInputElement>(form, "name"), "Dana");
+    expect(localStorage.getItem(AGE)).not.toBeNull();
+    form.dispatchEvent(new Event("submit", { cancelable: true }));
+    await vi.waitFor(() => expect(sent).toBe(true));
+    expect(localStorage.getItem(KEY)).toBeNull();
+    expect(localStorage.getItem(AGE)).toBeNull();
   });
 });
