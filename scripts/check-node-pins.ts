@@ -15,11 +15,11 @@
  */
 import fs from "node:fs";
 
-/** @param {string | undefined} s */
-const major = (s) => s?.match(/(\d+)/)?.[1];
+const major = (s: string | undefined) => s?.match(/(\d+)/)?.[1];
 
 const nvmrc = major(fs.readFileSync(".nvmrc", "utf8"));
-const engines = major(JSON.parse(fs.readFileSync("package.json", "utf8")).engines?.node);
+const pkg = JSON.parse(fs.readFileSync("package.json", "utf8")) as { engines?: { node?: string } };
+const engines = major(pkg.engines?.node);
 
 if (!nvmrc || !engines) {
   console.error(

@@ -1,9 +1,8 @@
-// @ts-check
 import { defineConfig } from "astro/config";
 import node from "@astrojs/node";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
-import { RUNTIME_EXTERNALS } from "./runtime-externals.mjs";
+import { RUNTIME_EXTERNALS } from "./runtime-externals.ts";
 import { BODY_LIMIT_BYTES } from "./src/lib/forms/limits.ts";
 
 // Hybrid, not static and not server. `output: "static"` with an adapter
@@ -70,7 +69,7 @@ export default defineConfig({
       tailwindcss(),
       // noExternal bundles every dependency into the server output, so
       // the deployed artifact needs no node_modules beyond the native
-      // addon that cannot be bundled. See runtime-externals.mjs — that
+      // addon that cannot be bundled. See runtime-externals.ts — that
       // list is shared with the release script so the two cannot drift.
       //
       // IT MUST NOT APPLY IN DEV. Set unconditionally it also routes

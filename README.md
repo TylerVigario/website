@@ -153,7 +153,7 @@ same commits.
 per-path and permanently, and stays registered for exactly that reason —
 a 301 carries link equity only while it exists.
 
-`site` in `astro.config.mjs` is the single place the domain is written.
+`site` in `astro.config.ts` is the single place the domain is written.
 It drives every canonical link, `og:url`, the JSON-LD `@id` and `url`,
 `robots.txt` and both sitemaps — 16 built files in total. Nothing else
 in the site hardcodes it.

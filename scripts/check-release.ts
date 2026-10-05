@@ -14,13 +14,13 @@
  *   - RELEASE and package.json name the same version
  *   - the unpacked server, with its own node_modules, passes check:forms
  *
- * The last runs scripts/check-forms.mjs from inside the unpacked tree, so
+ * The last runs scripts/check-forms.ts from inside the unpacked tree, so
  * the server it boots is the artifact's, loading the artifact's copy of
  * better-sqlite3. The artifact carries the linux-x64 binary only, so this
  * runs where the artifact runs and nowhere else: CI, not a developer's
  * machine.
  *
- * Usage: node scripts/check-release.mjs dist-release/vigario-website-1.2.3.tar.gz
+ * Usage: node scripts/check-release.ts dist-release/vigario-website-1.2.3.tar.gz
  */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -31,15 +31,13 @@ import { fileURLToPath } from "node:url";
 
 const tarball = process.argv[2];
 if (!tarball || !existsSync(tarball)) {
-  console.error("usage: node scripts/check-release.mjs <release tarball>");
+  console.error("usage: node scripts/check-release.ts <release tarball>");
   process.exit(1);
 }
 
 const dir = mkdtempSync(path.join(tmpdir(), "vts-release-"));
-/** @type {string[]} */
-const failures = [];
-/** @param {string} msg */
-const fail = (msg) => {
+const failures: string[] = [];
+const fail = (msg: string) => {
   failures.push(msg);
   console.log(`  ✗ ${msg}`);
 };
@@ -83,13 +81,18 @@ try {
     console.log(`  ✓ all ${files.length} files match MANIFEST.sha256, and none is unlisted`);
   }
 
-  const release = Object.fromEntries(
+  const release: Record<string, string> = Object.fromEntries(
     readFileSync(path.join(root, "RELEASE"), "utf8")
       .trim()
       .split("\n")
-      .map((l) => l.split("=")),
+      .map((l) => {
+        const at = l.indexOf("=");
+        return [l.slice(0, at), l.slice(at + 1)] as const;
+      }),
   );
-  const { version } = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"));
+  const { version } = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")) as {
+    version: string;
+  };
   if (release.version === version && release.dirty === "false") {
     console.log(`  ✓ RELEASE and package.json both say ${version}, built from a clean tree`);
   } else {
@@ -99,7 +102,7 @@ try {
   // check-forms resolves the server from its working directory and its
   // own imports from where it lives, so run from here it boots the
   // artifact and reads the database with the repository's driver.
-  const checkForms = fileURLToPath(new URL("./check-forms.mjs", import.meta.url));
+  const checkForms = fileURLToPath(new URL("./check-forms.ts", import.meta.url));
   try {
     execFileSync(process.execPath, [checkForms], { cwd: root, stdio: "inherit" });
   } catch {

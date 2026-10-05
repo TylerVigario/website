@@ -10,7 +10,7 @@ name: CodeQL
 # - .astro files. CodeQL's JavaScript extractor has no handler for the
 #   extension, so every page, layout and component is skipped, including
 #   the two request-time pages that parse the query string and render it
-#   back. What is analysed is the plain .ts and .mjs: src/lib, the API
+#   back. What is analysed is the plain .ts and .js: src/lib, the API
 #   routes, scripts/ and the config files.
 # - Astro's request as a source of untrusted data. CodeQL models Express,
 #   Nest and Next, not Astro, so the taint-tracking queries (SQL

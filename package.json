@@ -10,29 +10,29 @@
   "packageManager": "npm@11.19.0",
   "scripts": {
     "build": "astro build",
-    "check:bundles": "node scripts/check-bundles.mjs",
-    "check:forms": "node scripts/check-forms.mjs",
-    "check:release": "node scripts/check-release.mjs",
+    "check:bundles": "node scripts/check-bundles.ts",
+    "check:forms": "node scripts/check-forms.ts",
+    "check:release": "node scripts/check-release.ts",
     "ci": "npm run check:install-scripts && npm run lint && npm run typecheck && npm run format && npm test && npm run build && npm run check:bundles && npm run check:forms",
     "clean": "node -e \"const fs=require('fs'); ['dist','.astro','node_modules/.cache','.eslintcache'].forEach(p=>fs.rmSync(p,{recursive:true,force:true}))\"",
     "dev": "node --env-file-if-exists=.env.local node_modules/astro/bin/astro.mjs dev",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
     "lint": "npm run lint:js && npm run lint:md && npm run lint:actions",
-    "lint:actions": "node scripts/lint-actions.mjs",
+    "lint:actions": "node scripts/lint-actions.ts",
     "lint:js": "eslint",
     "lint:js:fix": "eslint --fix",
     "lint:md": "markdownlint-cli2",
     "lint:md:fix": "markdownlint-cli2 --fix",
     "prepare": "husky",
     "preview": "node --env-file-if-exists=.env.local node_modules/astro/bin/astro.mjs preview",
-    "release": "node scripts/make-release.mjs",
+    "release": "node scripts/make-release.ts",
     "start": "node --env-file-if-exists=.env.local ./dist/server/entry.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "astro check",
-    "check:pins": "node scripts/check-node-pins.mjs",
-    "check:install-scripts": "node scripts/check-install-scripts.mjs"
+    "check:pins": "node scripts/check-node-pins.ts",
+    "check:install-scripts": "node scripts/check-install-scripts.ts"
   },
   "dependencies": {
     "@astrojs/node": "^11.1.6",
@@ -70,7 +70,7 @@
     "*.astro": [
       "eslint --cache --fix --max-warnings=0 --no-warn-ignored"
     ],
-    "*.{ts,js,mjs}": [
+    "*.{ts,js}": [
       "eslint --cache --fix --max-warnings=0 --no-warn-ignored",
       "prettier --write"
     ],

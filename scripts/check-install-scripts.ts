@@ -29,9 +29,15 @@ const run = spawnSync("npm", ["install-scripts", "ls", "--json"], {
   shell: process.platform === "win32",
 });
 
-let report;
+/** What `npm install-scripts ls --json` reports: each package whose
+ *  install script package.json#allowScripts does not yet cover. */
+interface Report {
+  allowScripts?: { changes: { key: string }[] }[];
+}
+
+let report: Report;
 try {
-  report = JSON.parse(run.stdout);
+  report = JSON.parse(run.stdout) as Report;
 } catch {
   // An npm without the command (before 11.18) prints a usage error, not
   // JSON. Skip rather than fail: the gate runs the npm that ships with
@@ -57,7 +63,9 @@ if (pending.length > 0) {
   process.exit(1);
 }
 
-const policy = JSON.parse(fs.readFileSync("package.json", "utf8")).allowScripts ?? {};
+const { allowScripts: policy = {} } = JSON.parse(fs.readFileSync("package.json", "utf8")) as {
+  allowScripts?: Record<string, boolean>;
+};
 const approved = Object.keys(policy).filter((k) => policy[k] === true);
 const denied = Object.keys(policy).filter((k) => policy[k] === false);
 console.log(

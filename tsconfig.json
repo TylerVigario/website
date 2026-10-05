@@ -7,15 +7,15 @@
     // whatever was at the index, and the checks that made them safe were
     // invisible to the compiler: a refactor that dropped one compiled.
     "noUncheckedIndexedAccess": true,
-    // The build and release scripts are JavaScript that Node runs as it
-    // stands, and they are checked as strictly as the TypeScript: their
-    // types are JSDoc. make-release.mjs builds what ships, and a type
-    // error there used to surface on release day.
-    "checkJs": true,
+    // Only syntax a type-stripper can erase: no enums, namespaces or
+    // parameter properties. Node runs scripts/*.ts, runtime-externals.ts
+    // and what they import by deleting the types and nothing more, so
+    // anything that needs compiling would pass this check and fail there.
+    "erasableSyntaxOnly": true,
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": [".astro/types.d.ts", "**/*.ts", "**/*.astro", "*.mjs", "scripts/*.mjs"],
+  "include": [".astro/types.d.ts", "**/*.ts", "**/*.astro"],
   "exclude": ["node_modules", "dist"]
 }

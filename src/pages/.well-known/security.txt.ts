@@ -23,7 +23,7 @@ import type { APIRoute } from "astro";
  * (RFC 9116, section 2.5.5).
  *
  * "From build" means from SOURCE_DATE_EPOCH when it is set, which
- * make-release.mjs sets to the commit's time. That is the
+ * make-release.ts sets to the commit's time. That is the
  * reproducible-builds convention, and it is what lets two builds of one
  * commit write the same date: with the clock, every build of the same
  * source differed in this one line. A release is cut from the latest

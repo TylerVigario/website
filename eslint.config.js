@@ -33,9 +33,11 @@ export default defineConfig([
     },
   },
 
-  // Config files are plain Node modules with no project entry.
+  // The two JavaScript configs, which are in no tsconfig. Everything
+  // else, scripts/ and astro.config.ts included, is TypeScript in the
+  // project and linted with types.
   {
-    files: ["*.{js,mjs}", ".*.js", "scripts/**"],
+    files: ["*.js", ".*.js"],
     ...tseslint.configs.disableTypeChecked,
   },
 
