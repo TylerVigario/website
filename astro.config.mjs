@@ -4,6 +4,7 @@ import node from "@astrojs/node";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
 import { RUNTIME_EXTERNALS } from "./runtime-externals.mjs";
+import { BODY_LIMIT_BYTES } from "./src/lib/forms/limits.ts";
 
 // Hybrid, not static and not server. `output: "static"` with an adapter
 // present means every page prerenders to HTML at build time unless it
@@ -47,8 +48,8 @@ export default defineConfig({
   // submission is 20,000 characters of details (src/lib/forms/limits.ts);
   // at worst three UTF-8 bytes a character, each percent-encoded, that is
   // about 180 KB, so no real submission comes near the cap. A body over it
-  // fails to parse and is rejected like any other invalid submission.
-  adapter: node({ mode: "standalone", bodySizeLimit: 256 * 1024 }),
+  // cannot be read, and is answered 413 rather than as a validation failure.
+  adapter: node({ mode: "standalone", bodySizeLimit: BODY_LIMIT_BYTES }),
   trailingSlash: "never",
   // No UI framework integration, deliberately, and no carousel library
   // either. Nothing on this site needs one: the animations are

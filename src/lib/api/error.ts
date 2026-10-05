@@ -4,8 +4,13 @@
  * Every API error returns:
  *   { type, title, status, detail?, errors? }
  *
- * `type` is a relative URI identifying the error class — stable
- * identifiers that API consumers can switch on.
+ * `type` identifies the error class. A validation failure has its own,
+ * a tag URI (RFC 4151) that names the class without pretending to be a
+ * page: the relative "/errors/validation" this used to send resolved to a
+ * 404 on this site, while RFC 9457 §3.1.1 expects a type that can be
+ * dereferenced to lead to documentation. An error that means no more
+ * than its HTTP status uses `about:blank`, the RFC's own type for that,
+ * with the status phrase as its title (§4.2.1).
  *
  * `errors` is an optional array of field-level validation issues
  * (Zod failures), each with { field, message }.
@@ -49,8 +54,26 @@ export interface SafeParseFailure {
   error: { issues: readonly { path: readonly PropertyKey[]; message: string }[] };
 }
 
-/** Format a failed safe-parse into a Problem Details 400 with one entry
- *  per issue. The form maps these back to inline field errors. */
+/** The problem type of a validation failure. Stable: a client may switch on it. */
+export const VALIDATION_TYPE = "tag:vigario.tech,2026:validation";
+
+/** A Problem Details response. */
+function problem(body: ProblemDetails, headers: Record<string, string> = {}): Response {
+  return new Response(JSON.stringify(body), {
+    status: body.status,
+    // RFC 9457 media type, not application/json — the shape is
+    // Problem Details and the content type should say so.
+    headers: { "Content-Type": "application/problem+json", ...headers },
+  });
+}
+
+/** Format a failed safe-parse into a Problem Details 422 with one entry
+ *  per issue. The form maps these back to inline field errors.
+ *
+ *  422, not 400: the request was read and understood, and its content is
+ *  what failed (RFC 9110 §15.5.21). The page that takes the no-JS submit
+ *  answers the same failure with 422, and the two ways in should agree.
+ *  400 is for a body that could not be read at all (badRequest below). */
 export function zodError(result: SafeParseFailure): Response {
   const errors = result.error.issues.map((issue) => ({
     field: issue.path.length ? issue.path.join(".") : "(root)",
@@ -62,18 +85,35 @@ export function zodError(result: SafeParseFailure): Response {
   // drift between the two a compile error rather than a surprise for
   // whoever is parsing the response.
   const body: ProblemDetails = {
-    type: "/errors/validation",
+    type: VALIDATION_TYPE,
     title: "Validation Error",
-    status: 400,
+    status: 422,
     detail: errors[0]?.message,
     errors,
   };
+  return problem(body);
+}
 
-  return new Response(JSON.stringify(body), {
+/** 400 for a body that could not be read: malformed JSON, or a form body
+ *  that does not parse. Before this, such a body reached the schema as
+ *  null and came back as "Invalid input: expected object, received null". */
+export function badRequest(): Response {
+  return problem({
+    type: "about:blank",
+    title: "Bad Request",
     status: 400,
-    // RFC 9457 media type, not application/json — the shape is
-    // Problem Details and the content type should say so.
-    headers: { "Content-Type": "application/problem+json" },
+    detail: "The submission could not be read.",
+  });
+}
+
+/** 413 for a body over BODY_LIMIT_BYTES, which the adapter refuses to
+ *  read (RFC 9110 §15.5.14). */
+export function contentTooLarge(): Response {
+  return problem({
+    type: "about:blank",
+    title: "Content Too Large",
+    status: 413,
+    detail: "The submission is larger than this form accepts.",
   });
 }
 
@@ -88,16 +128,15 @@ export function zodError(result: SafeParseFailure): Response {
  */
 export function methodNotAllowed(allowed: readonly string[]): Response {
   const allow = allowed.join(", ");
-  const body: ProblemDetails = {
-    type: "/errors/method-not-allowed",
-    title: "Method Not Allowed",
-    status: 405,
-    detail: `This endpoint accepts ${allow}.`,
-  };
-  return new Response(JSON.stringify(body), {
-    status: 405,
-    headers: { "Content-Type": "application/problem+json", Allow: allow },
-  });
+  return problem(
+    {
+      type: "about:blank",
+      title: "Method Not Allowed",
+      status: 405,
+      detail: `This endpoint accepts ${allow}.`,
+    },
+    { Allow: allow },
+  );
 }
 
 /** TWO ERRORS UNDER /api/ ARE NOT THIS SHAPE, AND CANNOT BE.
@@ -122,14 +161,10 @@ export function methodNotAllowed(allowed: readonly string[]): Response {
  *  The namespace answers in one media type. A client that asked for JSON
  *  and got an HTML 404 has to guess whether it reached the API at all. */
 export function notFound(): Response {
-  const body: ProblemDetails = {
-    type: "/errors/not-found",
+  return problem({
+    type: "about:blank",
     title: "Not Found",
     status: 404,
     detail: "No endpoint at this path.",
-  };
-  return new Response(JSON.stringify(body), {
-    status: 404,
-    headers: { "Content-Type": "application/problem+json" },
   });
 }

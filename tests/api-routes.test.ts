@@ -8,12 +8,14 @@ import type { APIContext } from "astro";
  * A 303 there would turn it into a GET and drop what was typed, which is
  * why the status itself is asserted.
  */
-const { insertSubmission } = vi.hoisted(() => ({ insertSubmission: vi.fn() }));
-vi.mock("@/lib/db", () => ({ insertSubmission }));
+const { insertSubmission } = vi.hoisted(() => ({ insertSubmission: vi.fn(() => 1) }));
+vi.mock("@/lib/db", () => ({ insertSubmission, markNotified: vi.fn() }));
 vi.mock("@/lib/email/mailer", () => ({
-  sendQuoteNotification: vi.fn(() => Promise.resolve()),
-  sendPotsAuditNotification: vi.fn(() => Promise.resolve()),
+  sendQuoteNotification: vi.fn(() => Promise.resolve(true)),
+  sendPotsAuditNotification: vi.fn(() => Promise.resolve(true)),
 }));
+
+const { VALIDATION_TYPE } = await import("@/lib/api/error");
 
 const quote = await import("@/pages/api/quote");
 const audit = await import("@/pages/api/pots-audit");
@@ -63,10 +65,33 @@ describe("the JSON path", () => {
     expect(insertSubmission).toHaveBeenCalledOnce();
   });
 
-  it("answers an invalid one with Problem Details", async () => {
+  it("answers an invalid one 422, with the validation problem type", async () => {
+    // Read and understood, and the content is what failed: 422, the same
+    // status the page answers the no-JS submit with.
     const res = await call(quote, jsonPost({ name: "", contact: "x", services: [] }));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(422);
     expect(res.headers.get("content-type")).toContain("application/problem+json");
+    expect(await res.json()).toMatchObject({ type: VALIDATION_TYPE, status: 422 });
     expect(insertSubmission).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["quote", quote],
+    ["audit", audit],
+  ] as const)(
+    "answers an unreadable %s body 400, not as a validation failure",
+    async (_n, route) => {
+      const res = await call(
+        route,
+        new Request("http://x/", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: "{not json",
+        }),
+      );
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ type: "about:blank", title: "Bad Request" });
+      expect(insertSubmission).not.toHaveBeenCalled();
+    },
+  );
 });

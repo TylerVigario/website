@@ -3,7 +3,7 @@ import { areaServed, businessRef } from "@/lib/business";
 import Base from "@/layouts/Base.astro";
 import POTSLanding from "@/components/POTSLanding.astro";
 import LandingHeader from "@/components/LandingHeader.astro";
-import { readSubmission, submitPotsAudit, type Values } from "@/lib/api/submit";
+import { readSubmission, submitPotsAudit, unreadableMessage, type Values } from "@/lib/api/submit";
 
 // Built from Astro.site so the canonical domain lives in one place.
 const site = Astro.site!.href.replace(/\/$/, "");
@@ -61,9 +61,18 @@ let values: Values = {};
 let errors: Record<string, string> = {};
 if (Astro.request.method === "POST") {
   const outcome = await submitPotsAudit(await readSubmission(Astro.request));
-  if (outcome.kind !== "invalid") return Astro.redirect("/pots-migration?sent=1#audit", 303);
-  ({ values, errors } = outcome);
-  Astro.response.status = 422;
+  if (outcome.kind === "unreadable") {
+    // Nothing was read, so nothing can be echoed back: the form comes
+    // back empty, with a message that says so rather than one that
+    // blames a field.
+    errors = { "(root)": unreadableMessage(outcome.status) };
+    Astro.response.status = outcome.status;
+  } else if (outcome.kind === "invalid") {
+    ({ values, errors } = outcome);
+    Astro.response.status = 422;
+  } else {
+    return Astro.redirect("/pots-migration?sent=1#audit", 303);
+  }
 }
 const submitted = Astro.url.searchParams.get("sent") === "1";
 ---

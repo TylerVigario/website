@@ -68,6 +68,15 @@ const MIGRATIONS: readonly ((db: Database.Database) => void)[] = [
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
     `),
+  // 1 -> 2: when the notification email for a row was handed to the relay.
+  // NULL means it has not been, so a lead nobody was told about can be
+  // found instead of looking like every other. Rows from before this
+  // column existed are marked 'unknown': whether they were announced was
+  // never recorded, and calling them unannounced would be a guess.
+  (db) => {
+    db.exec("ALTER TABLE quotes ADD COLUMN notified_at TEXT");
+    db.exec("UPDATE quotes SET notified_at = 'unknown'");
+  },
 ];
 
 /** The version a database is brought to. Exported so a test can assert
@@ -169,6 +178,23 @@ export interface Submission {
   /** A real services list for a quote; POTS_AUDIT_MARKER for an audit. */
   services: string;
   details: string | null;
+}
+
+/** Records that the notification for row `id` was handed to the relay. */
+export function markNotified(id: number): void {
+  getDb().prepare("UPDATE quotes SET notified_at = datetime('now') WHERE id = ?").run(id);
+}
+
+/** Submissions older than `minutes` whose notification never went out:
+ *  the relay refused it, or mail is off. Recent ones are left out, since a
+ *  send may still be in flight. */
+export function unannouncedCount(minutes = 10): number {
+  const row = getDb()
+    .prepare(
+      "SELECT count(*) AS n FROM quotes WHERE notified_at IS NULL AND created_at < datetime('now', ?)",
+    )
+    .get(`-${minutes} minutes`) as { n: number };
+  return row.n;
 }
 
 /** Writes one submission and returns its row id.

@@ -78,6 +78,51 @@ describe("schema migrations", () => {
     expect(handle.prepare("SELECT count(*) AS n FROM quotes").get()).toEqual({ n: 1 });
   });
 
+  it("marks rows from before notified_at as unknown, and new rows as unannounced", async () => {
+    // Whether an old row was announced was never recorded. Calling it
+    // unannounced would put every past lead in the health check's count.
+    const legacy = path.join(dir, "notified.db");
+    const seed = new Database(legacy);
+    seed.exec(`
+      CREATE TABLE quotes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        contact TEXT NOT NULL,
+        services TEXT NOT NULL,
+        details TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    seed
+      .prepare("INSERT INTO quotes (name, contact, services, created_at) VALUES (?, ?, ?, ?)")
+      .run("Old", "x", "Networking", "2026-01-01 00:00:00");
+    seed.pragma("user_version = 1");
+    seed.close();
+
+    const db = await openAt("notified.db");
+    const handle = db.getDb();
+    const notified = (id: number) =>
+      (
+        handle.prepare("SELECT notified_at FROM quotes WHERE id = ?").get(id) as {
+          notified_at: string | null;
+        }
+      ).notified_at;
+    expect(notified(1)).toBe("unknown");
+
+    const id = db.insertSubmission({ name: "New", contact: "x", services: "Linux", details: null });
+    expect(notified(id)).toBeNull();
+    // Too recent to count: its send may still be in flight.
+    expect(db.unannouncedCount()).toBe(0);
+    handle
+      .prepare("UPDATE quotes SET created_at = datetime('now', '-1 hour') WHERE id = ?")
+      .run(id);
+    expect(db.unannouncedCount()).toBe(1);
+
+    db.markNotified(id);
+    expect(notified(id)).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+    expect(db.unannouncedCount()).toBe(0);
+  });
+
   it("does not re-run on an already-migrated database", async () => {
     // Step one is CREATE TABLE IF NOT EXISTS, so re-running it can neither
     // throw nor be seen on a normal file, and "the version did not change"

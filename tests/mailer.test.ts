@@ -7,7 +7,8 @@ import { readRelay, transportOptions } from "@/lib/email/relay";
  * replaced by recorders. A policy that is tested but not wired in is the
  * failure this file exists for.
  */
-const { createTransport, lookup } = vi.hoisted(() => ({
+const { createTransport, lookup, sendMail } = vi.hoisted(() => ({
+  sendMail: vi.fn(),
   createTransport: vi.fn(),
   lookup: vi.fn(),
 }));
@@ -28,7 +29,8 @@ const KEYS = [
 
 async function load(env: Record<string, string>, resolves: string[] = []) {
   vi.resetModules();
-  createTransport.mockReset().mockReturnValue({ sendMail: vi.fn() });
+  sendMail.mockReset().mockResolvedValue({ messageId: "<id@relay>" });
+  createTransport.mockReset().mockReturnValue({ sendMail });
   lookup.mockReset().mockResolvedValue(resolves.map((address) => ({ address, family: 4 })));
   for (const k of KEYS) vi.stubEnv(k, env[k] ?? "");
   const log = {
@@ -36,8 +38,8 @@ async function load(env: Record<string, string>, resolves: string[] = []) {
     warn: vi.spyOn(console, "warn").mockImplementation(() => {}),
     error: vi.spyOn(console, "error").mockImplementation(() => {}),
   };
-  await import("@/lib/email/mailer");
-  return log;
+  const mod = await import("@/lib/email/mailer");
+  return Object.assign(log, { mod });
 }
 
 const LOCAL_RELAY = {
@@ -121,5 +123,65 @@ describe("what cannot be acted on is off, loudly", () => {
     expect(log.error).toHaveBeenCalledWith(
       expect.stringMatching(new RegExp(`MISCONFIGURED.*${named}`)),
     );
+  });
+});
+
+describe("a notification", () => {
+  const QUOTE = { name: "Dana", contact: "dana@example.com", services: ["Linux"], details: "" };
+
+  it("names the row in its subject, and answers Reply-To with the sender's address", async () => {
+    const { mod } = await load(LOCAL_RELAY);
+    expect(mod.mailState).toBe("on");
+    expect(await mod.sendQuoteNotification(7, QUOTE)).toBe(true);
+    expect(sendMail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: "New Quote Request #7 from Dana",
+        replyTo: "dana@example.com",
+      }),
+    );
+  });
+
+  it.each([
+    ["a phone number", "559 555 0100"],
+    ["two addresses", "a@example.com, b@example.com"],
+    ["an address with words around it", "email me at a@example.com"],
+  ])("sets no Reply-To for %s", async (_label, contact) => {
+    const { mod } = await load(LOCAL_RELAY);
+    await mod.sendPotsAuditNotification(8, {
+      business: "Acme",
+      name: "Dana",
+      contact,
+      bill: "$100–$300",
+    });
+    const sent = sendMail.mock.calls[0][0] as Record<string, unknown>;
+    expect(sent.subject).toBe("POTS Audit Request #8 from Acme");
+    expect(sent).not.toHaveProperty("replyTo");
+  });
+
+  it("is rethrown on a relay failure, logged by row id rather than by name", async () => {
+    const { mod, error } = await load(LOCAL_RELAY);
+    sendMail.mockRejectedValueOnce(new Error("relay down"));
+    await expect(mod.sendQuoteNotification(9, QUOTE)).rejects.toThrow("relay down");
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("#9"), expect.any(Error));
+    expect(JSON.stringify(error.mock.calls)).not.toContain("Dana");
+  });
+
+  it.each([
+    ["off", {}],
+    ["misconfigured", { SMTP_HOST: "localhost" }],
+  ])("is not sent, and says so, when mail is %s", async (state, env) => {
+    const { mod } = await load(env);
+    expect(mod.mailState).toBe(state);
+    expect(await mod.sendQuoteNotification(10, QUOTE)).toBe(false);
+    expect(sendMail).not.toHaveBeenCalled();
+  });
+
+  it("logs nothing a person typed when mail is off in production", async () => {
+    vi.stubEnv("PROD", true);
+    const { mod, log } = await load({});
+    await mod.sendQuoteNotification(11, { ...QUOTE, details: "my alarm code is 1234" });
+    const logged = JSON.stringify(log.mock.calls);
+    expect(logged).toContain("#11");
+    for (const typed of ["Dana", "dana@example.com", "1234"]) expect(logged).not.toContain(typed);
   });
 });

@@ -108,10 +108,15 @@ as though one of them is the way.
 | everything else | Static file from `dist/client/`, served `Cache-Control: no-cache`. Unmatched paths should fall through to the Node process, so adding a dynamic route does not 404 until the server config catches up. |
 
 `no-cache` on HTML is not `no-store`: the file is cached, and revalidated
-before use. Apache already sends `ETag` and `Last-Modified`, so
-revalidation is a 304 with no body — the bandwidth cost is a header
-exchange and the benefit is that a release is visible the moment it
-lands. Sent nothing, HTML falls to heuristic freshness, where a cache is
+before use. Against a `Last-Modified` or a working `ETag`, revalidation
+is a 304 with no body — the bandwidth cost is a header exchange and the
+benefit is that a release is visible the moment it lands. Check it with
+a conditional request, not by reading the config: a validator that never
+matches turns every revalidation into a full 200. Apache's compression
+modules are the known case, suffixing the `ETag` of a compressed
+response so the value a browser sends back never equals the file's;
+`DeflateAlterETag Remove` and `BrotliAlterETag Remove` drop it there and
+leave `Last-Modified` to do the job. Sent nothing, HTML falls to heuristic freshness, where a cache is
 free to reuse a page for a fraction of its age without asking. An install
 that completes in six seconds is then invisible for hours, which makes
 the whole delivery path a guess.
@@ -187,8 +192,8 @@ should not be told something laxer.
 
 - **Quote** — a "request a quote" submission from the main contact form. Schema in [`src/lib/api/quote.ts`](src/lib/api/quote.ts). Submitted through `submitQuote()` in [`src/lib/api/submit.ts`](src/lib/api/submit.ts), which both ways in call: `/api/quote` for JSON, and `/contact` itself for a no-JS form post.
 - **POTS audit** — a "free phone-bill audit" submission from the `/pots-migration` landing page. Different schema ([`src/lib/api/pots-audit.ts`](src/lib/api/pots-audit.ts)), same destination row, submitted through `submitPotsAudit()` the same two ways (`/api/pots-audit`, `/pots-migration`).
-- **`quotes` table** — single SQLite table that holds both kinds of submission. The `services` column distinguishes: a real services array for quote submissions, the literal string `"POTS Migration Audit"` for audit submissions. Its schema is versioned: `getDb()` runs the migrations in `src/lib/db.ts` against `PRAGMA user_version`. A migration that has shipped is never edited; append a new one.
-- **Problem Details** — the API error shape, per RFC 9457, `application/problem+json`. Validation failures via `zodError()`, an unsupported method via `methodNotAllowed()` (which sets `Allow`), an unclaimed path via `notFound()` from the `[...path].ts` catch-all. Two errors are NOT this shape and cannot be: a cross-site write is refused by Astro before middleware or routes run (`403 text/plain`), and an unhandled route fault returns the site's `500 text/html` — catching that is the blanket try/catch the guardrails forbid. `error.ts` records both, with the measurement. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()`, whose response body is annotated with the `ProblemDetails` type so a change to the shape fails the build. The client does **not** import that schema: [`enhance.ts`](src/lib/forms/enhance.ts) reads the shape by hand, because validating it in the browser would pull zod into a bundle that is otherwise ~2 KB in order to re-check a response this server just produced. See "Form patterns" below.
+- **`quotes` table** — single SQLite table that holds both kinds of submission. The `services` column distinguishes: the chosen services, comma-joined, for quote submissions, the literal string `"POTS Migration Audit"` for audit submissions. `notified_at` is when the row's notification reached the relay: NULL if it never did, `'unknown'` for rows older than the column. Its schema is versioned: `getDb()` runs the migrations in `src/lib/db.ts` against `PRAGMA user_version`. A migration that has shipped is never edited; append a new one.
+- **Problem Details** — the API error shape, per RFC 9457, `application/problem+json`. Validation failures via `zodError()` (422, type `VALIDATION_TYPE`, a tag URI rather than a path that would 404), a body that cannot be read at all via `badRequest()` (400) or `contentTooLarge()` (413, over `BODY_LIMIT_BYTES`), an unsupported method via `methodNotAllowed()` (which sets `Allow`), an unclaimed path via `notFound()` from the `[...path].ts` catch-all. Everything but validation is `about:blank`, which means no more than its status. Two errors are NOT this shape and cannot be: a cross-site write is refused by Astro before middleware or routes run (`403 text/plain`), and an unhandled route fault returns the site's `500 text/html` — catching that is the blanket try/catch the guardrails forbid. `error.ts` records both, with the measurement. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()`, whose response body is annotated with the `ProblemDetails` type so a change to the shape fails the build. The client does **not** import that schema: [`enhance.ts`](src/lib/forms/enhance.ts) reads the shape by hand, because validating it in the browser would pull zod into a bundle that is otherwise ~2 KB in order to re-check a response this server just produced. See "Form patterns" below.
 
 ## Key paths
 
@@ -208,7 +213,8 @@ src/
 │   └── api/                          # prerender = false, like contact + pots-migration
 │       ├── quote.ts                  # POST, JSON: submitQuote(); a form post is 307'd to /contact
 │       ├── pots-audit.ts             # POST, JSON: submitPotsAudit(); a form post is 307'd to the page
-│       └── health.ts                 # GET/HEAD: open, read, schema, write-probe, free space → 200 or 503
+│       └── health.ts                 # GET/HEAD: open, read, schema, write-probe, free space → 200 or 503;
+│                                     #   mail + unannounced leads are advisory: "degraded", still 200
 ├── components/                       # .astro, render to HTML at build time
 │   ├── QuoteForm.astro  PotsAuditForm.astro
 │   ├── Lightbox.astro                # <dialog> + scroll-snap viewer
@@ -270,7 +276,7 @@ fail.
 - Errors render as sibling nodes next to the field. The form is never re-rendered, so the DOM the user is typing into is never replaced underneath them.
 - On `!res.ok` the response is parsed as Problem Details and each `errors[]` entry is matched to its field by name. Unmatched or top-level failures render in a form-level `role="alert"`.
 - Client rules live in [`rules.ts`](src/lib/forms/rules.ts), hand-written and deliberately more permissive than the schema, so the browser never rejects something the server would have accepted. [`tests/form-rules.test.ts`](tests/form-rules.test.ts) proves the two agree in both directions, including field-set equality — it already caught two fields missing from the POTS rules.
-- Validation is structural, not stylistic: a phone field rejects letters because a phone number has no letters, and an `extension` field exists so nobody has to smuggle one into a field that is not for it.
+- Validation is structural, not stylistic: a field that accepts one shape says so and checks it, and a field that accepts anything does not pretend otherwise. `contact` asks for "phone or email, whichever you'd rather I use" and means it, so it has a length limit and no format. A constraint is stated on the field before it can be failed.
 - a11y baseline: `aria-required`, `aria-invalid` toggled dynamically, `aria-describedby` linking input → error node. Chip groups are `<fieldset><legend>` around native checkboxes sharing one `name`, so the browser aggregates them into an array with no script involved.
 
 ## Route handler pattern
@@ -291,7 +297,8 @@ export const POST: APIRoute = async ({ request }) => {
   if (!isJson(request)) return new Response(null, { status: 307, headers: { Location: "/contact" } });
 
   const outcome = await submitQuote(await readSubmission(request, ["services"]));
-  if (outcome.kind === "invalid") return zodError(outcome.failure); // RFC 9457
+  if (outcome.kind === "unreadable") return outcome.status === 413 ? contentTooLarge() : badRequest();
+  if (outcome.kind === "invalid") return zodError(outcome.failure); // 422, RFC 9457
   return json({ success: true }); // "dropped" by the honeypot answers the same
 };
 ```
@@ -301,9 +308,13 @@ export const POST: APIRoute = async ({ request }) => {
 // src/pages/contact.astro: the no-JS path. The form posts to its own page.
 if (Astro.request.method === "POST") {
   const outcome = await submitQuote(await readSubmission(Astro.request, ["services"]));
-  if (outcome.kind !== "invalid") return Astro.redirect("/contact?sent=1", 303);
-  ({ values, errors } = outcome); // re-rendered into the form; never in a URL
-  Astro.response.status = 422;
+  if (outcome.kind === "unreadable") {
+    errors = { "(root)": unreadableMessage(outcome.status) }; // nothing was read to echo
+    Astro.response.status = outcome.status;
+  } else if (outcome.kind === "invalid") {
+    ({ values, errors } = outcome); // re-rendered into the form; never in a URL
+    Astro.response.status = 422;
+  } else return Astro.redirect("/contact?sent=1", 303);
 }
 ---
 ```
@@ -311,6 +322,13 @@ if (Astro.request.method === "POST") {
 Genuine errors propagate: there is no top-level try/catch. The email
 send keeps its own, inside `submit.ts`, because the row is already saved
 by then and SMTP being down must not turn a captured lead into a 500.
+A send the relay accepted stamps the row's `notified_at`; one that
+failed, or never happened because mail is off, leaves it NULL, and
+`/api/health` counts those.
+
+Logs name a submission by its row id, never by what was typed. With
+mail off, development prints the would-be email so the forms can be
+worked on without a relay; production prints the id and nothing else.
 
 ## Commands
 
