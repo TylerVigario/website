@@ -1,4 +1,24 @@
 # Changelog
+## [1.17.0](https://github.com/TylerVigario/website/compare/v1.16.0...v1.17.0) (2026-10-05)
+
+### Features
+
+* **site:** Open the homepage on a full-screen photograph 
+
+### Bug Fixes
+
+* **forms:** Answer each failure with its own status, and record which leads were announced 
+* **forms:** Discard a draft left untouched for 30 days, and check both forms end to end without JavaScript 
+
+### Refactoring
+
+* Type every index access, and typecheck the build scripts 
+* Write the scripts and the Astro config in TypeScript 
+
+### Build & Packaging
+
+* **release:** Make the release tarball a function of its commit 
+
 ## [1.16.0](https://github.com/TylerVigario/website/compare/v1.15.2...v1.16.0) (2026-10-05)
 
 ### Features
