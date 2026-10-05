@@ -29,6 +29,17 @@ name: Release
 # the App token and the default persist-credentials wrote it into
 # .git/config for the whole job, readable by every dependency `npm ci` and
 # the build executed, and that token is past main's protection.
+#
+# BUILDING AND PUBLISHING ARE SEPARATE JOBS, on separate machines. `build`
+# runs every dependency the tree has: npm ci, Astro, the bundler. It holds
+# no secret and cannot request an OIDC token. `publish` holds both, and
+# runs nothing from node_modules. In one job, minting the App token after
+# the build kept the token out of the build's reach only while the build
+# left nothing behind, and nothing stops a step from leaving a process
+# running, or rewriting PATH or the environment for the steps after it;
+# the OIDC request token, which signs attestations, was in every step's
+# environment from the start. A separate job starts on a clean runner,
+# so what the build ran is not there.
 on:
   workflow_dispatch:
     inputs:
@@ -54,7 +65,12 @@ jobs:
   # with an empty version and then tried to tag it. A guard that must be
   # remembered per step is a guard that eventually is not.
   decide:
+    # From main only. The release environment refuses any other ref too,
+    # but only at publish, after a gate and a build that a branch would
+    # have run for nothing.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       release: ${{ steps.decide.outputs.release }}
       version: ${{ steps.decide.outputs.version }}
@@ -161,18 +177,17 @@ jobs:
       contents: read
     uses: ./.github/workflows/ci.yml
 
-  release:
+  build:
     needs: [decide, gate]
     if: needs.decide.outputs.release == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Read-only, no environment, no id-token: this is the job that runs
+    # the dependency tree, so it is the job that holds nothing.
     permissions:
       contents: read
-      # Both required by attest-build-provenance: the OIDC token is the
-      # keyless signing identity, and attestations:write stores the
-      # result. This replaces the RPM's GPG key — no key on any host to
-      # store, rotate, or leak.
-      id-token: write
-      attestations: write
+    outputs:
+      sha256: ${{ steps.digest.outputs.sha256 }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -186,12 +201,12 @@ jobs:
       - uses: ./.github/actions/setup
 
       - name: Regenerate the changelog, and render the release notes
-        # Into the runner's temp directory, NOT the tree. The build below
-        # refuses a dirty tree, and that guard is worth more than the
-        # convenience of writing here — it is what stops an artifact
-        # carrying changes no commit records. The changelog is handed to
-        # the build as an argument and committed further down, so it
-        # reaches both the tarball and the branch without the tree being
+        # Into a directory outside the tree. The build below refuses a
+        # dirty tree, and that guard is worth more than the convenience
+        # of writing here — it is what stops an artifact carrying changes
+        # no commit records. The changelog is handed to the build as an
+        # argument and to the publish job beside the tarball, so it
+        # reaches both the artifact and the branch without the tree being
         # dirty in between.
         #
         # Both from one git-cliff, over one commit range, in one step, so
@@ -203,15 +218,16 @@ jobs:
           TAG: ${{ needs.decide.outputs.tag }}
         run: |
           set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/release"
           npx --no-install git-cliff --config cliff.toml --tag "$TAG" \
-            --output "$RUNNER_TEMP/CHANGELOG.md"
+            --output "$RUNNER_TEMP/release/CHANGELOG.md"
           npx --no-install git-cliff --config cliff.toml --tag "$TAG" --unreleased --strip all \
-            --output "$RUNNER_TEMP/NOTES.md"
+            --output "$RUNNER_TEMP/release/NOTES.md"
 
       - name: Build the artifact
-        # Before anything is written anywhere. Everything above this point
-        # is reversible: a failed build leaves no commit, no tag and no
-        # release, and a re-dispatch starts from an unchanged main.
+        # Everything up to publish is reversible: a failure leaves no
+        # commit, no tag and no release, and a re-dispatch starts from an
+        # unchanged main.
         #
         # The version is passed in rather than read from the tree. The
         # artifact's package.json is generated, so the bump does not need
@@ -220,7 +236,84 @@ jobs:
         # of before it.
         env:
           VERSION: ${{ needs.decide.outputs.version }}
-        run: npm run release -- --version "$VERSION" --changelog "$RUNNER_TEMP/CHANGELOG.md"
+        run: >-
+          npm run release -- --version "$VERSION"
+          --changelog "$RUNNER_TEMP/release/CHANGELOG.md" --out "$RUNNER_TEMP/release"
+
+      - name: The artifact runs
+        # Unpacked the way the host unpacks it, checked against its own
+        # manifest, then booted from its own node_modules and posted to.
+        # Before this, the first time a tarball ever ran was on the host,
+        # after it had been signed and its tag made permanent.
+        env:
+          VERSION: ${{ needs.decide.outputs.version }}
+        run: npm run check:release -- "$RUNNER_TEMP/release/vigario-website-$VERSION.tar.gz"
+
+      - name: Record the artifact's digest
+        # The publish job attests what it downloads, and checks first that
+        # it is byte-for-byte what was built and checked here.
+        id: digest
+        env:
+          VERSION: ${{ needs.decide.outputs.version }}
+        run: |
+          set -euo pipefail
+          sha=$(sha256sum "$RUNNER_TEMP/release/vigario-website-$VERSION.tar.gz" | cut -d' ' -f1)
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+          echo "vigario-website-$VERSION.tar.gz sha256 $sha"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release
+          path: |
+            ${{ runner.temp }}/release/vigario-website-${{ needs.decide.outputs.version }}.tar.gz
+            ${{ runner.temp }}/release/CHANGELOG.md
+            ${{ runner.temp }}/release/NOTES.md
+          if-no-files-found: error
+          # Long enough to re-run a failed publish; the release itself is
+          # what keeps the tarball.
+          retention-days: 7
+
+  publish:
+    needs: [decide, build]
+    if: needs.decide.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The environment holds the App's secrets and admits main alone, so a
+    # job on any other ref is refused before a secret is in reach.
+    environment: release
+    permissions:
+      contents: read
+      # Both required by attest-build-provenance: the OIDC token is the
+      # keyless signing identity, and attestations:write stores the
+      # result. This replaces the RPM's GPG key — no key on any host to
+      # store, rotate, or leak.
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Only the commit being released: this job reads package.json,
+          # package-lock.json and HEAD, and walks no history.
+          persist-credentials: false
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release
+          path: ${{ runner.temp }}/release
+
+      - name: Check it is what was built
+        # download-artifact checks the upload's own digest. This checks
+        # the tarball inside it against the digest the build job took
+        # after the artifact ran, so what is signed below is what was
+        # checked, not merely what arrived.
+        env:
+          WANT: ${{ needs.build.outputs.sha256 }}
+          VERSION: ${{ needs.decide.outputs.version }}
+        run: |
+          set -euo pipefail
+          got=$(sha256sum "$RUNNER_TEMP/release/vigario-website-$VERSION.tar.gz" | cut -d' ' -f1)
+          [ "$got" = "$WANT" ] || { echo "::error::tarball is $got, the build produced $WANT"; exit 1; }
+          echo "sha256 $got, as built"
 
       - name: Attest the artifact
         # Binds the tarball's sha256 to this workflow, repo and commit
@@ -233,32 +326,33 @@ jobs:
           # the tarball, so this signature already covers it; a copy
           # published beside it would add no proof and one more thing
           # that could disagree.
-          subject-path: dist-release/vigario-website-${{ needs.decide.outputs.version }}.tar.gz
+          subject-path: ${{ runner.temp }}/release/vigario-website-${{ needs.decide.outputs.version }}.tar.gz
 
       - name: Mint a token for the release App
         # Only now, immediately before the first write, and only into the
-        # environment of the two steps that use it. Nothing that ran
-        # above — npm ci, the build and whatever it executed — could have
-        # reached it, because it did not exist yet.
+        # environment of the two steps that use it. Scoped below what the
+        # App is granted: contents:write is all the commit and the release
+        # need, so the token carries nothing else even if the App is ever
+        # given more.
         id: app-token
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          app-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
 
       - name: Ask the forge to write the release commit
         id: commit
-        # THE FIRST WRITE OF THE RUN. The artifact is built and attested
-        # by now, so everything that could fail has.
+        # THE FIRST WRITE OF THE RUN. The artifact is built, run and
+        # attested by now, so everything that could fail has.
         #
         # NOT `git commit && git push`. A push sends an object already
-        # built, so it arrives unsigned no matter which token carried it
-        # — which is why every chore(release) commit in this
-        # repository's history is unsigned. createCommitOnBranch has
-        # GitHub construct the object and sign it with its own key.
+        # built, so it arrives unsigned no matter which token carried it.
+        # createCommitOnBranch has GitHub construct the object and sign
+        # it with its own key.
         #
         # expectedHeadOid makes it a compare-and-swap: if anything landed
-        # on main since this job read it, the mutation fails rather than
+        # on main since this run began, the mutation fails rather than
         # clobbering.
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -266,12 +360,24 @@ jobs:
           VERSION: ${{ needs.decide.outputs.version }}
         run: |
           set -euo pipefail
-          # The bump and the changelog land in the tree only now, purely
-          # to be read into the mutation below. --allow-same-version so a
-          # retry of a partial release is not refused for setting the
-          # number the branch already carries.
-          npm version "$VERSION" --no-git-tag-version --allow-same-version
-          cp "$RUNNER_TEMP/CHANGELOG.md" CHANGELOG.md
+          # The bump lands in the tree only now, purely to be read into
+          # the mutation below. Node, not `npm version`: this job runs
+          # nothing from the package manager, and both files round-trip
+          # byte-identically through JSON.stringify(…, null, 2), which is
+          # what npm writes. Setting the number a branch already carries
+          # is allowed, so a retry of a partial release is not refused.
+          node -e '
+            const fs = require("fs");
+            const v = process.env.VERSION;
+            const write = (f, edit) => {
+              const o = JSON.parse(fs.readFileSync(f, "utf8"));
+              edit(o);
+              fs.writeFileSync(f, JSON.stringify(o, null, 2) + "\n");
+            };
+            write("package.json", (o) => { o.version = v; });
+            write("package-lock.json", (o) => { o.version = v; o.packages[""].version = v; });
+          '
+          cp "$RUNNER_TEMP/release/CHANGELOG.md" CHANGELOG.md
           head=$(git rev-parse HEAD)
           # --rawfile, not --arg "$(base64 ...)". A single argv entry is
           # capped at 128 KB on Linux and package-lock.json base64s to
@@ -293,8 +399,8 @@ jobs:
                 fileChanges:{additions:[
                   {path:"package.json",contents:($pkg|@base64)},
                   {path:"package-lock.json",contents:($lock|@base64)},
-                  {path:"CHANGELOG.md",contents:($log|@base64)}]}}}}' > /tmp/mutation.json
-          oid=$(gh api graphql --input /tmp/mutation.json --jq '.data.createCommitOnBranch.commit.oid')
+                  {path:"CHANGELOG.md",contents:($log|@base64)}]}}}}' > "$RUNNER_TEMP/mutation.json"
+          oid=$(gh api graphql --input "$RUNNER_TEMP/mutation.json" --jq '.data.createCommitOnBranch.commit.oid')
           [ -n "$oid" ] || { echo "::error::createCommitOnBranch returned no oid"; exit 1; }
           echo "release commit: $oid"
           echo "oid=$oid" >> "$GITHUB_OUTPUT"
@@ -318,16 +424,15 @@ jobs:
         # Publishing is what creates the tag, at --target. Rule 18 is
         # explicit that annotated or lightweight makes no difference, so
         # the lightweight tag this produces costs nothing.
-
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           TAG: ${{ needs.decide.outputs.tag }}
           OID: ${{ steps.commit.outputs.oid }}
-          ARTIFACT: dist-release/vigario-website-${{ needs.decide.outputs.version }}.tar.gz
+          ARTIFACT: ${{ runner.temp }}/release/vigario-website-${{ needs.decide.outputs.version }}.tar.gz
         run: |
           set -euo pipefail
           gh release create "$TAG" --draft --target "$OID" --title "$TAG" \
-            --notes-file "$RUNNER_TEMP/NOTES.md"
+            --notes-file "$RUNNER_TEMP/release/NOTES.md"
           gh release upload "$TAG" "$ARTIFACT"
 
           # Only now does the tag exist and the freeze fall.

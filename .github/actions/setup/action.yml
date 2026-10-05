@@ -21,6 +21,11 @@ runs:
         # no node-version input — that would just be another place to
         # drift from the file.
         node-version-file: .nvmrc
+        # setup-node caches on its own whenever package.json names npm in
+        # packageManager, keyed on the lockfile — the key the step below
+        # exists to avoid. Two caches of one directory, one of them
+        # rotating every release.
+        package-manager-cache: false
 
     - name: Compute npm cache key
       # Hash package.json's dep fields ONLY, not the full lockfile.
@@ -43,5 +48,14 @@ runs:
         restore-keys: |
           npm-${{ runner.os }}-
 
-    - shell: bash
-      run: npm ci --prefer-offline
+    - name: Install, running no package's scripts
+      # package.json#allowScripts reviews install scripts, but only an npm
+      # that reads it enforces it, and the npm here is whichever one the
+      # Node from .nvmrc bundles. --ignore-scripts makes CI independent of
+      # that: no dependency runs code at install. The one approved script,
+      # better-sqlite3's, compiles nothing where a prebuilt binary exists,
+      # and the binary it would have found is the one the release ships
+      # (make-release.mjs installs with --ignore-scripts too), so the
+      # tests load what production loads.
+      shell: bash
+      run: npm ci --prefer-offline --ignore-scripts

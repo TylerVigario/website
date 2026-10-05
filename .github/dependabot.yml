@@ -11,6 +11,13 @@ updates:
     schedule:
       interval: weekly
       day: sunday
+    # A version is offered only once it has been public for a week, a
+    # major for two. A hijacked publish is usually caught and pulled
+    # within days, and a week costs nothing on a site with no feature
+    # waiting on a dependency. Security updates are not held back.
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
     open-pull-requests-limit: 5
     commit-message:
       # The type is the release decision, so it follows the repo's rule:
@@ -73,6 +80,11 @@ updates:
     schedule:
       interval: weekly
       day: sunday
+    # The same hold as npm, for the same reason: an action runs with this
+    # repository's token.
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
     open-pull-requests-limit: 5
     commit-message:
       # Workflow changes are CI infrastructure: `ci`, which never releases.

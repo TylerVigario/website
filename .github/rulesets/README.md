@@ -38,6 +38,12 @@ green and nothing mergeable. They were taken from what GitHub actually reports
 on a pull request, not from the YAML, because `Validate PR title` only runs on
 `pull_request` and never appears on a push to `main`.
 
+Each check also names `integration_id` 15368, the GitHub Actions app, read off
+the check runs on `main` rather than assumed. Without it a check is satisfied by
+anything that reports the right name: another App, or a commit status posted
+with any token that can write statuses. With it, only a run of these workflows
+counts.
+
 `strict_required_status_checks_policy` is on, so a branch must be up to date
 with `main` before it merges — the checks that passed are the checks for the
 code that lands.

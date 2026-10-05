@@ -49,7 +49,7 @@ jobs:
       - name: Verify Node major pins agree
         # .nvmrc and package.json#engines.node must declare the same
         # Node major. CI reads .nvmrc directly (node-version-file in the
-        # setup composite + the release job), so there's no separate
+        # setup composite + the release build job), so there's no separate
         # workflow pin. These were two of four pins once; the other two
         # belonged to the packaging tree and went with it, so this check
         # is now the whole of it.
@@ -100,7 +100,7 @@ jobs:
       - name: Put actionlint on PATH
         run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
       # Node setup + npm cache + `npm ci`, factored into a composite so
-      # the release job (and future jobs) reuse the same block. Reads
+      # the release build job (and future jobs) reuse the same block. Reads
       # the Node version from .nvmrc.
       - uses: ./.github/actions/setup
       - name: Every install script is reviewed
@@ -112,17 +112,6 @@ jobs:
       - run: npm run lint
       - run: npm run format
       - run: npm test
-      - name: Cache Astro build
-        # Astro's content and build caches live under .astro/. A warm
-        # cache shaves wall-clock; the key rotates when deps or source
-        # change, and restore-keys let a stale cache still seed it.
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .astro
-          key: astro-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('src/**', 'astro.config.mjs') }}
-          restore-keys: |
-            astro-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
-            astro-${{ runner.os }}-
       - name: Validate build
         # `astro build` prerenders every page and compiles the server
         # entry. No secrets are needed: the build reads no credentials,
@@ -145,6 +134,21 @@ jobs:
         # as `npm run check:forms`, so it fails locally first.
         run: npm run check:forms
 
+      - name: The release artifact runs
+        # The tarball a release would publish, built from this
+        # commit, unpacked, checked against its manifest and booted from
+        # its own node_modules with the forms posted to it. Release runs
+        # the same check on the real artifact; here it catches a packaging
+        # mistake on the pull request that makes it, rather than on the
+        # day of a release. Not in pre-push: the artifact carries the
+        # linux-x64 binary only, and installs its runtime from the
+        # registry.
+        run: |
+          set -euo pipefail
+          npm run release -- --out "$RUNNER_TEMP/release"
+          version=$(node -p "require('./package.json').version")
+          npm run check:release -- "$RUNNER_TEMP/release/vigario-website-$version.tar.gz"
+
       - name: The dev server boots
         # Everything above tests the BUILT output. Nothing tested the
         # thing developers actually run, which is how `ssr.noExternal:
@@ -161,12 +165,6 @@ jobs:
           ASTRO_DEV_BACKGROUND: "1"
         run: |
           set -euo pipefail
-          # The build cache restores .astro/, which carries dev.json — the
-          # lock recording a running dev server's PID. Cached from another
-          # runner it names a process that never existed here, and Astro
-          # refuses to start rather than fight it. A lock from a different
-          # machine is meaningless, so drop it before starting.
-          rm -f .astro/dev.json
           # --host 127.0.0.1 is required, not tidiness. Left to itself the
           # dev server binds "localhost", which on the runner resolves to
           # ::1 first — the server comes up healthy and every curl to

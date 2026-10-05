@@ -12,6 +12,7 @@
     "build": "astro build",
     "check:bundles": "node scripts/check-bundles.mjs",
     "check:forms": "node scripts/check-forms.mjs",
+    "check:release": "node scripts/check-release.mjs",
     "ci": "npm run check:install-scripts && npm run lint && npm run typecheck && npm run format && npm test && npm run build && npm run check:bundles && npm run check:forms",
     "clean": "node -e \"const fs=require('fs'); ['dist','.astro','node_modules/.cache','.eslintcache'].forEach(p=>fs.rmSync(p,{recursive:true,force:true}))\"",
     "dev": "node --env-file-if-exists=.env.local node_modules/astro/bin/astro.mjs dev",
