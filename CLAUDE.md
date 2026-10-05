@@ -102,7 +102,7 @@ machine, which is the only kind this workflow uses.
 
 The tarball is meant to be a function of its commit, so a rebuild can be
 compared with the attested sha256 instead of trusting the attestation's
-account of what was built. `make-release.mjs` dates everything from the
+account of what was built. `make-release.ts` dates everything from the
 commit (`SOURCE_DATE_EPOCH`), pins the runtime tree from the lockfile and
 writes the archive deterministically with GNU tar. A rebuild needs the
 same Node, Linux x64, and the same checkout path, because Astro writes
@@ -181,7 +181,7 @@ rather than the whole site.
 **What the proxy forwards to Node.** `Host` as the browser sent it (or
 `X-Forwarded-Host`), and `X-Forwarded-Proto: https`, set by the proxy
 rather than passed through from the client. `security.allowedDomains` in
-`astro.config.mjs` trusts those for this site's own https origin, which
+`astro.config.ts` trusts those for this site's own https origin, which
 is what makes a no-JS form POST's `Origin: https://…` match the request.
 **Do not rewrite `Origin`.** A proxy that turns it into `http://` works
 with a build that ignores forwarded headers and breaks every no-JS
@@ -211,7 +211,7 @@ Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(),
 things would force one, and all three are currently zero across every
 page including the two that render at request time: inline `<script>`
 (scripts are emitted as files — `build.assetsInlineLimit: 0` in
-`astro.config.mjs`), inline `<style>`, and `style=` attributes. The hero's
+`astro.config.ts`), inline `<style>`, and `style=` attributes. The hero's
 grid pattern was the only one of the last kind and now lives in
 `global.css` as `.hero-grid`.
 
@@ -244,7 +244,7 @@ src/
 │   ├── work/                         # case studies: italesowell, pipetree, voip
 │   ├── pots-migration.astro          # the campaign landing page; takes its own no-JS POST
 │   ├── 404.astro  500.astro          # error pages, prerendered to static HTML
-│   ├── robots.txt.ts                 # generated from `site` in astro.config.mjs
+│   ├── robots.txt.ts                 # generated from `site` in astro.config.ts
 │   ├── manifest.webmanifest.ts       # generated, so icon paths cannot drift
 │   └── api/                          # prerender = false, like contact + pots-migration
 │       ├── quote.ts                  # POST, JSON: submitQuote(); a form post is 307'd to /contact
@@ -374,7 +374,7 @@ npm run dev                       # astro dev
 npm run preview                   # serve the built output
 npm run build                     # astro build → dist/client (static) + dist/server (the /api process)
 npm start                         # node dist/server/entry.mjs (after build)
-npm run typecheck                 # astro check — sees .astro templates (tsc alone does not) and the .mjs scripts
+npm run typecheck                 # astro check — sees .astro templates, which tsc alone does not
 npm test                          # vitest run
 npm run lint                      # eslint (js) + markdownlint (md)
 npm run format                    # prettier --check
@@ -391,7 +391,7 @@ npm run check:install-scripts     # every dependency install script is approved 
 ## Code style & conventions
 
 - Prettier: 100 col, double quotes, trailing commas, semicolons.
-- TypeScript `strict` plus `noUncheckedIndexedAccess`: an index into an array or record is possibly `undefined`, so a guard has to be one the compiler can see. The `.mjs` scripts and configs are typechecked as well (`checkJs`), with JSDoc types, and still run as plain JavaScript.
+- TypeScript `strict` plus `noUncheckedIndexedAccess`: an index into an array or record is possibly `undefined`, so a guard has to be one the compiler can see. The scripts and `astro.config.ts` are TypeScript too, which Node 24 runs directly by stripping the types, so `erasableSyntaxOnly` is on: nothing that needs compiling (enums, namespaces, parameter properties) passes the typecheck. A relative import names its `.ts` file. Only `eslint.config.js` and `.commitlintrc.js` stay JavaScript, because loading those as TypeScript needs a dependency.
 - ESLint flat config with type-aware rules (`recommendedTypeChecked`). `req.json()` returns `any` — always parse through a zod schema.
 - Path alias: `@/*` → `src/*`.
 - **Conventional Commits** — Angular type set, inherited from `@commitlint/config-conventional` rather than declared. The line the types draw is **did the artifact change**, because the version names a tarball: `feat` (minor bump), `fix` / `revert` / `perf` / `refactor` / `build` (patch bump), all six in the changelog; `ci` / `docs` / `test` / `chore` / `style` reach no artifact, so no bump and no changelog entry. **Type = release impact, not change-nature** — a bug fix inside CI infra is `ci:` (no release), not `fix(ci):`. Matches pipetree's set (the canonical sibling). `.commitlintrc.js` carries only genuine overrides — the type set, type-case and subject rules come from the extended config, so there is no second copy to drift. The bump matrix lives in `cliff.toml`'s `commit_parsers`. `footer-leading-blank` is deliberately off (the conventional-changelog parser greedy-detected mid-body `Word:` line starts as the footer boundary and false-fired on natural prose like "What landed:" / "Why:"; the comment in `.commitlintrc.js` records why).
@@ -438,4 +438,4 @@ Don't introduce a permanent `develop` branch — the ceremony outweighs the bene
 - **`HOST`, not `HOSTNAME`.** `@astrojs/node` reads `HOST` and `PORT`. `HOSTNAME` — which the Next-era env template documented — is read by nothing and fails silently. Unset, the server listens on `localhost:4321`.
 - **Don't wrap route handlers in top-level try/catch.** A blanket catch turns a real fault into a generic 500 and drops the stack, which is the difference between a fixable report and "the form is broken sometimes." Let errors propagate; the adapter logs them with the stack intact. The email-send `try/catch` is the one legitimate catch — the row is already saved by then, so SMTP being down must not fail a submission that actually succeeded.
 - **Bump Node major across both pins together.** `.nvmrc` and `package.json#engines.node` must agree; CI reads `.nvmrc` directly via `node-version-file`, so there is no third pin. The gate's "Verify Node major pins agree" step enforces it.
-- **`better-sqlite3` is a native module.** Declared in [`astro.config.mjs`](astro.config.mjs)'s `vite.ssr.external` so the SSR build resolves it at runtime instead of trying to bundle it. Since v13 it is built on the N-API, so the prebuilt binary published with the package is ABI-stable across Node majors — bumping Node no longer invalidates the binding, which it did up to v12. Binaries for eight platforms ship inside the package; anywhere else its install script compiles from source, so a toolchain is needed there. npm 12 runs that script only if `package.json#allowScripts` approves it, so the approval is pinned to the reviewed version, and a version bump fails `check:install-scripts` until someone reviews the new version's script and re-approves it (`npm install-scripts approve better-sqlite3`). CI and the release install with `--ignore-scripts` regardless: the script compiles nothing where a prebuild exists, so tests and the tarball load the same published binary.
+- **`better-sqlite3` is a native module.** Declared in [`astro.config.ts`](astro.config.ts)'s `vite.ssr.external` so the SSR build resolves it at runtime instead of trying to bundle it. Since v13 it is built on the N-API, so the prebuilt binary published with the package is ABI-stable across Node majors — bumping Node no longer invalidates the binding, which it did up to v12. Binaries for eight platforms ship inside the package; anywhere else its install script compiles from source, so a toolchain is needed there. npm 12 runs that script only if `package.json#allowScripts` approves it, so the approval is pinned to the reviewed version, and a version bump fails `check:install-scripts` until someone reviews the new version's script and re-approves it (`npm install-scripts approve better-sqlite3`). CI and the release install with `--ignore-scripts` regardless: the script compiles nothing where a prebuild exists, so tests and the tarball load the same published binary.

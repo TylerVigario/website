@@ -65,8 +65,7 @@ const HOMEPAGE_BUDGET = 1024;
  *  needs. */
 const LOCAL_PREFIX = "/_astro/";
 
-/** @param {string} dir @returns {string[]} */
-function htmlFiles(dir) {
+function htmlFiles(dir: string): string[] {
   if (!fs.existsSync(dir)) {
     console.error(`error: ${dir} does not exist — run \`npm run build\` first.`);
     process.exit(1);
@@ -91,9 +90,8 @@ const PRELOAD = /<link[^>]*\brel="modulepreload"[^>]*\bhref="([^"]+)"/g;
 const STATIC_IMPORT = /\bimport\s*["']([^"']+)["']|\bfrom\s*["']([^"']+)["']/g;
 
 /** Local specifiers only: relative to the importing file, or rooted. A
- *  bare one cannot load in a browser at all, so it is not ours to count.
- *  @param {string} spec @param {string} fromUrl @returns {string | null} */
-function resolveImport(spec, fromUrl) {
+ *  bare one cannot load in a browser at all, so it is not ours to count. */
+function resolveImport(spec: string, fromUrl: string): string | null {
   if (spec.startsWith("/")) return spec;
   if (spec.startsWith("./") || spec.startsWith("../")) {
     return new URL(spec, `https://x${fromUrl}`).pathname;
@@ -101,11 +99,9 @@ function resolveImport(spec, fromUrl) {
   return null;
 }
 
-/** Every file the given entry URLs load, following static imports.
- *  @param {Iterable<string>} entries */
-function loadedFiles(entries) {
-  /** @type {Set<string>} */
-  const seen = new Set();
+/** Every file the given entry URLs load, following static imports. */
+function loadedFiles(entries: Iterable<string>) {
+  const seen = new Set<string>();
   const queue = [...entries];
   while (queue.length) {
     const url = queue.pop();

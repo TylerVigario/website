@@ -2,8 +2,8 @@
  * Modules the built server must resolve from node_modules at runtime,
  * rather than have bundled into it.
  *
- * Single source of truth, imported by BOTH astro.config.mjs (which
- * tells Vite to leave them external) and scripts/make-release.mjs
+ * Single source of truth, imported by BOTH astro.config.ts (which
+ * tells Vite to leave them external) and scripts/make-release.ts
  * (which installs exactly these into the artifact). One list, so the
  * artifact cannot disagree with the build about what the server needs.
  *

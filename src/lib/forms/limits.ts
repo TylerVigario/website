@@ -19,7 +19,7 @@ export const MAX = {
   details: 20_000,
 } as const;
 
-/** The largest request body the adapter will read: astro.config.mjs passes
+/** The largest request body the adapter will read: astro.config.ts passes
  *  it as bodySizeLimit, and submit.ts answers a body declared larger with
  *  413. A body over it cannot be read at all, so nothing of it can be
  *  echoed back into the form. */

@@ -35,7 +35,10 @@ export type Outcome =
  *  past it without declaring one is indistinguishable from any other
  *  broken stream here, and gets 400. */
 export class Unreadable {
-  constructor(readonly status: 400 | 413) {}
+  readonly status: 400 | 413;
+  constructor(status: 400 | 413) {
+    this.status = status;
+  }
 }
 
 /**

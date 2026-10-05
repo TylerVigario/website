@@ -57,7 +57,7 @@ const {
 
 const fullTitle = bareTitle ? title : `${title} | Vigario Technology Solutions`;
 
-// Astro.site comes from `site` in astro.config.mjs. Building the URL
+// Astro.site comes from `site` in astro.config.ts. Building the URL
 // from it rather than hardcoding means the domain move to vigario.tech
 // is a one-line config change, not a grep.
 const canonicalURL = canonical ?? new URL(Astro.url.pathname, Astro.site).href;

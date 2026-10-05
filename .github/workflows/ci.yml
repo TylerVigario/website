@@ -57,7 +57,7 @@ jobs:
         # It is a script rather than inline bash so the pre-push hook runs
         # the identical comparison. Inline, the check existed only on the
         # far side of a push.
-        run: node scripts/check-node-pins.mjs
+        run: node scripts/check-node-pins.ts
       - name: Cache actionlint
         # Keyed on the pinned version, so the usual run downloads nothing.
         id: actionlint-cache
@@ -106,7 +106,7 @@ jobs:
       - name: Every install script is reviewed
         # Straight after the install, so a dependency that brought a new
         # install script in, or moved past its pinned approval, is named
-        # before anything else is judged. See scripts/check-install-scripts.mjs.
+        # before anything else is judged. See scripts/check-install-scripts.ts.
         run: npm run check:install-scripts
       - run: npm run typecheck
       - run: npm run lint

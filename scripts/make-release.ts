@@ -34,30 +34,30 @@
  * so a rebuild has to happen at the same path the release used.
  *
  * Usage:
- *   node scripts/make-release.mjs                 # version from package.json
- *   node scripts/make-release.mjs --version 1.2.3
- *   node scripts/make-release.mjs --out /tmp/dir
+ *   node scripts/make-release.ts                 # version from package.json
+ *   node scripts/make-release.ts --version 1.2.3
+ *   node scripts/make-release.ts --out /tmp/dir
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, type ExecFileSyncOptions } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { createHash } from "node:crypto";
-import { RUNTIME_EXTERNALS } from "../runtime-externals.mjs";
+import { RUNTIME_EXTERNALS } from "../runtime-externals.ts";
 
-/** `--name value` from the command line, or the fallback.
- *  @param {string} name @param {string} fallback @returns {string} */
-function arg(name, fallback) {
+/** `--name value` from the command line, or the fallback. */
+function arg(name: string, fallback: string): string {
   const i = process.argv.indexOf(`--${name}`);
   return i === -1 ? fallback : (process.argv[i + 1] ?? fallback);
 }
 
-/** @param {string} cmd @param {string[]} args
- *  @param {import("node:child_process").ExecFileSyncOptions} [opts] */
-const run = (cmd, args, opts = {}) =>
-  /** @type {string} */ (execFileSync(cmd, args, { stdio: "pipe", encoding: "utf8", ...opts }));
+const run = (cmd: string, args: string[], opts: Omit<ExecFileSyncOptions, "encoding"> = {}) =>
+  execFileSync(cmd, args, { stdio: "pipe", ...opts, encoding: "utf8" });
 
-const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+const pkg = JSON.parse(fs.readFileSync("package.json", "utf8")) as {
+  name: string;
+  version: string;
+};
 const version = arg("version", pkg.version);
 const outDir = path.resolve(arg("out", "dist-release"));
 const name = `vigario-website-${version}`;
@@ -122,10 +122,13 @@ fs.writeFileSync(
 // better-sqlite3 13, node-addon-api, a header library the running server
 // never loads — so the same commit released a month apart could ship
 // different trees.
-const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
-const pinned = new Map();
-/** @param {string} name @param {string} [from] */
-function pin(name, from = "") {
+/** The parts of a lockfile (v3) this reads. */
+interface Lockfile {
+  packages: Record<string, { version?: string; dependencies?: Record<string, string> }>;
+}
+const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8")) as Lockfile;
+const pinned = new Map<string, string>();
+function pin(name: string, from = "") {
   // npm's own lookup: the nearest node_modules/<name> walking up from the
   // dependent's location.
   let base = from;
@@ -251,8 +254,7 @@ fs.writeFileSync(
 // as the files it would be vouching for.
 //
 // sha256sum's own format, so `sha256sum -c` works on it directly.
-/** @param {string} dir @param {string} [base] @returns {string[]} */
-function manifestLines(dir, base = dir) {
+function manifestLines(dir: string, base = dir): string[] {
   return fs
     .readdirSync(dir, { withFileTypes: true })
     .flatMap((e) => {

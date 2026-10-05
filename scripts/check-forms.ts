@@ -16,13 +16,13 @@
  * sets X-Forwarded-Proto: https, and leaves Origin as the browser sent
  * it. Two of the checks are that contract's failure modes.
  *
- * Written in Node rather than shell, like check-bundles.mjs, so it runs
+ * Written in Node rather than shell, like check-bundles.ts, so it runs
  * wherever `npm run ci` does. Mail is forced off: a developer's shell
  * with SMTP_* set must not send notifications for test leads.
  */
 import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { createServer } from "node:net";
+import { createServer, type AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
@@ -40,18 +40,17 @@ const robots = readFileSync("dist/client/robots.txt", "utf8");
 const SITE = new URL(/^Sitemap:\s*(\S+)/m.exec(robots)?.[1] ?? "").origin;
 
 /** A port nothing is listening on. */
-const port = await new Promise((resolve, reject) => {
+const port = await new Promise<number>((resolve, reject) => {
   const probe = createServer();
   probe.on("error", reject);
   probe.listen(0, "127.0.0.1", () => {
-    const { port } = /** @type {import("node:net").AddressInfo} */ (probe.address());
+    const { port } = probe.address() as AddressInfo;
     probe.close(() => resolve(port));
   });
 });
 
 const dir = mkdtempSync(path.join(tmpdir(), "vts-forms-"));
-/** @type {NodeJS.ProcessEnv} */
-const env = {
+const env: NodeJS.ProcessEnv = {
   ...process.env,
   SQLITE_PATH: path.join(dir, "forms.db"),
   HOST: "127.0.0.1",
@@ -111,11 +110,12 @@ const proxied = {
   origin: SITE,
 };
 
-/** A request as the browser sends it through the proxy.
- *  @param {string} pathname
- *  @param {string | Record<string, string>} body
- *  @param {{ type?: string, headers?: Record<string, string> }} [options] */
-function post(pathname, body, { type = FORM, headers = {} } = {}) {
+/** A request as the browser sends it through the proxy. */
+function post(
+  pathname: string,
+  body: string | Record<string, string>,
+  { type = FORM, headers = {} }: { type?: string; headers?: Record<string, string> } = {},
+) {
   return fetch(`${BASE}${pathname}`, {
     method: "POST",
     redirect: "manual",
@@ -124,10 +124,11 @@ function post(pathname, body, { type = FORM, headers = {} } = {}) {
   });
 }
 
-/** @param {string} name
- *  @param {() => Promise<Response>} request
- *  @param {(res: Response, text: string) => string} expect */
-async function check(name, request, expect) {
+async function check(
+  name: string,
+  request: () => Promise<Response>,
+  expect: (res: Response, text: string) => string,
+) {
   try {
     const res = await request();
     const text = await res.text();
@@ -136,26 +137,23 @@ async function check(name, request, expect) {
     console.log(`  ${problem ? "✗" : "✓"} ${name}${problem ? ` — ${problem}` : ""}`);
   } catch (err) {
     failures.push(`${name}: ${err instanceof Error ? err.message : String(err)}`);
-    console.log(`  ✗ ${name} — threw ${err}`);
+    console.log(`  ✗ ${name} — threw ${String(err)}`);
   }
 }
 
-/** Each expectation returns a description of what was wrong, or nothing.
- *  @param {Response} res @param {number} want */
-const status = (res, want) => (res.status === want ? "" : `got ${res.status}, want ${want}`);
-/** @param {Response} res @param {number} want @param {string} location */
-const redirectTo = (res, want, location) =>
+/** Each expectation returns a description of what was wrong, or nothing. */
+const status = (res: Response, want: number) =>
+  res.status === want ? "" : `got ${res.status}, want ${want}`;
+const redirectTo = (res: Response, want: number, location: string) =>
   status(res, want) ||
   (res.headers.get("location") === location
     ? ""
     : `went to ${res.headers.get("location")}, want ${location}`);
-/** @param {Response} res */
-const noStore = (res) =>
+const noStore = (res: Response) =>
   (res.headers.get("cache-control") ?? "").includes("no-store")
     ? ""
     : `Cache-Control is "${res.headers.get("cache-control")}"`;
-/** @param {string} text @param {string[]} needles */
-const contains = (text, ...needles) =>
+const contains = (text: string, ...needles: string[]) =>
   needles
     .filter((n) => !text.includes(n))
     .map((n) => `the page does not contain "${n}"`)
@@ -263,7 +261,7 @@ const db = new Database(env.SQLITE_PATH, { readonly: true });
 const stored = db
   .prepare("SELECT name FROM quotes ORDER BY id")
   .all()
-  .map((r) => /** @type {{ name: string }} */ (r).name);
+  .map((r) => (r as { name: string }).name);
 db.close();
 const want = ["check-forms quote", "Dana", "check-forms api"];
 const same = stored.length === want.length && stored.every((n, i) => n === want[i]);
