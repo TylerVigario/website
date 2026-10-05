@@ -122,8 +122,10 @@ function makeZoomable(pane: HTMLElement): () => void {
   let panFrom: { p: Point; t: Point } | null = null;
   let pinch: { anchor: Point; t: Point; s: number; spread: number; b: Box } | null = null;
 
+  // Only called with exactly two pointers down; every caller checks.
   const two = () => {
-    const [a, b] = [...points.values()];
+    const [a, b] = points.values();
+    if (!a || !b) throw new Error("two() needs two pointers");
     return {
       spread: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
       mid: { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 },

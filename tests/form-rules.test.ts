@@ -55,6 +55,7 @@ const SAMPLES: FieldValue[] = [
  *  those are their samples. The schema rejects anything else, and the
  *  browser cannot produce anything else to be rejected. */
 const [t0, t1] = catalog.map((s) => s.title);
+if (!t0 || !t1) throw new Error("these samples need at least two services in the catalog");
 const CHOICES: Record<string, { baseline: FieldValue; samples: FieldValue[] }> = {
   services: { baseline: [t0], samples: [[], [t0], [t0, t1]] },
   bill: { baseline: BILL_RANGES[0], samples: ["", ...BILL_RANGES] },
@@ -79,10 +80,7 @@ describe.each(RULE_SCHEMA_PAIRS)("$name rules match the schema", ({ rules, schem
   // A valid baseline so that changing one field is the only thing under
   // test — otherwise every case fails on unrelated missing fields.
   const valid: Record<string, FieldValue> = {};
-  for (const f of fields) {
-    valid[f] = rules[f]([]) === null && rules[f]("x") === null ? "x" : "x";
-  }
-  for (const f of fields) if (f in CHOICES) valid[f] = CHOICES[f].baseline;
+  for (const f of fields) valid[f] = CHOICES[f]?.baseline ?? "x";
 
   it("the baseline is actually valid, or every case below is meaningless", () => {
     expect(schema.safeParse(valid).success).toBe(true);
@@ -93,12 +91,12 @@ describe.each(RULE_SCHEMA_PAIRS)("$name rules match the schema", ({ rules, schem
     expect([...fields].sort()).toEqual([...schemaFields].sort());
   });
 
-  for (const field of fields) {
+  for (const [field, rule] of Object.entries(rules)) {
     const samples = CHOICES[field]?.samples ?? SAMPLES;
     // Wrapped: it.each spreads an array case into separate arguments,
     // so ["Networking"] would arrive as the string "Networking".
     it.each(samples.map((s) => [s]))(`${field} agrees on %j`, (value) => {
-      const mine = rules[field](value);
+      const mine = rule(value);
       const theirs = schemaMessageFor(schema, valid, field, value);
       // Same verdict...
       expect(mine === null).toBe(theirs === null);

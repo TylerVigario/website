@@ -36,7 +36,9 @@ if (!tarball || !existsSync(tarball)) {
 }
 
 const dir = mkdtempSync(path.join(tmpdir(), "vts-release-"));
+/** @type {string[]} */
 const failures = [];
+/** @param {string} msg */
 const fail = (msg) => {
   failures.push(msg);
   console.log(`  ✗ ${msg}`);
@@ -45,6 +47,7 @@ const fail = (msg) => {
 try {
   execFileSync("tar", ["-xzf", path.resolve(tarball), "-C", dir]);
   const [top, ...extra] = readdirSync(dir);
+  if (!top) throw new Error(`${tarball} is empty`);
   if (extra.length) fail(`the tarball has ${extra.length + 1} top-level entries, not one`);
   const root = path.join(dir, top);
   console.log(`Release ${path.basename(tarball)}, unpacked:`);

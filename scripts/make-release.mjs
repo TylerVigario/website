@@ -45,13 +45,17 @@ import os from "node:os";
 import { createHash } from "node:crypto";
 import { RUNTIME_EXTERNALS } from "../runtime-externals.mjs";
 
+/** `--name value` from the command line, or the fallback.
+ *  @param {string} name @param {string} fallback @returns {string} */
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`);
-  return i === -1 ? fallback : process.argv[i + 1];
+  return i === -1 ? fallback : (process.argv[i + 1] ?? fallback);
 }
 
+/** @param {string} cmd @param {string[]} args
+ *  @param {import("node:child_process").ExecFileSyncOptions} [opts] */
 const run = (cmd, args, opts = {}) =>
-  execFileSync(cmd, args, { stdio: "pipe", encoding: "utf8", ...opts });
+  /** @type {string} */ (execFileSync(cmd, args, { stdio: "pipe", encoding: "utf8", ...opts }));
 
 const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 const version = arg("version", pkg.version);
@@ -120,6 +124,7 @@ fs.writeFileSync(
 // different trees.
 const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
 const pinned = new Map();
+/** @param {string} name @param {string} [from] */
 function pin(name, from = "") {
   // npm's own lookup: the nearest node_modules/<name> walking up from the
   // dependent's location.
@@ -246,6 +251,7 @@ fs.writeFileSync(
 // as the files it would be vouching for.
 //
 // sha256sum's own format, so `sha256sum -c` works on it directly.
+/** @param {string} dir @param {string} [base] @returns {string[]} */
 function manifestLines(dir, base = dir) {
   return fs
     .readdirSync(dir, { withFileTypes: true })

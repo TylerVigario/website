@@ -67,14 +67,14 @@ describe("a checkbox group", () => {
   it("says nothing while focus moves between its boxes", () => {
     const form = mount();
     const [a, b] = form.querySelectorAll<HTMLInputElement>('[name="services"]');
-    blur(a, b);
+    blur(a!, b);
     expect(form.querySelector("#services-error")).toBeNull();
   });
 
   it("is judged when focus leaves the group", () => {
     const form = mount();
     const [, b] = form.querySelectorAll<HTMLInputElement>('[name="services"]');
-    blur(b, form.querySelector('[name="after"]'));
+    blur(b!, form.querySelector('[name="after"]'));
     expect(form.querySelector("#services-error")?.textContent).toBe("Pick at least one service.");
   });
 });

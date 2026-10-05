@@ -15,6 +15,7 @@
  */
 import fs from "node:fs";
 
+/** @param {string | undefined} s */
 const major = (s) => s?.match(/(\d+)/)?.[1];
 
 const nvmrc = major(fs.readFileSync(".nvmrc", "utf8"));

@@ -46,9 +46,9 @@ function controlsFor(form: HTMLFormElement, field: string): HTMLElement[] {
  */
 function setError(form: HTMLFormElement, field: string, message: string | null) {
   const controls = controlsFor(form, field);
-  if (controls.length === 0) return;
-
   const anchor = controls[0];
+  if (!anchor) return;
+
   const errorId = `${field}-error`;
   const existing = form.querySelector<HTMLElement>(`#${CSS.escape(errorId)}`);
 
@@ -304,8 +304,8 @@ export function enhance({
         // hunt for it.
         for (const field of errors.keys()) touched.add(field);
         refresh();
-        const first = controlsFor(form, Array.from(errors.keys())[0])[0];
-        first?.focus();
+        const [firstField] = errors.keys();
+        if (firstField) controlsFor(form, firstField)[0]?.focus();
         return;
       }
 
@@ -368,7 +368,8 @@ export function enhance({
           const unplaced: string[] = [];
           let first: HTMLElement | undefined;
           for (const { field, message } of fieldErrors) {
-            const name = controlsFor(form, field).length > 0 ? field : field.split(".")[0];
+            const name =
+              controlsFor(form, field).length > 0 ? field : (field.split(".")[0] ?? field);
             const controls = controlsFor(form, name);
             if (controls.length === 0) {
               unplaced.push(message);

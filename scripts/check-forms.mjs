@@ -50,8 +50,13 @@ const port = await new Promise((resolve, reject) => {
 });
 
 const dir = mkdtempSync(path.join(tmpdir(), "vts-forms-"));
-const env = { ...process.env, SQLITE_PATH: path.join(dir, "forms.db"), HOST: "127.0.0.1" };
-env.PORT = String(port);
+/** @type {NodeJS.ProcessEnv} */
+const env = {
+  ...process.env,
+  SQLITE_PATH: path.join(dir, "forms.db"),
+  HOST: "127.0.0.1",
+  PORT: String(port),
+};
 for (const key of Object.keys(env)) {
   if (key.startsWith("SMTP_") || key === "NOTIFY_EMAIL" || key === "HEALTH_MIN_FREE_MB") {
     delete env[key];
@@ -106,7 +111,10 @@ const proxied = {
   origin: SITE,
 };
 
-/** A request as the browser sends it through the proxy. */
+/** A request as the browser sends it through the proxy.
+ *  @param {string} pathname
+ *  @param {string | Record<string, string>} body
+ *  @param {{ type?: string, headers?: Record<string, string> }} [options] */
 function post(pathname, body, { type = FORM, headers = {} } = {}) {
   return fetch(`${BASE}${pathname}`, {
     method: "POST",
@@ -116,6 +124,9 @@ function post(pathname, body, { type = FORM, headers = {} } = {}) {
   });
 }
 
+/** @param {string} name
+ *  @param {() => Promise<Response>} request
+ *  @param {(res: Response, text: string) => string} expect */
 async function check(name, request, expect) {
   try {
     const res = await request();
@@ -129,17 +140,21 @@ async function check(name, request, expect) {
   }
 }
 
-/** Each expectation returns a description of what was wrong, or nothing. */
+/** Each expectation returns a description of what was wrong, or nothing.
+ *  @param {Response} res @param {number} want */
 const status = (res, want) => (res.status === want ? "" : `got ${res.status}, want ${want}`);
+/** @param {Response} res @param {number} want @param {string} location */
 const redirectTo = (res, want, location) =>
   status(res, want) ||
   (res.headers.get("location") === location
     ? ""
     : `went to ${res.headers.get("location")}, want ${location}`);
+/** @param {Response} res */
 const noStore = (res) =>
   (res.headers.get("cache-control") ?? "").includes("no-store")
     ? ""
     : `Cache-Control is "${res.headers.get("cache-control")}"`;
+/** @param {string} text @param {string[]} needles */
 const contains = (text, ...needles) =>
   needles
     .filter((n) => !text.includes(n))

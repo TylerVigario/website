@@ -93,14 +93,14 @@ function migrate(db: Database.Database): void {
         `Deploy a build that knows it, or restore an older file.`,
     );
   }
-  for (let v = from; v < MIGRATIONS.length; v++) {
+  for (const [i, step] of MIGRATIONS.slice(from).entries()) {
     // One transaction per step, so a failure leaves the version at the
     // last step that fully applied rather than half of the next one.
     db.transaction(() => {
-      MIGRATIONS[v](db);
-      // v is a loop index over a literal array, so there is nothing to
+      step(db);
+      // A loop index over a literal array, so there is nothing to
       // interpolate but a number — PRAGMA takes no bound parameters.
-      db.pragma(`user_version = ${v + 1}`);
+      db.pragma(`user_version = ${from + i + 1}`);
     })();
   }
 }
