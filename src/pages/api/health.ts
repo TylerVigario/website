@@ -2,7 +2,8 @@ import type { APIRoute } from "astro";
 import { methodNotAllowed } from "@/lib/api/error";
 import { statfsSync } from "node:fs";
 import path from "node:path";
-import { getDb, getDbPath, SUBMISSION_COLUMNS, insertSubmission } from "@/lib/db";
+import { getDb, getDbPath, SUBMISSION_COLUMNS, insertSubmission, unannouncedCount } from "@/lib/db";
+import { mailState } from "@/lib/email/mailer";
 
 export const prerender = false;
 
@@ -19,6 +20,18 @@ export const prerender = false;
  * directory, an SELinux denial on the WAL. Every one of those leaves
  * SELECT working. A check that only reads passes cleanly while every
  * form on the site is losing leads.
+ *
+ * Two checks are advisory: whether mail is on, and whether every lead
+ * older than ten minutes was announced. They answer "would I hear about
+ * a submission", which matters, but a failure there is the relay's or the
+ * host's configuration rather than this release. The updater rolls a
+ * release back on anything but a 200, and rolling back cannot fix SMTP
+ * settings, so an advisory failure reports "degraded" and keeps the 200.
+ *
+ * The response names each check and whether it passed, and nothing more.
+ * This endpoint is public, and a failure's message can carry a path, a
+ * column list or the disk's free space; that goes to the journal, with
+ * the stack, where the person fixing it will look.
  */
 
 /** Columns the two POST routes write — imported, not restated. This
@@ -39,20 +52,24 @@ class Rollback extends Error {}
 interface Check {
   name: string;
   ok: boolean;
-  detail?: string;
+  /** Reported, but never what decides the status code. */
+  advisory?: true;
 }
 
 export const GET: APIRoute = () => {
   const checks: Check[] = [];
-  const record = (name: string, fn: () => void) => {
+  const record = (name: string, fn: () => void, advisory = false) => {
     try {
       fn();
-      checks.push({ name, ok: true });
+      checks.push({ name, ok: true, ...(advisory ? { advisory } : {}) });
     } catch (err) {
       // Logged with the stack intact so journald keeps the real fault;
-      // the response carries only what a monitor can act on.
-      console.error(`[health] ${name} failed:`, err);
-      checks.push({ name, ok: false, detail: err instanceof Error ? err.message : String(err) });
+      // the response carries only what a monitor can act on. An advisory
+      // failure is a state, not a fault, so it gets its reason and no stack.
+      if (advisory)
+        console.warn(`[health] ${name}: ${err instanceof Error ? err.message : String(err)}`);
+      else console.error(`[health] ${name} failed:`, err);
+      checks.push({ name, ok: false, ...(advisory ? { advisory } : {}) });
     }
   };
 
@@ -129,10 +146,35 @@ export const GET: APIRoute = () => {
         );
       }
     });
+
+    record(
+      "notified",
+      () => {
+        const n = unannouncedCount();
+        if (n > 0) throw new Error(`${n} submission(s) saved but never announced`);
+      },
+      true,
+    );
   }
 
-  const ok = checks.every((c) => c.ok);
-  return new Response(JSON.stringify({ status: ok ? "ok" : "unhealthy", checks }), {
+  record(
+    "mail",
+    () => {
+      if (mailState === "off") {
+        throw new Error("mail is off: none of SMTP_HOST, SMTP_USER, SMTP_PASS is set");
+      }
+      if (mailState === "misconfigured") {
+        throw new Error(
+          "mail is misconfigured: the [Mailer] MISCONFIGURED line at startup says why",
+        );
+      }
+    },
+    true,
+  );
+
+  const ok = checks.every((c) => c.ok || c.advisory);
+  const status = !ok ? "unhealthy" : checks.every((c) => c.ok) ? "ok" : "degraded";
+  return new Response(JSON.stringify({ status, checks }), {
     // 503 rather than 500: this is a statement about whether the service
     // can serve, which is what a monitor or a deploy gate is asking.
     status: ok ? 200 : 503,

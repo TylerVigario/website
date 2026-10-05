@@ -6,8 +6,8 @@
  * that only ever reach one inbox. Templates are strings now and React
  * is gone entirely.
  *
- * Deliberately plain: table-free, inline-styled, no web fonts, no
- * images. Mail clients are a worse rendering target than any browser,
+ * Deliberately plain: one table to line labels up with values,
+ * inline styles, no web fonts, no images. Mail clients are a worse rendering target than any browser,
  * and this only has to be legible in one — the recipient reads it,
  * calls the number, and never sees it again.
  */

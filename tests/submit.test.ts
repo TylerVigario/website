@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { MAX, tooLong } from "@/lib/forms/limits";
+import { BODY_LIMIT_BYTES, MAX, tooLong } from "@/lib/forms/limits";
 import type { insertSubmission as InsertSubmission } from "@/lib/db";
 
 /**
@@ -8,15 +8,18 @@ import type { insertSubmission as InsertSubmission } from "@/lib/db";
  * by recorders, so each test sees exactly what would have been stored
  * and sent.
  */
-const { insertSubmission, sendQuoteNotification, sendPotsAuditNotification } = vi.hoisted(() => ({
-  insertSubmission: vi.fn<typeof InsertSubmission>(),
-  sendQuoteNotification: vi.fn(),
-  sendPotsAuditNotification: vi.fn(),
-}));
-vi.mock("@/lib/db", () => ({ insertSubmission }));
+const { insertSubmission, markNotified, sendQuoteNotification, sendPotsAuditNotification } =
+  vi.hoisted(() => ({
+    insertSubmission: vi.fn<typeof InsertSubmission>(),
+    markNotified: vi.fn(),
+    sendQuoteNotification: vi.fn(),
+    sendPotsAuditNotification: vi.fn(),
+  }));
+vi.mock("@/lib/db", () => ({ insertSubmission, markNotified }));
 vi.mock("@/lib/email/mailer", () => ({ sendQuoteNotification, sendPotsAuditNotification }));
 
-const { readSubmission, submitQuote, submitPotsAudit } = await import("@/lib/api/submit");
+const { readSubmission, submitQuote, submitPotsAudit, Unreadable } =
+  await import("@/lib/api/submit");
 
 const QUOTE = {
   name: " Dana ",
@@ -34,8 +37,9 @@ const AUDIT = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  sendQuoteNotification.mockResolvedValue(undefined);
-  sendPotsAuditNotification.mockResolvedValue(undefined);
+  insertSubmission.mockReturnValue(42);
+  sendQuoteNotification.mockResolvedValue(true);
+  sendPotsAuditNotification.mockResolvedValue(true);
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -48,15 +52,23 @@ describe("a valid quote", () => {
       services: "Networking & WiFi",
       details: null,
     });
-    expect(sendQuoteNotification).toHaveBeenCalledOnce();
+    expect(sendQuoteNotification).toHaveBeenCalledWith(42, expect.anything());
+    expect(markNotified).toHaveBeenCalledWith(42);
   });
 
-  it("is still saved when the mail relay is down", async () => {
+  it("is still saved when the mail relay is down, and left unmarked", async () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     sendQuoteNotification.mockRejectedValue(new Error("ECONNREFUSED"));
     expect(await submitQuote(QUOTE)).toEqual({ kind: "saved" });
     expect(insertSubmission).toHaveBeenCalledOnce();
-    expect(log).toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("#42"), expect.any(Error));
+    expect(markNotified).not.toHaveBeenCalled();
+  });
+
+  it("is left unmarked when mail is off", async () => {
+    sendPotsAuditNotification.mockResolvedValue(false);
+    expect(await submitPotsAudit(AUDIT)).toEqual({ kind: "saved" });
+    expect(markNotified).not.toHaveBeenCalled();
   });
 });
 
@@ -101,6 +113,13 @@ describe("the honeypot", () => {
     expect(await submitPotsAudit({ website: "http://spam.example" })).toEqual({ kind: "dropped" });
   });
 
+  it("logs which form it caught, and nothing that was in it", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await submitPotsAudit({ ...AUDIT, website: "http://spam.example" });
+    expect(log).toHaveBeenCalledWith("[honeypot] dropped a POTS audit submission");
+    expect(JSON.stringify(log.mock.calls)).not.toMatch(/Acme|Dana|spam\.example/);
+  });
+
   it("stores and sends nothing, however valid the rest is", async () => {
     expect(await submitQuote({ ...QUOTE, website: "x" })).toEqual({ kind: "dropped" });
     expect(await submitPotsAudit({ ...AUDIT, website: "x" })).toEqual({ kind: "dropped" });
@@ -136,6 +155,39 @@ describe("reading a request", () => {
         body,
       });
     expect(await readSubmission(json('{"name":"Dana"}'))).toEqual({ name: "Dana" });
-    expect(await readSubmission(json("{not json"))).toBeNull();
+  });
+
+  it("tells a body it could not read from one that failed the schema", async () => {
+    const json = (body: string) =>
+      new Request("http://x/", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body,
+      });
+    const read = await readSubmission(json("{not json"));
+    expect(read).toEqual(new Unreadable(400));
+    expect(await submitQuote(read)).toEqual({ kind: "unreadable", status: 400 });
+    expect(insertSubmission).not.toHaveBeenCalled();
+  });
+
+  it("answers 413 for a body the adapter cut off past the limit", async () => {
+    // What the adapter does to an oversized body: the stream fails partway.
+    const cut = () =>
+      new Request("http://x/", {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          "content-length": String(BODY_LIMIT_BYTES + 1),
+        },
+        body: new ReadableStream({
+          pull: (c) => c.error(new Error("Body size limit exceeded")),
+        }),
+        duplex: "half",
+      } as RequestInit);
+    expect(await readSubmission(cut())).toEqual(new Unreadable(413));
+    expect(await submitPotsAudit(await readSubmission(cut()))).toEqual({
+      kind: "unreadable",
+      status: 413,
+    });
   });
 });

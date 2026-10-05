@@ -84,52 +84,85 @@ if (problems.length) {
 
 const transporter = relay ? nodemailer.createTransport(transportOptions(relay)) : null;
 
+/** Which of the three states above the mailer is in. /api/health reports
+ *  it, so a mistake in the relay settings shows up somewhere other than a
+ *  boot line nobody reads. */
+export type MailState = "on" | "off" | "misconfigured";
+export const mailState: MailState = problems.length ? "misconfigured" : relay ? "on" : "off";
+
 interface SendOptions {
+  /** The submission's row id: in the subject, and the only thing logged
+   *  about it when mail is off in production. */
+  id: number;
   to: string;
   subject: string;
   text: string;
   html: string;
+  replyTo?: string;
+}
+
+/** A contact that is exactly one email address, or undefined. A reply to
+ *  the notification then goes to the person who asked, not to the site's
+ *  own sender. Anything else (a phone number, two addresses, text around
+ *  an address) sets nothing: Reply-To is only ever a clean address. */
+function replyAddress(contact: string): string | undefined {
+  const c = contact.trim();
+  return /^[^\s@<>,;:"()[\]\\]+@[^\s@<>,;:"()[\]\\]+\.[^\s@<>,;:"()[\]\\]+$/.test(c)
+    ? c
+    : undefined;
 }
 
 /**
- * Low-level send. When SMTP isn't configured, logs the would-have-
- * been email to stdout instead — keeps dev flows usable without
- * setting up real credentials. A real send failure is logged with its
- * recipient and subject, then re-thrown so the caller decides whether
- * to swallow it (best-effort) or surface it.
+ * Low-level send. Returns true once the message is handed to the relay,
+ * false when mail is off or misconfigured. A real send failure is logged
+ * with its recipient and subject, then re-thrown so the caller decides
+ * whether to swallow it (best-effort) or surface it.
+ *
+ * With mail off, development logs the whole would-be email so the forms
+ * can be worked on without a relay. Production logs the row id and
+ * nothing else: the row is already in the database, and a second copy of
+ * someone's name, number and message in the journal is one kept outside
+ * every retention rule.
  */
 // Not exported: the two notification helpers below are the whole
 // public surface of this module, and an exported low-level sender
 // invites a caller that bypasses them.
 async function sendEmail(options: SendOptions): Promise<boolean> {
   if (!transporter) {
-    console.log(`[Mailer] SMTP not configured — would send:`);
+    if (import.meta.env.PROD) {
+      console.log(`[Mailer] Mail is ${mailState}: submission #${options.id} saved, not announced.`);
+      return false;
+    }
+    console.log(`[Mailer] Mail is ${mailState} — would send:`);
     console.log(`  To: ${options.to}`);
     console.log(`  Subject: ${options.subject}`);
+    if (options.replyTo) console.log(`  Reply-To: ${options.replyTo}`);
     console.log(
       `  Body:\n${options.text
         .split("\n")
         .map((line) => `    ${line}`)
         .join("\n")}`,
     );
-    return true;
+    return false;
   }
 
   try {
     const info = await transporter.sendMail({
       from: `"VTS Website" <${MAIL_FROM}>`,
       to: options.to,
+      ...(options.replyTo ? { replyTo: options.replyTo } : {}),
       subject: options.subject,
       text: options.text,
       html: options.html,
     });
-    console.log(`[Mailer] Sent email to ${options.to}: ${info.messageId}`);
+    console.log(`[Mailer] Sent submission #${options.id} to ${options.to}: ${info.messageId}`);
     return true;
   } catch (err) {
-    // The recipient is the operator's own address. The subject carries
-    // the submitter's name, and that is what makes the line useful: it
-    // says which lead went unannounced. The row itself is already saved.
-    console.error(`[Mailer] Send to ${options.to} failed (${options.subject}):`, err);
+    // The recipient is the operator's own address. The row id says which
+    // lead went unannounced, and is all the line needs: the row itself is
+    // saved, with the name and number in it, and the journal is no place
+    // for a second copy.
+    console.error(`[Mailer] Send of submission #${options.id} to ${options.to} failed:`, err);
     throw err;
   }
 }
@@ -160,11 +193,15 @@ export interface SendQuoteNotificationArgs {
 }
 
 /**
- * Render + send the "new quote request" internal notification.
- * Throws on SMTP failure; the route handler wraps in try/catch so the
- * SQLite row is preserved either way (the email is best-effort).
+ * Render + send the "new quote request" internal notification for row
+ * `id`. Resolves true once the relay has it, false with mail off. Throws
+ * on SMTP failure; submit.ts catches that, so the row it already saved is
+ * kept either way (the email is best-effort).
  */
-export async function sendQuoteNotification(args: SendQuoteNotificationArgs): Promise<void> {
+export async function sendQuoteNotification(
+  id: number,
+  args: SendQuoteNotificationArgs,
+): Promise<boolean> {
   const submittedAtFormatted = formatSubmittedAt();
   const html = renderQuoteEmail({ ...args, submittedAtFormatted });
 
@@ -178,9 +215,11 @@ export async function sendQuoteNotification(args: SendQuoteNotificationArgs): Pr
     `Submitted: ${submittedAtFormatted}`,
   ].join("\n");
 
-  await sendEmail({
+  return sendEmail({
+    id,
     to: NOTIFY_EMAIL,
-    subject: `New Quote Request from ${args.name}`,
+    subject: `New Quote Request #${id} from ${args.name}`,
+    replyTo: replyAddress(args.contact),
     text,
     html,
   });
@@ -195,13 +234,13 @@ export interface SendPotsAuditNotificationArgs {
 }
 
 /**
- * Render + send the "POTS audit request" internal notification.
- * Throws on SMTP failure; same best-effort semantics as the quote
- * notification.
+ * Render + send the "POTS audit request" internal notification for row
+ * `id`. Same results and best-effort semantics as the quote notification.
  */
 export async function sendPotsAuditNotification(
+  id: number,
   args: SendPotsAuditNotificationArgs,
-): Promise<void> {
+): Promise<boolean> {
   const submittedAtFormatted = formatSubmittedAt();
   const html = renderPotsAuditEmail({ ...args, submittedAtFormatted });
 
@@ -216,9 +255,11 @@ export async function sendPotsAuditNotification(
     `Source: /pots-migration landing page`,
   ].join("\n");
 
-  await sendEmail({
+  return sendEmail({
+    id,
     to: NOTIFY_EMAIL,
-    subject: `POTS Audit Request from ${args.business}`,
+    subject: `POTS Audit Request #${id} from ${args.business}`,
+    replyTo: replyAddress(args.contact),
     text,
     html,
   });

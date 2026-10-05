@@ -19,6 +19,12 @@ export const MAX = {
   details: 20_000,
 } as const;
 
+/** The largest request body the adapter will read: astro.config.mjs passes
+ *  it as bodySizeLimit, and submit.ts answers a body declared larger with
+ *  413. A body over it cannot be read at all, so nothing of it can be
+ *  echoed back into the form. */
+export const BODY_LIMIT_BYTES = 256 * 1024;
+
 /** The one message for every limit, so client and server say it alike. */
 export const tooLong = (max: number) =>
   `Please keep this to ${max.toLocaleString("en-US")} characters or fewer.`;
