@@ -205,7 +205,17 @@ Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'
   upgrade-insecure-requests
 Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(),
   magnetometer=(), microphone=(), payment=(), usb=()
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
 ```
+
+The last two isolate the site from other origins: a page this site opens,
+or that opens it, gets no handle on its window, and no other site can
+load its files into its own pages. Nothing here needs either: no popup
+talks back, and nothing is meant to be embedded elsewhere. A link preview
+or a crawler fetches from its own server, which neither header affects.
+The one visible cost: an image search's full-size preview, which loads
+the file from here inside its own page, falls back to its own thumbnail.
 
 **No `'unsafe-inline'`, and keeping it that way is the repo's job.** Three
 things would force one, and all three are currently zero across every
@@ -215,10 +225,13 @@ page including the two that render at request time: inline `<script>`
 `style=` the build had was a decorative grid in the hero, moved to a class
 and since removed with it.
 
-Adding any of them does not fail the build — it silently requires the
-policy to be weakened, which is the sort of thing that gets done in a
-hurry and never undone. `npm run check:bundles` catches the script case
-by budgeting total JavaScript weight; the other two are on review.
+Any of them would be blocked by the browser rather than by the build, or
+"fixed" by weakening the policy, which is the sort of thing that gets
+done in a hurry and never undone. So the build looks for all three
+(`scripts/inline-code.ts`): `npm run check:bundles` fails a prerendered
+page that has one, and `npm run check:forms` fails the two pages that
+render at request time, including the re-render that echoes a failed
+submission. JSON-LD is a data block, not code, and is allowed.
 
 `frame-ancestors 'none'` supersedes `X-Frame-Options` for anything
 current, and the two must agree — a browser reading only the older header

@@ -155,7 +155,7 @@ const ownsDialog = from === 0;
             native momentum and snapping; no JavaScript drives movement. */}
         <div
           data-track
-          class="flex h-full w-full snap-x snap-mandatory motion-safe:scroll-smooth overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          class="flex h-full w-full snap-x snap-mandatory motion-safe:scroll-smooth overflow-x-auto overflow-y-hidden overscroll-x-contain scrollbar-none [&::-webkit-scrollbar]:hidden"
         >
           {shots.map((shot, i) => (
             <div
@@ -201,14 +201,14 @@ const ownsDialog = from === 0;
             so it works on a narrow screen. */}
         <div
           data-thumbs
-          class="absolute right-0 bottom-0 left-0 z-20 flex gap-2 overflow-x-auto bg-gradient-to-t from-black/70 to-transparent px-3 pt-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          class="absolute right-0 bottom-0 left-0 z-20 flex gap-2 overflow-x-auto bg-linear-to-t from-black/70 to-transparent px-3 pt-6 pb-[max(0.75rem,env(safe-area-inset-bottom))] scrollbar-none [&::-webkit-scrollbar]:hidden"
         >
           {shots.map((shot, i) => (
             <button
               type="button"
               data-thumb={i}
               aria-label={`Go to image ${i + 1}: ${shot.alt}`}
-              class="h-12 w-16 shrink-0 overflow-hidden rounded border-2 border-transparent opacity-50 transition aria-[current=true]:border-white aria-[current=true]:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+              class="h-12 w-16 shrink-0 overflow-hidden rounded border-2 border-transparent opacity-50 transition aria-current:border-white aria-current:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
             >
               <Picture
                 src={shot.src}

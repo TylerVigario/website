@@ -70,7 +70,7 @@ const jsonLd = {
                   class="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface-light transition-all hover:-translate-y-1 hover:border-accent/30 hover:shadow-lg"
                 >
                   {cs.preview ? (
-                    <div class="relative aspect-[16/9] overflow-hidden border-b border-border bg-surface">
+                    <div class="relative aspect-video overflow-hidden border-b border-border bg-surface">
                       <Picture
                         src={preview(cs.preview)}
                         alt=""
@@ -83,7 +83,7 @@ const jsonLd = {
                       />
                     </div>
                   ) : cs.outcome ? (
-                    <div class="relative flex aspect-[16/9] flex-col items-center justify-center gap-3 overflow-hidden border-b border-border bg-gradient-to-br from-accent/5 via-surface to-surface px-6 text-center">
+                    <div class="relative flex aspect-video flex-col items-center justify-center gap-3 overflow-hidden border-b border-border bg-linear-to-br from-accent/5 via-surface to-surface px-6 text-center">
                       <Picture
                         src={preview(cs.outcome.logo)}
                         formats={["avif"]}

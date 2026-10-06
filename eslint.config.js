@@ -21,6 +21,12 @@ export default defineConfig([
   ...astro.configs.recommended,
   {
     files: ["**/*.astro"],
+    // astro-eslint-parser has no projectService and said so on every
+    // .astro file, then used project: true instead. Asking for that
+    // directly gives the same type information without the warning.
+    languageOptions: {
+      parserOptions: { projectService: false, project: true },
+    },
     rules: {
       // The frontmatter is typechecked by `astro check`; the type-aware
       // ESLint rules cannot see through the .astro parser and report

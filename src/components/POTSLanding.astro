@@ -311,7 +311,7 @@ const faqs = [
             <div class="mt-8 space-y-3">
               {checklistItems.map((item) => (
                 <label
-                class="flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors border-border hover:border-accent/20 has-[:checked]:border-accent/40 has-[:checked]:bg-accent/5"
+                class="flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors border-border hover:border-accent/20 has-checked:border-accent/40 has-checked:bg-accent/5"
                 >
                   <input
                     type="checkbox"
@@ -333,7 +333,7 @@ const faqs = [
                   are this element's siblings, not its children, and a
                   plain has-[:checked] here could never match. */}
               <div
-                class="mt-6 rounded-xl border border-border bg-surface p-5 transition-all group-has-[:checked]:border-accent/30 group-has-[:checked]:bg-accent/5"
+                class="mt-6 rounded-xl border border-border bg-surface p-5 transition-all group-has-checked:border-accent/30 group-has-checked:bg-accent/5"
               >
               <p class="text-muted">
                 Tick any that apply. If more than a couple are true, your carrier is counting on
