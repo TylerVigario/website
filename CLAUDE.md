@@ -261,6 +261,7 @@ src/
 ├── lib/
 │   ├── db.ts                         # better-sqlite3 singleton
 │   ├── services.ts  work.ts          # content catalogs
+│   ├── image-sizes.ts                # every image's `sizes`, derived from its container; images are <Picture>, AVIF + WebP
 │   ├── forms/
 │   │   ├── enhance.ts                # progressive enhancement; never erases input
 │   │   └── rules.ts                  # client rules mirroring the schemas

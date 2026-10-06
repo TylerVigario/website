@@ -22,8 +22,9 @@
  * precisely on Apple devices. The zoom is therefore implemented on
  * Pointer Events, which are supported 28/28.
  */
-import { Image } from "astro:assets";
+import { Picture } from "astro:assets";
 import type { ImageMetadata } from "astro";
+import type { ImageGrid } from "@/lib/image-sizes";
 
 /** `src` is an imported image, not a URL string. That is what lets Astro
  *  resize it, emit a srcset and hash the filename — and it carries its
@@ -37,7 +38,6 @@ export interface Shot {
    *  from alt: alt says what the picture IS, the caption says what it
    *  is showing you and why. Falls back to alt where none was written. */
   caption?: string;
-  sizes?: string;
 }
 
 interface Props {
@@ -47,16 +47,15 @@ interface Props {
   from?: number;
   to?: number;
   id?: string;
+  /** The grid this slice is laid out in. Its `sizes` is the width each
+   *  cell draws at, which the grid decides, not the shot: the same
+   *  screenshot is a different width in a different grid. */
+  grid: ImageGrid;
+  /** Anything else on the grid element, such as its margin. */
   class?: string;
 }
 
-const {
-  shots,
-  from = 0,
-  to = shots.length,
-  id = "gallery",
-  class: className = "grid gap-4 sm:grid-cols-2",
-} = Astro.props;
+const { shots, from = 0, to = shots.length, id = "gallery", grid, class: className } = Astro.props;
 
 const visible = shots.slice(from, to);
 // Only the first slice emits the dialog; later slices point their grids
@@ -68,7 +67,7 @@ const ownsDialog = from === 0;
     a browser without <dialog>, clicking still does the useful thing: it
     opens the full-size image. The viewer is an enhancement layered on a
     link that already works, not the only way in. */}
-<div class={className} data-lightbox={id}>
+<div class:list={[grid.class, className]} data-lightbox={id}>
   {
     visible.map((shot, i) => (
       <a
@@ -78,12 +77,19 @@ const ownsDialog = from === 0;
         aria-label={`View larger: ${shot.alt}`}
       >
         {/* widths are the sizes actually rendered: a two-column grid
-            at common breakpoints, not the 2400px original. */}
-        <Image
+            at common breakpoints, not the 2400px original. AVIF with a
+            WebP fallback, as every <Picture> here: a third to almost half
+            smaller, and a browser without AVIF takes the <img>. The
+            <picture> is display: contents, so the <img> lays out exactly
+            as it did on its own. */}
+        <Picture
           src={shot.src}
           alt={shot.alt}
+          formats={["avif"]}
+          fallbackFormat="webp"
+          pictureAttributes={{ class: "contents" }}
           widths={[320, 480, 640, 960]}
-          sizes={shot.sizes ?? "(min-width: 640px) 50vw, calc(100vw - 3rem)"}
+          sizes={grid.sizes}
           loading="lazy"
           decoding="async"
           class="h-auto w-full transition-transform duration-300 group-hover:scale-[1.02]"
@@ -165,9 +171,12 @@ const ownsDialog = from === 0;
                 data-zoom
                 class="flex min-h-0 flex-1 touch-pan-x items-center overflow-hidden"
               >
-                <Image
+                <Picture
                   src={shot.src}
                   alt={shot.alt}
+                  formats={["avif"]}
+                  fallbackFormat="webp"
+                  pictureAttributes={{ class: "contents" }}
                   widths={[640, 1024, 1600, 2400]}
                   sizes="100vw"
                   loading="lazy"
@@ -201,9 +210,12 @@ const ownsDialog = from === 0;
               aria-label={`Go to image ${i + 1}: ${shot.alt}`}
               class="h-12 w-16 shrink-0 overflow-hidden rounded border-2 border-transparent opacity-50 transition aria-[current=true]:border-white aria-[current=true]:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
             >
-              <Image
+              <Picture
                 src={shot.src}
                 alt=""
+                formats={["avif"]}
+                fallbackFormat="webp"
+                pictureAttributes={{ class: "contents" }}
                 widths={[128]}
                 sizes="64px"
                 loading="lazy"

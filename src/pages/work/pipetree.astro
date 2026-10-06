@@ -1,6 +1,7 @@
 ---
 import { businessRef, founderRef } from "@/lib/business";
-import { Image } from "astro:assets";
+import { Picture } from "astro:assets";
+import { CASE_STUDY_LEAD_SIZES, PHONE_SCREENSHOT_GRID, SCREENSHOT_GRID } from "@/lib/image-sizes";
 import imgAddressesFull0 from "@/assets/images/work/pipetree/addresses-full.webp";
 import Base from "@/layouts/Base.astro";
 import PipetreeScreenshots from "@/components/PipetreeScreenshots.astro";
@@ -107,14 +108,17 @@ const stack = [
             </div>
             <div data-reveal="scale">
               <div class="relative overflow-hidden rounded-xl border border-border bg-surface-light shadow-2xl">
-                <Image
+                <Picture
                   src={imgAddressesFull0}
                   alt="Pipetree Addresses view — per-address completeness with unlinked, reach-failure, and jetting diagnostics"
                   width={2000}
                   height={1131}
                   priority
+                  formats={["avif"]}
+                  fallbackFormat="webp"
+                  pictureAttributes={{ class: "contents" }}
                   widths={[640, 960, 1280, 1600, 2000]}
-                  sizes="(min-width: 1024px) 55vw, calc(100vw - 3rem)"
+                  sizes={CASE_STUDY_LEAD_SIZES}
                   class="w-full" />
               </div>
             </div>
@@ -205,7 +209,7 @@ const stack = [
               Captured from a demo instance seeded with fictional inspection data.
             </p>
           </div>
-          <PipetreeScreenshots id="pipetree" from={0} to={4} class="mt-10 grid gap-6 md:grid-cols-2" />
+          <PipetreeScreenshots id="pipetree" from={0} to={4} grid={SCREENSHOT_GRID} class="mt-10" />
         </div>
       </section>
 
@@ -238,7 +242,8 @@ const stack = [
           <PipetreeScreenshots id="pipetree"
             from={4}
             to={6}
-            class="mx-auto mt-10 grid max-w-3xl gap-6 sm:grid-cols-2"
+            grid={PHONE_SCREENSHOT_GRID}
+            class="mt-10"
           />
         </div>
       </section>
