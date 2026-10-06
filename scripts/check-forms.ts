@@ -27,6 +27,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { BODY_LIMIT_BYTES } from "../src/lib/forms/limits.ts";
+import { inlineCodeIn } from "./inline-code.ts";
 
 const ENTRY = "dist/server/entry.mjs";
 if (!existsSync(ENTRY)) {
@@ -153,6 +154,12 @@ const noStore = (res: Response) =>
   (res.headers.get("cache-control") ?? "").includes("no-store")
     ? ""
     : `Cache-Control is "${res.headers.get("cache-control")}"`;
+/** The CSP has no 'unsafe-inline'; these two pages render per request, so
+ *  check-bundles.ts never sees them. */
+const noInlineCode = (text: string) =>
+  inlineCodeIn(text)
+    .map((what) => `the page has ${what}, which the CSP would block`)
+    .join("; ");
 const contains = (text: string, ...needles: string[]) =>
   needles
     .filter((n) => !text.includes(n))
@@ -177,7 +184,13 @@ console.log(`Forms, without JavaScript, against ${ENTRY} as ${SITE}:`);
 await check(
   "/contact is served per request and never stored",
   () => fetch(`${BASE}/contact`),
-  (res, text) => status(res, 200) || noStore(res) || contains(text, 'method="post"'),
+  (res, text) =>
+    status(res, 200) || noStore(res) || contains(text, 'method="post"') || noInlineCode(text),
+);
+await check(
+  "/pots-migration has no inline code either",
+  () => fetch(`${BASE}/pots-migration`),
+  (res, text) => status(res, 200) || noInlineCode(text),
 );
 await check(
   "a valid quote is saved and redirected, so a reload cannot resend it",
@@ -188,7 +201,10 @@ await check(
   "an invalid quote comes back 422 with everything typed still in it",
   () => post("/contact", { ...QUOTE, name: "", details: "kept, not lost" }),
   (res, text) =>
-    status(res, 422) || noStore(res) || contains(text, "kept, not lost", "Please enter your name."),
+    status(res, 422) ||
+    noStore(res) ||
+    contains(text, "kept, not lost", "Please enter your name.") ||
+    noInlineCode(text),
 );
 await check(
   `a quote over ${BODY_LIMIT_BYTES / 1024} KB is refused 413 with a form-level message`,

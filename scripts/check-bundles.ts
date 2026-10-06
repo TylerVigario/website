@@ -39,10 +39,16 @@
  *
  * Only prerendered pages can be checked here. /contact and
  * /pots-migration render at request time and never become files, so
- * they are outside what a static assertion can see.
+ * they are outside what a static assertion can see; check-forms.ts,
+ * which fetches them from the built server, checks them instead.
+ *
+ * INLINE CODE OF ANY KIND FAILS. The CSP has no 'unsafe-inline', so an
+ * inline script, a <style> element or a style= attribute would be
+ * blocked on the page rather than caught here. See inline-code.ts.
  */
 import fs from "node:fs";
 import path from "node:path";
+import { inlineCodeIn } from "./inline-code.ts";
 
 const ROOT = "dist/client";
 
@@ -128,6 +134,11 @@ for (const file of htmlFiles(ROOT).sort()) {
     .replace(/\\/g, "/")
     .replace(/\/index\.html$/, "/");
 
+  for (const what of inlineCodeIn(html)) {
+    console.error(`error: ${route} has ${what}, which the CSP would block.`);
+    failed = true;
+  }
+
   const inlineCode = [...html.matchAll(INLINE)].map((m) => m[1] ?? "");
   const inline = inlineCode.reduce((sum, code) => sum + code.length, 0);
   const named = [
@@ -187,5 +198,7 @@ if (rows.length === 0) {
 }
 
 console.log(rows.join("\n"));
-console.log(`  ${rows.length} prerendered pages checked, no framework runtime present.`);
+console.log(
+  `  ${rows.length} prerendered pages checked, no framework runtime present, no inline code.`,
+);
 process.exit(failed ? 1 : 0);
