@@ -47,8 +47,9 @@ const linkClass = (href: string) =>
 
           loading="eager" because the masthead logo is above the fold and
           <img> would otherwise inherit no priority at all. Photographs
-          keep using <Image> — they appear only on prerendered pages,
-          where processing happens at build time and webp wins. */}
+          use <Picture> — they appear only on prerendered pages, where
+          processing happens at build time, and AVIF with a WebP fallback
+          wins. */}
       <img
         src={imgVtsLogo0.src}
               decoding="async"

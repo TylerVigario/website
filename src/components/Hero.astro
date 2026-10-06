@@ -1,5 +1,5 @@
 ---
-import { Image } from "astro:assets";
+import { Picture } from "astro:assets";
 import cables from "@/assets/images/stock/blue-cables-switch.jpg";
 
 const stats = [
@@ -24,12 +24,15 @@ const stats = [
           past the paragraph's right edge at 1024px (59%), then thins so
           the cables show on the right. */}
       <div class="absolute inset-0 -z-10 bg-navy">
-        <Image
+        <Picture
           src={cables}
           alt=""
           width={2400}
           height={1600}
           priority
+          formats={["avif"]}
+          fallbackFormat="webp"
+          pictureAttributes={{ class: "contents" }}
           widths={[640, 960, 1280, 1600, 2400]}
           sizes="100vw"
           class="h-full w-full object-cover object-[70%_center]"
