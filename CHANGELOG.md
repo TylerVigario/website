@@ -1,4 +1,10 @@
 # Changelog
+## [1.17.1](https://github.com/TylerVigario/website/compare/v1.17.0...v1.17.1) (2026-10-06)
+
+### Performance
+
+* **site:** Serve images at the width they are drawn, as AVIF 
+
 ## [1.17.0](https://github.com/TylerVigario/website/compare/v1.16.0...v1.17.0) (2026-10-05)
 
 ### Features
