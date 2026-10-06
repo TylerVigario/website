@@ -113,6 +113,19 @@
   }
 }
 
+/* Page changes cross-fade instead of cutting, in browsers that can
+ * (Chrome 126+, Safari 18.2+; the rest navigate as before). One at-rule
+ * and no script: the browser snapshots the old page and the new one and
+ * blends the two. It is motion, so it follows the reduced-motion setting
+ * as the reveal and smooth scrolling do. The new page's first screen is
+ * never half-hidden at that moment, because the reveal only arms what
+ * starts below the fold. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
 /* Honeypot. Off-canvas rather than display:none — bots that respect
    display:none skip the field, and a skipped trap catches nothing. It
    stays in the layout, occupying no space anyone can reach. */
