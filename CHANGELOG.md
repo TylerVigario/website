@@ -1,4 +1,14 @@
 # Changelog
+## [1.18.0](https://github.com/TylerVigario/website/compare/v1.17.1...v1.18.0) (2026-10-06)
+
+### Features
+
+* **site:** Cross-fade between pages, and prerender the next one on hover 
+
+### Refactoring
+
+* Follow current Tailwind and GitHub conventions, and enforce the no-inline-code rule 
+
 ## [1.17.1](https://github.com/TylerVigario/website/compare/v1.17.0...v1.17.1) (2026-10-06)
 
 ### Performance
