@@ -26,8 +26,10 @@ No auth, no API consumers other than the site's own forms.
 
 **No UI framework, and that is load-bearing.** Nothing here needs one:
 the menu is `<details>`, the reveal is one CSS rule armed by a 500-byte
-script, the lightbox is `<dialog>` plus scroll-snap, and the forms post
-HTML. No page ships a framework: a plain page carries 508 B (the scroll
+script, the lightbox is `<dialog>` plus scroll-snap, page changes
+cross-fade by one CSS at-rule (`@view-transition`), instant navigation is
+a speculation-rules file the server points at, and the forms post HTML.
+No page ships a framework: a plain page carries 508 B (the scroll
 reveal), a case study about 4.9 KB (plus the image viewer), and the two
 input pages about 5.4 KB (plus the form script). `npm run check:bundles`
 budgets every prerendered page, following imports, locally and in CI. If
@@ -140,8 +142,16 @@ as though one of them is the way.
 | `/api/*` | Reaches the Node process. |
 | `/.well-known/security.txt`, `/robots.txt` | Static file, `Content-Type: text/plain; charset=utf-8` (RFC 9116 requires it for `security.txt`). Prerendered, so the headers set in their `.ts` endpoints are never sent in production; the server chooses them. |
 | `/manifest.webmanifest` | Static file, `Content-Type: application/manifest+json`, for the same reason. |
+| `/speculation-rules.json` | Static file, `Content-Type: application/speculationrules+json`. A rule set loaded by header is ignored under any other type. |
 | `/contact`, `/pots-migration` | Reaches the Node process — the only two pages with `prerender = false`, because they accept input. |
 | everything else | Static file from `dist/client/`, served `Cache-Control: no-cache`. Unmatched paths should fall through to the Node process, so adding a dynamic route does not 404 until the server config catches up. |
+
+Every HTML response also carries `Speculation-Rules: "/speculation-rules.json"`.
+That is how Chrome and Edge learn to prerender a page while the pointer
+rests on its link (`src/pages/speculation-rules.json.ts` says what is
+excluded and why). By header rather than an inline `<script
+type="speculationrules">`, because inline rules are code under the CSP.
+Without the header nothing breaks: navigation is simply not instant.
 
 `no-cache` on HTML is not `no-store`: the file is cached, and revalidated
 before use. Against a `Last-Modified` or a working `ETag`, revalidation
@@ -259,6 +269,7 @@ src/
 │   ├── 404.astro  500.astro          # error pages, prerendered to static HTML
 │   ├── robots.txt.ts                 # generated from `site` in astro.config.ts
 │   ├── manifest.webmanifest.ts       # generated, so icon paths cannot drift
+│   ├── speculation-rules.json.ts     # hover-to-prerender rules, loaded by header (the CSP forbids inline)
 │   └── api/                          # prerender = false, like contact + pots-migration
 │       ├── quote.ts                  # POST, JSON: submitQuote(); a form post is 307'd to /contact
 │       ├── pots-audit.ts             # POST, JSON: submitPotsAudit(); a form post is 307'd to the page
