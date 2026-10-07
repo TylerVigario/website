@@ -1,6 +1,12 @@
 ---
 import { businessRef, founderRef } from "@/lib/business";
 import Base from "@/layouts/Base.astro";
+import OutcomePanel from "@/components/OutcomePanel.astro";
+import { caseStudies } from "@/lib/work";
+
+// The same logo and outcome as this study's card on /work.
+const outcome = caseStudies.find((cs) => cs.slug === "voip")?.outcome;
+if (!outcome) throw new Error("No outcome for voip in src/lib/work.ts");
 
 // Built from Astro.site so the canonical domain lives in one place.
 const site = Astro.site!.href.replace(/\/$/, "");
@@ -55,18 +61,23 @@ const services = [
 
     <>
       {/* Hero */}
-      <section class="pt-32 pb-16 lg:pb-20 lg:pt-36">
+      <section class="relative overflow-hidden pt-32 pb-16 lg:pb-20 lg:pt-36">
         <div class="mx-auto max-w-6xl px-6">
-          <div data-reveal="up">
-            <p class="text-sm font-medium text-accent-ink">Work / Case Study</p>
-            <h1 class="mt-4 text-3xl font-bold tracking-tight text-navy sm:text-4xl md:text-5xl">
-              POTS-to-VoIP Migration
-            </h1>
-            <p class="mt-4 max-w-2xl text-lg text-muted leading-relaxed">
-              How VTS helped a 47-year AT&amp;T customer beat an unauthorized $5,000 contract, win
-              an FCC complaint in 15 days, and escape overpriced copper lines &mdash; cutting a
-              ~$945/month bill to under $50.
-            </p>
+          <div class="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
+            <div data-reveal="up">
+              <p class="text-sm font-medium text-accent-ink">Work / Case Study</p>
+              <h1 class="mt-4 text-3xl font-bold tracking-tight text-navy sm:text-4xl md:text-5xl">
+                POTS-to-VoIP Migration
+              </h1>
+              <p class="mt-4 text-lg text-muted leading-relaxed">
+                How VTS helped a 47-year AT&amp;T customer beat an unauthorized $5,000 contract, win
+                an FCC complaint in 15 days, and escape overpriced copper lines &mdash; cutting a
+                ~$945/month bill to under $50.
+              </p>
+            </div>
+            <div data-reveal="scale">
+              <OutcomePanel outcome={outcome} lead />
+            </div>
           </div>
         </div>
       </section>

@@ -1,0 +1,79 @@
+---
+import ServicePage from "@/components/ServicePage.astro";
+
+const capabilities = [
+  {
+    title: "Monitoring & Support",
+    items: [
+      "Remote management of every workstation and register",
+      "Updates and patches, kept current",
+      "Help from people who already know your setup",
+      "On-site visits across the Central Valley",
+      "New machines set up and old ones retired",
+      "Documentation of what you have and how it fits",
+    ],
+  },
+  {
+    title: "Backups You Can Trust",
+    items: [
+      "Scheduled backups of the data that runs the business",
+      "Each backup checksummed and verified before it goes off-site",
+      "Off-site copies on hardware we run",
+      "An alert when a backup fails to arrive",
+      "Regular integrity checks of your databases",
+      "A recovery plan written down before it's needed",
+    ],
+  },
+  {
+    title: "Phones, Email & Accounts",
+    items: [
+      "VoIP phones, with your numbers ported over",
+      "Business email on your own domain",
+      "SPF, DKIM and DMARC, so your mail arrives",
+      "Accounts and devices for new staff",
+      "Carrier and vendor bills reviewed",
+      "Planning for what to replace, and when",
+    ],
+  },
+];
+
+const examples = [
+  {
+    title: "Bravo Farms",
+    status: "Client since 2021",
+    desc: "Two stores, sixteen machines managed remotely, register backups verified before they go off-site, and phones, the online store and the paperwork looked after.",
+    href: "/work/bravo-farms",
+  },
+  {
+    title: "POTS-to-VoIP Migration",
+    status: "Client engagement",
+    desc: "A $945 monthly phone bill cut to under $50, and an unauthorized $5,000 contract defeated with an FCC complaint in 15 days.",
+    href: "/work/voip",
+  },
+];
+---
+
+<ServicePage
+  path="/services/managed-it"
+  title="Managed IT & Support"
+  description="Managed IT for small businesses in the Central Valley: remote management, verified off-site backups, phones, email and planning, from one team that knows your setup."
+  intro="Remote management, backups verified before they leave the building, phones, email and planning. One team that already knows your setup, and picks up when you call."
+  capabilities={capabilities}
+  serviceTypes={["Managed IT Services", "Remote IT Support", "Data Backup and Recovery"]}
+  examples={examples}
+  quoteService="Managed IT & Support"
+  ctaTitle="Want someone already watching?"
+  ctaText="Tell us what you run and what keeps you up at night. The assessment is free."
+>
+  <p>
+    A backup nobody has checked is a hope, not a backup. Every one we take is checksummed and
+    verified before it leaves the building, the off-site copy lives on hardware we run, and we
+    get an alert when one fails to arrive &mdash; so nobody learns a backup is missing on the
+    day it&apos;s needed.
+  </p>
+  <p>
+    The same goes for the rest of it. We set up remote management on every machine, keep
+    everything patched, and write down what&apos;s where. When you call, you reach someone who
+    already knows your setup, not a ticket queue.
+  </p>
+</ServicePage>

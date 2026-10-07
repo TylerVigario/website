@@ -1,0 +1,81 @@
+---
+import ServicePage from "@/components/ServicePage.astro";
+import { projects } from "@/lib/work";
+
+const capabilities = [
+  {
+    title: "Field & Business Apps",
+    items: [
+      "Phone apps for crews in the field",
+      "Web apps for the office",
+      "Invoicing, time and job tracking",
+      "Dashboards over the data you already collect",
+      "Printed documents generated from your data",
+      "Logins and roles for your team",
+    ],
+  },
+  {
+    title: "Integrations & Automation",
+    items: [
+      "Spreadsheets turned into real databases",
+      "Connections between the tools you already use",
+      "Scheduled reports and alerts",
+      "Data imports and clean-ups",
+      "Maps, contacts and exports from one source",
+      "Repetitive office work, automated",
+    ],
+  },
+  {
+    title: "Built to Last",
+    items: [
+      "Your data in a database you own",
+      "Tested, versioned releases with a changelog",
+      "Runs on our servers or yours",
+      "Manuals and printed reference sheets",
+      "Training for the people who use it",
+      "Open source where it makes sense",
+    ],
+  },
+];
+
+const examples = [
+  {
+    title: "Pipetree",
+    status: "In production",
+    desc: "Field operations for crossbore sewer inspection: crews enter what they find, and the office sees the network it adds up to. In daily use since early 2026.",
+    href: "/work/pipetree",
+  },
+  // The in-development work, as /work describes it.
+  ...projects.map((p) => ({
+    title: p.title,
+    status: p.status,
+    desc: p.summary,
+    href: p.href,
+    linkText: p.href ? "Read the source" : undefined,
+  })),
+];
+---
+
+<ServicePage
+  path="/services/software"
+  title="Custom Software"
+  description="Custom software for small businesses: field apps, business tools, integrations and automation, built around how you actually work and kept running after launch."
+  intro="Field apps, business tools, integrations and automation, built around how you actually work. When off-the-shelf software doesn't fit, or fits only after you change how you do the job, we build what does."
+  capabilities={capabilities}
+  serviceTypes={["Custom Software Development", "Web Application Development", "Business Process Automation"]}
+  examples={examples}
+  quoteService="Custom Software"
+  ctaTitle="Working around your software?"
+  ctaText="Tell us what the job is and where the current tools get in the way. The quote is free."
+>
+  <p>
+    We start with the work, not the screens: who does what, where the data comes from, and what
+    keeps going wrong. Often the answer is smaller than expected &mdash; a form that replaces a
+    spreadsheet, or a report nobody has to put together by hand.
+  </p>
+  <p>
+    What we ship is tested, versioned and documented, and it keeps running after launch because
+    the people who wrote it are the people who look after it. Your data stays in a database you
+    own, in a format any developer could pick up.
+  </p>
+</ServicePage>

@@ -1,0 +1,80 @@
+---
+import ServicePage from "@/components/ServicePage.astro";
+
+const capabilities = [
+  {
+    title: "Design & Build",
+    items: [
+      "Designed around your business, not a template",
+      "Built for phones first, and fast on them",
+      "Accessible to people using screen readers and keyboards",
+      "Contact and quote forms that reach you",
+      "Copy written with you, in your words",
+      "Google Business Profile and search basics",
+    ],
+  },
+  {
+    title: "Hosting",
+    items: [
+      "Hosted on servers we own and run",
+      "HTTPS, security headers and a web application firewall",
+      "Domain and DNS management",
+      "Email on your domain, set up so it isn't marked as spam",
+      "Nightly backups",
+      "Changes made by the people who built it",
+    ],
+  },
+  {
+    title: "Beyond the Brochure",
+    items: [
+      "Booking and quote requests",
+      "A back office for editing your own content",
+      "Mailing lists you own, not rent",
+      "Downloads, catalogs and printable documents",
+      "Connections to the tools you already use",
+      "Room to grow into custom software",
+    ],
+  },
+];
+
+const examples = [
+  {
+    title: "iTaleSoWell",
+    status: "Live",
+    desc: "An author's site: twenty stories with cover art and an ePub each, a reader built for phones, a mailing list, and the back office the author runs it all from.",
+    href: "/work/italesowell",
+  },
+  {
+    title: "vigario.tech",
+    status: "Live",
+    desc: "This site. Every page works without JavaScript, the forms never lose what someone typed, and every release is signed before it goes live.",
+    href: "https://github.com/TylerVigario/website",
+    linkText: "Read the source",
+  },
+];
+---
+
+<ServicePage
+  path="/services/websites"
+  title="Websites & Hosting"
+  description="Custom websites for small businesses in the Central Valley, built by hand and hosted on servers we run. Fast on a phone, found on Google, and changed by the people who built it."
+  intro="Custom websites built by hand and hosted on servers we own and run. No page builder, no platform subscription, and no one else's price rise to plan around. When something needs changing, you call the people who built it."
+  capabilities={capabilities}
+  serviceTypes={["Web Design", "Web Development", "Web Hosting"]}
+  examples={examples}
+  quoteService="Websites & Hosting"
+  ctaTitle="Need a website, or a better one?"
+  ctaText="Tell us about your business and what the site needs to do. The quote is free."
+>
+  <p>
+    Most small business sites are a template on a rented platform: the same layout as the shop
+    down the street, a monthly fee that only goes up, and nobody to call when it breaks. We build
+    each site from scratch, so it loads fast, says what you do, and has nothing on it you
+    didn&apos;t ask for.
+  </p>
+  <p>
+    We host what we build, on hardware we run, with backups and updates handled. The site is
+    yours: the domain is in your name, and if you ever want to take it elsewhere, the files go
+    with you.
+  </p>
+</ServicePage>

@@ -1,0 +1,16 @@
+---
+import type { CreditedPhoto } from "@/lib/photos";
+
+/**
+ * The credit a photo's licence asks for, as one sentence: what it shows,
+ * the work's title linked to its source, the author, and the licence.
+ */
+interface Props {
+  photo: CreditedPhoto;
+}
+const { photo } = Astro.props;
+const { credit } = photo;
+const link = "underline transition-colors hover:text-foreground";
+---
+
+{photo.caption}. Photo: <a href={credit.url} class={link}>&ldquo;{credit.title}&rdquo;</a> by <a href={credit.authorUrl} class={link}>{credit.author}</a>, <a href={credit.licenseUrl} rel="license" class={`${link} whitespace-nowrap`}>{credit.license}</a>.

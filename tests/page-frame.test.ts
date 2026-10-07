@@ -35,7 +35,19 @@ describe("the page frame lives in Base.astro", () => {
   });
 
   it("wraps every page", () => {
+    // Directly, or through a component that renders Base itself, as
+    // ServicePage does for the pages built on it.
+    const frames = [
+      "Base",
+      ...rest
+        .filter((f) => f.startsWith(path.join("src", "components")))
+        .filter((f) => readFileSync(f, "utf8").includes("<Base"))
+        .map((f) => path.basename(f, ".astro")),
+    ];
+    const framed = (f: string) =>
+      frames.some((name) => readFileSync(f, "utf8").includes(`<${name}`));
+    expect(frames).toContain("ServicePage");
     expect(pages.length).toBeGreaterThan(10);
-    expect(pages.filter((f) => !readFileSync(f, "utf8").includes("<Base"))).toEqual([]);
+    expect(pages.filter((f) => !framed(f))).toEqual([]);
   });
 });

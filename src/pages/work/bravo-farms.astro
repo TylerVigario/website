@@ -1,0 +1,226 @@
+---
+import { businessRef, founderRef } from "@/lib/business";
+import Base from "@/layouts/Base.astro";
+import OutcomePanel from "@/components/OutcomePanel.astro";
+import { caseStudies } from "@/lib/work";
+import CreditedPhoto from "@/components/CreditedPhoto.astro";
+import { bravoFarmsKettlemanCity, bravoFarmsTraver } from "@/lib/photos";
+import { PHOTO_PAIR } from "@/lib/image-sizes";
+
+// The same logo and outcome as this study's card on /work.
+const outcome = caseStudies.find((cs) => cs.slug === "bravo-farms")?.outcome;
+if (!outcome) throw new Error("No outcome for bravo-farms in src/lib/work.ts");
+
+// Built from Astro.site so the canonical domain lives in one place.
+const site = Astro.site!.href.replace(/\/$/, "");
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "@id": `${site}/work/bravo-farms#article`,
+  headline: "Bravo Farms: managed IT for a two-store family business",
+  description:
+    "A managed-IT case study — remote management of the registers and office machines at two stores, point-of-sale backups verified before they go off-site, phones, the online store, and documentation.",
+  url: `${site}/work/bravo-farms`,
+  datePublished: "2026-10-07",
+  author: founderRef(site),
+  publisher: businessRef(site),
+  about: { "@type": "Thing", name: "Managed IT services for a small retail business" },
+};
+
+// Counts as of the last inventory. They change as machines come and go;
+// update them with the inventory, not from memory.
+const stats = [
+  { value: "Since 2021", label: "a VTS client" },
+  { value: "2", label: "stores, Traver and Kettleman City" },
+  { value: "16", label: "machines under remote management" },
+  { value: "Verified", label: "point-of-sale backups, before they go off-site" },
+];
+
+// What the engagement covers. No hostnames, products or staff: this is a
+// public page about a real business's systems.
+const work = [
+  {
+    title: "Remote management",
+    body: "Sixteen registers and office machines across both stores are enrolled in remote management, and the inventory of what is at each counter is kept from it.",
+  },
+  {
+    title: "Backups that are checked",
+    body: "The point-of-sale database is backed up with a checksum, verified, and only then copied off-site to storage we run. An alert fires when a backup fails to arrive, and a weekly integrity check runs against the database.",
+  },
+  {
+    title: "Registers",
+    body: "New tills are set up from one standard kit and recorded with the hardware at each one.",
+  },
+  {
+    title: "Phones",
+    body: "The store's phones moved off copper onto VoIP — and when the carrier answered with an unauthorized contract, we filed the FCC complaint that ended it.",
+    href: "/work/voip",
+    linkText: "Read the VoIP case study",
+  },
+  {
+    title: "Online store & print",
+    body: "The online store and its theme, email campaigns, and the printed catalogs and brochures.",
+  },
+  {
+    title: "Written down",
+    body: "A knowledge base of how each store actually works — the quirks, the vendor contacts, the reason a setting is the way it is — kept as things are learned.",
+  },
+];
+---
+
+<Base ogType="article" title="Bravo Farms Case Study" description="Managed IT for a two-store family business since 2021: remote management of the registers and office machines, point-of-sale backups verified before they go off-site, phones, the online store, and documentation." jsonLd={jsonLd}>
+
+    <>
+      {/* Hero */}
+      <section class="relative overflow-hidden pt-32 pb-16 lg:pb-20 lg:pt-36">
+        <div class="mx-auto max-w-6xl px-6">
+          <div class="grid items-center gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-12">
+            <div data-reveal="up">
+              <p class="text-sm font-medium text-accent-ink">Work / Case Study</p>
+              <h1 class="mt-4 text-3xl font-bold tracking-tight text-navy sm:text-4xl md:text-5xl">
+                Bravo Farms
+              </h1>
+              <p class="mt-4 text-lg text-muted leading-relaxed">
+                A family business in Traver, CA since 1979, with two stores. We&apos;ve looked after
+                its IT since 2021.
+              </p>
+            </div>
+            <div data-reveal="scale">
+              <OutcomePanel outcome={outcome} lead />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stats */}
+      <section class="bg-surface py-12 lg:py-14">
+        <div class="mx-auto max-w-6xl px-6">
+          <div class="grid grid-cols-2 gap-6 lg:grid-cols-4">
+            {stats.map((s) => (
+              <div data-reveal>
+                <div class="text-center">
+                  <p class="text-3xl font-bold text-navy sm:text-4xl">{s.value}</p>
+                  <p class="mt-2 text-sm text-muted">{s.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* The situation */}
+      <section class="py-16 lg:py-20">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <div class="mx-auto max-w-3xl">
+              <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                The stores
+              </h2>
+              <div class="mt-6 space-y-4 text-muted leading-relaxed sm:text-lg">
+                <p>
+                  Bravo Farms runs two roadside stores, in Traver and Kettleman City, with registers,
+                  label printers, back-office machines, phones and an online store between them.
+                </p>
+                <p>
+                  Since 2021 we&apos;ve been the people they call for all of it.
+                </p>
+              </div>
+            </div>
+          </div>
+          <div class={`mt-12 ${PHOTO_PAIR.class}`}>
+            <div data-reveal>
+              <CreditedPhoto photo={bravoFarmsTraver} sizes={PHOTO_PAIR.sizes} position="object-bottom" />
+            </div>
+            <div data-reveal>
+              <CreditedPhoto photo={bravoFarmsKettlemanCity} sizes={PHOTO_PAIR.sizes} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* The work */}
+      <section class="bg-surface py-16 lg:py-20">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <h2 class="text-center text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+              What the engagement covers
+            </h2>
+          </div>
+          <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {work.map((w) => (
+              <div data-reveal>
+                <div class="flex h-full flex-col rounded-xl border border-border bg-surface-light p-6">
+                  <h3 class="text-lg font-semibold text-navy">{w.title}</h3>
+                  <p class="mt-3 flex-1 text-sm text-muted leading-relaxed">{w.body}</p>
+                  {w.href && (
+                    <a
+                      href={w.href}
+                      class="mt-4 inline-flex items-center gap-1.5 self-start text-sm font-semibold text-accent-ink transition-colors hover:text-navy"
+                    >
+                      {w.linkText}
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        class="h-4 w-4"
+                        aria-hidden="true"
+                      >
+                        <path
+                          fill-rule="evenodd"
+                          d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
+                          clip-rule="evenodd"
+                        />
+                      </svg>
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section class="py-16 lg:py-20">
+        <div class="mx-auto max-w-6xl px-6">
+          <div data-reveal="up">
+            <div class="mx-auto max-w-3xl text-center">
+              <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
+                Want someone already watching?
+              </h2>
+              <p class="mt-4 text-lg text-muted">
+                Tell us what you run and what keeps you up at night. The assessment is free.
+              </p>
+              <div class="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                <a
+                  href="/contact?service=Managed%20IT%20%26%20Support"
+                  class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-base font-semibold text-white transition-all hover:bg-accent-ink hover:shadow-lg hover:shadow-accent/15 sm:w-auto"
+                >
+                  Get a free quote
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                    class="h-5 w-5"
+                    aria-hidden="true"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </a>
+                <a
+                  href="/services/managed-it"
+                  class="inline-flex w-full items-center justify-center rounded-xl border border-border px-6 py-3.5 text-base font-semibold text-foreground transition-colors hover:border-accent/30 hover:bg-surface sm:w-auto"
+                >
+                  About managed IT
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+</Base>
