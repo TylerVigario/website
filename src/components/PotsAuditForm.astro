@@ -24,7 +24,7 @@ const fields = [
   {
     id: "contact",
     label: "Phone or email",
-    hint: "Either is fine — whichever you'd rather I use.",
+    hint: "Either is fine — whichever you'd rather we use.",
     // No single token means "phone or email", so none is claimed.
     autocomplete: undefined,
   },
@@ -34,9 +34,9 @@ const fields = [
 {
   submitted ? (
     <div role="status" class="rounded-lg border border-border bg-surface-light p-6">
-      <p class="font-medium text-foreground">Got it — I'll take a look.</p>
+      <p class="font-medium text-foreground">Got it — we'll take a look.</p>
       <p class="mt-1 text-sm text-muted">
-        I'll come back with what your lines actually cost and what they'd cost after. If it's
+        We'll come back with what your lines actually cost and what they'd cost after. If it's
         urgent, call <a href="tel:+15599001400" class="text-accent-ink underline">(559) 900-1400</a>.
       </p>
     </div>
@@ -108,7 +108,7 @@ const fields = [
           Roughly what do the lines cost you monthly?
         </label>
         <p id="bill-hint" class="mb-1.5 text-sm text-muted">
-          A range is fine — I only need it to know where to start looking.
+          A range is fine — we only need it to know where to start looking.
         </p>
         <select
           id="bill"
@@ -170,8 +170,8 @@ const fields = [
         done.setAttribute("role", "status");
         done.className = "rounded-lg border border-border bg-surface-light p-6";
         done.innerHTML =
-          "<p class=\"font-medium text-foreground\">Got it — I'll take a look.</p>" +
-          '<p class="mt-1 text-sm text-muted">I\'ll come back with what your lines actually cost.</p>';
+          "<p class=\"font-medium text-foreground\">Got it — we'll take a look.</p>" +
+          '<p class="mt-1 text-sm text-muted">We\'ll come back with what your lines actually cost.</p>';
         // Focus moves to the confirmation: the button that had it is gone
         // with the form, and focus left on <body> leaves a keyboard or
         // screen-reader user nowhere.
