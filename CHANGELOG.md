@@ -1,4 +1,16 @@
 # Changelog
+## [1.19.0](https://github.com/TylerVigario/website/compare/v1.18.0...v1.19.0) (2026-10-08)
+
+### Features
+
+* **site:** Show websites, software and managed IT, and the Bravo Farms engagement 
+* **site:** Give each service its own band on /services, with our own hardware 
+
+### Bug Fixes
+
+* **site:** Say we are not a licensed contractor, and speak as we 
+* **seo:** Name the place in service titles, one name per service, and descriptions that fit a result 
+
 ## [1.18.0](https://github.com/TylerVigario/website/compare/v1.17.1...v1.18.0) (2026-10-06)
 
 ### Features
