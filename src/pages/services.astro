@@ -12,7 +12,7 @@ const jsonLd = {
   "@id": `${site}/services#service`,
   name: "IT Services",
   description:
-    "Full-stack IT services — networking, security cameras, Windows & Linux systems, cabling, custom software, and IT strategy.",
+    "Full-stack IT services — websites and hosting, custom software, managed IT, networking, security cameras, and Windows & Linux systems.",
   url: `${site}/services`,
   provider: {
     "@type": "ProfessionalService",
@@ -26,42 +26,16 @@ const jsonLd = {
   areaServed,
 };
 
-/* Featured service pages — these have dedicated pages */
-const featured = [
-  {
-    title: "Network Engineering",
-    desc: "Design, deployment, and troubleshooting. WiFi, switching, routing, firewalls, VPNs, cabling — the full stack.",
-    href: "/services/networking",
-    slug: "networking",
-  },
-  {
-    title: "Security Cameras",
-    desc: "Local AI detection with Frigate NVR. No cloud subscriptions, no monthly fees. Reliable, private, and affordable.",
-    href: "/services/security-cameras",
-    slug: "security-cameras",
-  },
-  {
-    title: "Windows Systems",
-    desc: "Deployment, management, and app support for desktops and servers. Active Directory, Group Policy, patching — if it runs on Windows, I handle it.",
-    href: "/services/windows",
-    slug: "windows",
-  },
-  {
-    title: "Linux Systems",
-    desc: "Server deployment, configuration, and maintenance. Web servers, Docker, networking appliances, storage — CLI-driven, no bloat.",
-    href: "/services/linux",
-    slug: "linux",
-  },
+/* The catalog, one card per service, each linking to its page.
+   "Computers & Servers" has two, Windows and Linux, so its card links to
+   both and carries the anchor the catalog's href points at. */
+const systems = [
+  { title: "Windows Systems", href: "/services/windows" },
+  { title: "Linux Systems", href: "/services/linux" },
 ];
-
-/* General services — no dedicated page yet */
-const general = services.filter(
-  (s) =>
-    !["Networking & WiFi", "Security & Cameras", "Computers, Servers & Cloud"].includes(s.title),
-);
 ---
 
-<Base title="IT Services" description="Full-stack IT in Fresno, CA — networking, security cameras, Windows and Linux, cabling, and custom software. Transparent hourly rate, no retainers." jsonLd={jsonLd}>
+<Base title="IT Services" description="Full-stack IT in Fresno, CA — websites and hosting, custom software, managed IT, networking, security cameras, and Windows and Linux. Transparent hourly rate, no retainers." jsonLd={jsonLd}>
 
     <>
       {/* Header */}
@@ -78,83 +52,74 @@ const general = services.filter(
             </p>
           </div>
 
-          {/* Featured services — have dedicated pages */}
-          <div class="mt-12 grid gap-6 sm:grid-cols-2">
-            {featured.map((s) => (
-              <div data-reveal>
-                <a
-                  href={s.href}
-                  class="group flex h-full flex-col rounded-2xl border border-border bg-surface-light p-6 transition-all sm:p-8 hover:border-accent/30 hover:-translate-y-1 hover:shadow-lg"
-                >
-                  <div class="mb-5 inline-flex rounded-xl bg-accent-soft p-3 text-accent-ink">
-                    <ServiceIcon slug={s.slug} />
+          <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {services.map((s) =>
+              s.slug === "computers-servers" ? (
+                <div data-reveal id="systems">
+                  <div class="flex h-full flex-col rounded-2xl border border-border bg-surface-light p-6 sm:p-8">
+                    <div class="mb-5 inline-flex self-start rounded-xl bg-accent-soft p-3 text-accent-ink">
+                      <ServiceIcon slug={s.slug} />
+                    </div>
+                    <h2 class="mb-3 text-xl font-semibold text-navy">{s.title}</h2>
+                    <p class="leading-relaxed text-muted">{s.desc}</p>
+                    <div class="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+                      {systems.map((sys) => (
+                        <a
+                          href={sys.href}
+                          class="inline-flex items-center gap-1 text-sm font-medium text-accent-ink transition-colors hover:text-navy"
+                        >
+                          {sys.title}
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                            class="h-4 w-4"
+                            aria-hidden="true"
+                          >
+                            <path
+                              fill-rule="evenodd"
+                              d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
+                              clip-rule="evenodd"
+                            />
+                          </svg>
+                        </a>
+                      ))}
+                    </div>
                   </div>
-                  <h2 class="mb-3 text-xl font-semibold text-navy">{s.title}</h2>
-                  <p class="leading-relaxed text-muted">{s.desc}</p>
-                  <span class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent-ink opacity-0 transition-opacity group-hover:opacity-100">
-                    Learn more
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      class="h-4 w-4"
-                      aria-hidden="true"
-                    >
-                      <path
-                        fill-rule="evenodd"
-                        d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
-                        clip-rule="evenodd"
-                      />
-                    </svg>
-                  </span>
-                </a>
-              </div>
-            ))}
+                </div>
+              ) : (
+                <div data-reveal>
+                  <a
+                    href={s.href}
+                    class="group flex h-full flex-col rounded-2xl border border-border bg-surface-light p-6 transition-all sm:p-8 hover:border-accent/30 hover:-translate-y-1 hover:shadow-lg"
+                  >
+                    <div class="mb-5 inline-flex self-start rounded-xl bg-accent-soft p-3 text-accent-ink">
+                      <ServiceIcon slug={s.slug} />
+                    </div>
+                    <h2 class="mb-3 text-xl font-semibold text-navy">{s.title}</h2>
+                    <p class="leading-relaxed text-muted">{s.desc}</p>
+                    <span class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent-ink opacity-0 transition-opacity group-hover:opacity-100">
+                      Learn more
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        class="h-4 w-4"
+                        aria-hidden="true"
+                      >
+                        <path
+                          fill-rule="evenodd"
+                          d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
+                          clip-rule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </a>
+                </div>
+              ),
+            )}
           </div>
-        </div>
-      </section>
-
-      {/* General services — link to contact */}
-      <section class="bg-surface py-16 lg:py-20">
-        <div class="mx-auto max-w-6xl px-6">
-          <div data-reveal="up">
-            <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">
-              Also available
-            </h2>
-          </div>
-          <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {general.map((s) => (
-              <div data-reveal>
-                <a
-                  href={`/contact?service=${encodeURIComponent(s.title)}`}
-                  class="group flex h-full flex-col rounded-2xl border border-border bg-surface-light p-6 transition-all sm:p-8 hover:border-accent/30 hover:-translate-y-1 hover:shadow-lg"
-                >
-                  <div class="mb-5 inline-flex rounded-xl bg-accent-soft p-3 text-accent-ink">
-                    <ServiceIcon slug={s.slug} />
-                  </div>
-                  <h2 class="mb-3 text-xl font-semibold text-navy">{s.title}</h2>
-                  <p class="leading-relaxed text-muted">{s.desc}</p>
-                  <span class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent-ink opacity-0 transition-opacity group-hover:opacity-100">
-                    Get a quote
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                      class="h-4 w-4"
-                      aria-hidden="true"
-                    >
-                      <path
-                        fill-rule="evenodd"
-                        d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
-                        clip-rule="evenodd"
-                      />
-                    </svg>
-                  </span>
-                </a>
-              </div>
-            ))}
-          </div>
-          {/* Beside the cabling it covers; the footer repeats it on every page. */}
+          {/* Beside the cabling and cameras it covers; the footer repeats it on every page. */}
           <p class="mt-8 text-sm text-muted">
             Vigario Technology Solutions is not a licensed contractor.
           </p>

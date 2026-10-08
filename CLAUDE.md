@@ -263,8 +263,8 @@ the URL is the path under `src/pages/`.
 src/
 ├── pages/                            # ROUTES. One file, one URL.
 │   ├── index.astro  about.astro  contact.astro  services.astro   # contact takes its own no-JS POST
-│   ├── services/                     # linux, networking, security-cameras, windows
-│   ├── work/                         # case studies: italesowell, pipetree, voip
+│   ├── services/                     # websites, software, managed-it (on ServicePage); linux, networking, security-cameras, windows
+│   ├── work/                         # case studies: italesowell, pipetree, voip, bravo-farms
 │   ├── pots-migration.astro          # the campaign landing page; takes its own no-JS POST
 │   ├── 404.astro  500.astro          # error pages, prerendered to static HTML
 │   ├── robots.txt.ts                 # generated from `site` in astro.config.ts
@@ -280,11 +280,13 @@ src/
 │   ├── Lightbox.astro                # <dialog> + scroll-snap viewer
 │   ├── POTSLanding.astro             # hero, case study, FAQ, form
 │   ├── LandingHeader.astro           # logo + call, no nav; the POTS page's header slot
+│   ├── ServicePage.astro             # the frame of a service page: capabilities, approach, work, CTA
 │   └── icons/                        # inline SVG, incl. icons/services/*
 ├── layouts/Base.astro                # <head>, canonical, and the frame: nav, <main id="main">, footer
 ├── lib/
 │   ├── db.ts                         # better-sqlite3 singleton
-│   ├── services.ts  work.ts          # content catalogs
+│   ├── services.ts  work.ts          # content catalogs: services (the quote form's options), case studies, projects in development
+│   ├── photos.ts                     # other people's photos, each with the credit its licence requires (CreditedPhoto renders both)
 │   ├── image-sizes.ts                # every image's `sizes`, derived from its container; images are <Picture>, AVIF + WebP
 │   ├── forms/
 │   │   ├── enhance.ts                # progressive enhancement; never erases input

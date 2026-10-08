@@ -1,3 +1,5 @@
+import { bravoFarmsKettlemanCity, bravoFarmsTraver, type CreditedPhoto } from "@/lib/photos";
+
 // Single source of truth for the /work index and any nav that lists case
 // studies. Each full case study lives at its own route under /work/<slug>;
 // this module carries only the summary metadata the index cards render.
@@ -16,9 +18,13 @@ export type CaseStudy = {
   outcome?: {
     logo: string;
     logoAlt: string;
-    before: string;
+    /** Struck through beside `after`; left out when there is no "before". */
+    before?: string;
     after: string;
     caption: string;
+    /** Faded in behind the logo. In a hero the panel credits it itself;
+     *  /work credits the cards' under the grid, since a card is a link. */
+    backdrop?: CreditedPhoto;
   };
 };
 
@@ -68,6 +74,59 @@ export const caseStudies: CaseStudy[] = [
       before: "$945/mo",
       after: "under $50/mo",
       caption: "FCC complaint won in 15 days · $10k+/yr saved",
+      backdrop: bravoFarmsTraver,
     },
+  },
+  {
+    slug: "bravo-farms",
+    href: "/work/bravo-farms",
+    title: "Bravo Farms",
+    category: "Managed IT",
+    summary:
+      "A family business since 1979, with two stores. VTS has looked after its IT since 2021: sixteen machines under remote management, register backups verified before they go off-site, the phones, the online store, and a written record of how each store actually works.",
+    tags: ["Remote management", "Verified backups", "Point of sale", "VoIP", "Online store"],
+    year: "2021–",
+    status: "Ongoing",
+    lastModified: "2026-10-07",
+    outcome: {
+      logo: "work/voip/bravo-farms-logo.png",
+      logoAlt: "Bravo Farms",
+      after: "Since 2021",
+      caption: "2 stores · 16 machines · backups verified off-site",
+      backdrop: bravoFarmsKettlemanCity,
+    },
+  },
+];
+
+// Work that is real but not finished: shown so the range is visible,
+// labelled so nobody mistakes it for a shipped product. Each moves to
+// caseStudies, with a page, when it ships.
+export type Project = {
+  title: string;
+  category: string;
+  summary: string;
+  status: string;
+  tags: string[];
+  /** The public source, when there is one. */
+  href?: string;
+};
+
+export const projects: Project[] = [
+  {
+    title: "reckon",
+    category: "Custom software",
+    summary:
+      "Invoicing and time tracking for a small trade business, self-hosted, with the books, invoices and timesheets kept in agreement by the database itself.",
+    status: "In development",
+    tags: ["SvelteKit", "PostgreSQL", "Self-hosted", "Open source"],
+    href: "https://github.com/TylerVigario/reckon",
+  },
+  {
+    title: "Turf Tracker",
+    category: "Custom software",
+    summary:
+      "A phone app for lawn and garden care: your soil test and product list in, the exact dose out, and every application logged with one tap.",
+    status: "In development",
+    tags: ["PWA", "Next.js", "PostgreSQL", "Self-hosted"],
   },
 ];

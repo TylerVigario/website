@@ -53,3 +53,10 @@ export const WORK_CARD_SIZES =
  *  (1104 - 48) * 0.55 - 2 = 579px from 1152px. */
 export const CASE_STUDY_LEAD_SIZES =
   "(min-width: 1152px) 579px, (min-width: 1024px) calc(55vw - 55px), calc(100vw - 50px)";
+
+/** Two photos side by side from sm (640px) in the page container: the
+ *  screenshot grid's arithmetic, two columns from a narrower breakpoint. */
+export const PHOTO_PAIR: ImageGrid = {
+  class: "grid gap-6 sm:grid-cols-2",
+  sizes: "(min-width: 1152px) 538px, (min-width: 640px) calc(50vw - 38px), calc(100vw - 50px)",
+};

@@ -41,10 +41,10 @@ describe("the audit row marker", () => {
     await submitQuote({
       name: "Dana",
       contact: "x",
-      services: ["Custom Software", "Low-Voltage Cabling"],
+      services: ["Custom Software", "Managed IT & Support"],
     });
     expect(insertSubmission.mock.calls[0]?.[0].services).toBe(
-      "Custom Software, Low-Voltage Cabling",
+      "Custom Software, Managed IT & Support",
     );
   });
 

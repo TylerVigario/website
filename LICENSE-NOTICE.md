@@ -24,7 +24,7 @@ in turn. That is the whole reason this licence was chosen.
 ## Reserved — © Vigario Technology Solutions, All Rights Reserved
 
 **Brand and imagery.** `src/assets/images/` in full, apart from the
-stock photograph under `stock/` (below) — the VTS logo and symbol, the
+photographs under `stock/` (below), which are other people's — the VTS logo and symbol, the
 social-sharing card, and every client screenshot under
 `src/assets/images/work/`. Also every file in `public/`, which is the
 logo mark in the formats browsers and home screens ask for:
@@ -66,6 +66,21 @@ The photograph behind the homepage hero,
 License (<https://unsplash.com/license>), which allows commercial use
 without credit. It is credited here anyway, it is not reserved above,
 and this licence grants nothing in it.
+
+The two photographs of Bravo Farms are used under Creative Commons
+Attribution 2.0 (<https://creativecommons.org/licenses/by/2.0/>),
+resized, cropped on the page, and credited beside each place they
+appear:
+
+- `src/assets/images/stock/bravo-farms-traver.jpg`, "Bravo Farms ~
+  Traver, California" by Thank You (25 Millions ) views
+  (<https://www.flickr.com/photos/prayitnophotography/51422967173/>)
+- `src/assets/images/stock/bravo-farms-kettleman-city.jpg`, "Bravo Farms,
+  Kettleman City" by kennejima
+  (<https://www.flickr.com/photos/kennejima/29184982401/>)
+
+They are not reserved above, this licence grants nothing in them, and
+their licence is theirs to pass on, not ours.
 
 ## Why the distinction is drawn rather than implied
 
