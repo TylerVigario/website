@@ -1,10 +1,16 @@
 # Vigario Technology Solutions
 
-The public face of Vigario Technology Solutions — an independent IT
-consultancy. It exists to do two things: establish that the business is
-real and competent, and turn the people who believe that into
-conversations. Brand presence and lead generation. Everything on it
-serves one of those two.
+**Jesus is Lord.**
+
+The website of Vigario Technology Solutions, an IT consultancy in
+California's Central Valley. Its code is given freely under the AGPL:
+take it, change it, run it. The written content and the brand are the
+business's own, and [LICENSE-NOTICE.md](LICENSE-NOTICE.md) draws that
+line path by path.
+
+The site does two things: it establishes that the business is real and
+competent, and it turns the people who believe that into conversations.
+Everything on it serves one of those two.
 
 The case studies are the credibility half. The forms are the other
 half, which is why they get disproportionate attention: a form that
@@ -58,23 +64,27 @@ decision: `feat` bumps minor; `fix`, `revert`, `perf`, `refactor` and
 src/pages/                     # ROUTES — one file, one URL. No router config.
   index about contact services services/* work/* pots-migration
   404 500                      # prerendered like any other page
-  robots.txt.ts                # generated from `site`, so the domain lives in one place
+  robots.txt.ts                # generated, so its sitemap URL comes from `site`
   manifest.webmanifest.ts      # generated, so icon paths cannot drift from reality
   api/quote                    # POST: zod-validated, writes to sqlite, optionally emails me
   api/pots-audit               # POST: same flow, scoped to the POTS landing page
-  api/health                   # GET: opens db, SELECT 1 FROM sqlite_schema
+  api/health                   # GET/HEAD: open, read, schema, write probe, free space → 200 or 503
 src/lib/
   db.ts                        # better-sqlite3 singleton on globalThis
   api/                         # zod: QuoteRequest, PotsAuditRequest, ProblemDetails (RFC 9457)
   forms/enhance.ts             # progressive enhancement. Never erases what you typed.
   forms/rules.ts               # client-side rules, proven equivalent to the schemas by a test
-  services.ts work.ts          # content catalogs
+  services.ts work.ts          # content catalogs: the services (the quote form's options), case studies
+  business.ts                  # the business as structured data names it, and where it works
+  photos.ts                    # other people's photos, each carrying the credit its licence asks for
+  image-sizes.ts               # every image's `sizes`, derived from its container
   email/mailer.ts              # nodemailer; best-effort form notification, logged on failure
 src/emails/templates.ts        # notification bodies as HTML strings, escaped at every interpolation
-src/components/                # .astro — Nav, Hero, the forms, Lightbox, icons/
+src/components/                # .astro — Nav, Hero, the forms, Lightbox, ServicePage, icons/
 src/layouts/Base.astro         # <head>, canonical URL, and the frame: nav, <main>, footer
-src/scripts/                   # the only browser JS: lightbox, scroll reveal
+src/scripts/                   # browser JS beside the form script: lightbox, scroll reveal
 src/styles/global.css          # @theme tokens and the reveal rules
+astro.config.ts                # `site`: the public URL every canonical link and the sitemap are built from
 ```
 
 ## Build & gate
@@ -97,19 +107,20 @@ that runs on a server.
 `npm run ci` is the gate, and it is the same gate CI runs:
 
 ```text
-check:install-scripts → lint → typecheck → format → test → build → check:bundles
+check:install-scripts → lint → typecheck → format → test → build → check:bundles → check:forms
 ```
 
 Run it before pushing and CI should hold no surprises. The `pre-push`
-hook runs the build and bundle assertion for you; `pre-commit` keeps to
-the fast checks (lint-staged, typecheck, test) so committing stays
-quick.
+hook runs the build, the bundle assertion and the no-JavaScript form
+check for you; `pre-commit` keeps to the fast checks (lint-staged,
+typecheck, test) so committing stays quick.
 
 `.github/workflows/ci.yml` is one job, `Gate`, on every PR and every
 push to main, and the first job of every release. It runs the same
-steps, plus a Node-major pin check and actionlint, which
-`npm run lint:actions` also runs locally (actionlint is a Go binary, so
-it is found on your PATH rather than installed by npm).
+steps, plus a Node-major pin check, actionlint (which
+`npm run lint:actions` also runs locally; it is a Go binary, so it is
+found on your PATH rather than installed by npm), a run of the release
+artifact itself, and a dev-server boot.
 
 CHANGELOG is regenerated from commit messages by git-cliff — don't
 hand-edit it. `cliff.toml` and the conventional-commit convention are
@@ -132,11 +143,13 @@ same commits.
   got nuked on the next swap.
 - **Health check is `/api/health`**, not `/`. The homepage rendering
   200 only means the static tree is being served — those are files and
-  would keep serving with the process dead. Health runs four checks
-  (open, read, schema, write-probe) and returns 503 with which one
-  failed. The write probe is the point: a full disk, a read-only
-  remount or a permissions change leaves SELECT working while every
-  submission fails.
+  would keep serving with the process dead. Health runs five checks
+  (open, read, schema, write probe, free space) and returns 503 naming
+  the one that failed. The write probe is the point: a full disk, a
+  read-only remount or a permissions change leaves SELECT working while
+  every submission fails. Two more are advisory — whether mail is on,
+  and whether every lead was announced — and report "degraded" with a
+  200, since a release rollback cannot fix a relay.
 - **Type-aware ESLint** (`recommendedTypeChecked`) is on. `req.json()`
   is `any`. Parse through a zod schema in `src/lib/api/`.
 - **Tests run via vitest** — `npm test` (one-shot) or `npm run test:watch`.
@@ -148,22 +161,6 @@ same commits.
   script blocks; astro check validates templates and component props.
   Running tsc alone once reported zero while 89 template errors stood,
   including a missing form component and a missing FAQ accordion.
-
-## Domain
-
-`vigario.tech` is canonical. `tylervigario.com` redirects to it,
-per-path and permanently, and stays registered for exactly that reason —
-a 301 carries link equity only while it exists.
-
-`site` in `astro.config.ts` is the single place the domain is written.
-It drives every canonical link, `og:url`, the JSON-LD `@id` and `url`,
-`robots.txt` and both sitemaps — 16 built files in total. Nothing else
-in the site hardcodes it.
-
-Contact addresses move with it. `vigario.tech` runs a catch-all, so the
-site uses the prefix that fits the context rather than one personal
-address everywhere — `contact@` for the public contact points and the
-business record, `security@` for vulnerability reports.
 
 ## License
 
