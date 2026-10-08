@@ -1,6 +1,7 @@
 ---
 import { businessRef, founderRef } from "@/lib/business";
 import Base from "@/layouts/Base.astro";
+import ogCard from "@/assets/images/og-card.png";
 import OutcomePanel from "@/components/OutcomePanel.astro";
 import { caseStudies } from "@/lib/work";
 import CreditedPhoto from "@/components/CreditedPhoto.astro";
@@ -22,6 +23,9 @@ const jsonLd = {
     "A managed-IT case study — remote management of the registers and office machines at two stores, point-of-sale backups verified before they go off-site, phones, the online store, and documentation.",
   url: `${site}/work/bravo-farms`,
   datePublished: "2026-10-07",
+  // The site's own card: the store photos on this page are other people's,
+  // under a licence whose credit a search result would not show.
+  image: new URL(ogCard.src, site).href,
   author: founderRef(site),
   publisher: businessRef(site),
   about: { "@type": "Thing", name: "Managed IT services for a small retail business" },
@@ -68,7 +72,7 @@ const work = [
 ];
 ---
 
-<Base ogType="article" title="Bravo Farms Case Study" description="Managed IT for a two-store family business since 2021: remote management of the registers and office machines, point-of-sale backups verified before they go off-site, phones, the online store, and documentation." jsonLd={jsonLd}>
+<Base ogType="article" title="Bravo Farms Case Study" description="Managed IT for a two-store family business since 2021: remote management, register backups verified before they go off-site, phones and the online store." jsonLd={jsonLd}>
 
     <>
       {/* Hero */}

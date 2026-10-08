@@ -12,6 +12,11 @@ const california = { "@type": "State", name: "California" } as const;
 
 const city = (name: string) => ({ "@type": "City", name, containedInPlace: california }) as const;
 
+/** The place a service page's title names, as people searching type it.
+ *  One value, so the titles cannot drift between "Fresno" and "the
+ *  Central Valley" page by page. */
+export const SEARCH_PLACE = "Fresno, CA";
+
 /** Where the business works on site. Remote work is not limited to these. */
 export const areaServed = [
   city("Fresno"),

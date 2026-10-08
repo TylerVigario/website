@@ -1,4 +1,5 @@
 ---
+import { areaServed, SEARCH_PLACE } from "@/lib/business";
 import Base from "@/layouts/Base.astro";
 
 // Built from Astro.site so the canonical domain lives in one place.
@@ -7,7 +8,7 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Service",
   "@id": `${site}/services/networking#service`,
-  name: "Network Engineering & Support",
+  name: "Networking & WiFi",
   description:
     "Network design, deployment, troubleshooting, and ongoing support for small businesses.",
   url: `${site}/services/networking`,
@@ -21,6 +22,7 @@ const jsonLd = {
     "Firewall Configuration",
     "Network Troubleshooting",
   ],
+  areaServed,
 };
 
 const capabilities = [
@@ -60,7 +62,7 @@ const capabilities = [
 ];
 ---
 
-<Base title="Network Engineering" description="Network design, deployment, and support for small businesses in Fresno and the Central Valley. WiFi, switching, routing, firewalls, VPNs, and diagnostics." jsonLd={jsonLd}>
+<Base title={`Networking & WiFi in ${SEARCH_PLACE}`} description="Network design, deployment, and support for small businesses in Fresno and the Central Valley. WiFi, switching, routing, firewalls, VPNs, and diagnostics." jsonLd={jsonLd}>
 
     <>
       {/* Hero */}
@@ -72,10 +74,10 @@ const capabilities = [
                 Services
               </a>
               {" / "}
-              Network Engineering
+              Networking & WiFi
             </p>
             <h1 class="mt-4 text-3xl font-bold tracking-tight text-navy sm:text-4xl md:text-5xl">
-              Network Engineering
+              Networking & WiFi
             </h1>
             <p class="mt-4 max-w-2xl text-lg text-muted leading-relaxed">
               From home routers to commercial wireless deployments &mdash; we design, build, and

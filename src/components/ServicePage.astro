@@ -1,5 +1,6 @@
 ---
 import Base from "@/layouts/Base.astro";
+import { areaServed, SEARCH_PLACE } from "@/lib/business";
 
 /**
  * The frame of a service page: a header, the capability lists, the
@@ -66,10 +67,11 @@ const jsonLd = {
   url: `${site}${path}`,
   provider: { "@type": "ProfessionalService", "@id": `${site}/#business` },
   serviceType: serviceTypes,
+  areaServed,
 };
 ---
 
-<Base title={title} description={description} jsonLd={jsonLd}>
+<Base title={`${title} in ${SEARCH_PLACE}`} description={description} jsonLd={jsonLd}>
   <>
     {/* Hero */}
     <section class="pt-32 pb-16 lg:pb-20 lg:pt-36">

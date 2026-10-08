@@ -1,4 +1,5 @@
 ---
+import { areaServed, SEARCH_PLACE } from "@/lib/business";
 import Base from "@/layouts/Base.astro";
 
 // Built from Astro.site so the canonical domain lives in one place.
@@ -20,6 +21,7 @@ const jsonLd = {
     "Web Server Configuration",
     "Linux System Maintenance",
   ],
+  areaServed,
 };
 
 const capabilities = [
@@ -59,7 +61,7 @@ const capabilities = [
 ];
 ---
 
-<Base title="Linux Systems" description="Linux server deployment, configuration, and maintenance for small businesses. Web servers, Docker, networking appliances, storage — CLI-driven, no bloat." jsonLd={jsonLd}>
+<Base title={`Linux Systems in ${SEARCH_PLACE}`} description="Linux server deployment, configuration, and maintenance for small businesses. Web servers, Docker, networking appliances, storage — CLI-driven, no bloat." jsonLd={jsonLd}>
 
     <>
       {/* Hero */}

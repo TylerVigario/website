@@ -55,6 +55,12 @@
  * in a built page, stylesheet or script, or in the server chunk of a page
  * that renders at request time. The server entry is left out, because
  * its manifest lists every emitted file whether used or not.
+ *
+ * EVERY INDEXABLE PAGE SAYS SOMETHING OF ITS OWN TO A SEARCH RESULT. Its
+ * title and description are unique, and the description fits what a
+ * result shows (about 160 characters; past that it is cut mid-word). The
+ * home page and /services once shared a title, and five descriptions ran
+ * past the cut. Pages marked noindex are not in results, so not checked.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -137,12 +143,48 @@ function loadedFiles(entries: Iterable<string>) {
 let failed = false;
 const rows = [];
 
+/** What a search result shows before cutting a description off. */
+const DESCRIPTION_MAX = 160;
+const META_TITLE = /<title>([\s\S]*?)<\/title>/;
+const META_DESCRIPTION = /<meta name="description" content="([^"]*)"/;
+const NOINDEX = /<meta name="robots" content="[^"]*noindex/;
+const titles = new Map<string, string>();
+const descriptions = new Map<string, string>();
+
 for (const file of htmlFiles(ROOT).sort()) {
   const html = fs.readFileSync(file, "utf8");
   const route = file
     .slice(ROOT.length)
     .replace(/\\/g, "/")
     .replace(/\/index\.html$/, "/");
+
+  if (!NOINDEX.test(html)) {
+    const title = html.match(META_TITLE)?.[1]?.trim() ?? "";
+    const description = html.match(META_DESCRIPTION)?.[1] ?? "";
+    if (!title || !description) {
+      console.error(`error: ${route} has no ${title ? "description" : "title"}.`);
+      failed = true;
+    }
+    // Entities count as the one character a result shows.
+    const shown = description.replace(/&[a-z]+;|&#\d+;/g, "x").length;
+    if (shown > DESCRIPTION_MAX) {
+      console.error(
+        `error: ${route}'s description is ${shown} characters; a search result cuts it at about ${DESCRIPTION_MAX}.`,
+      );
+      failed = true;
+    }
+    for (const [seen, value, what] of [
+      [titles, title, "title"],
+      [descriptions, description, "description"],
+    ] as const) {
+      const other = seen.get(value);
+      if (value && other) {
+        console.error(`error: ${route} has the same ${what} as ${other}.`);
+        failed = true;
+      }
+      seen.set(value, route);
+    }
+  }
 
   for (const what of inlineCodeIn(html)) {
     console.error(`error: ${route} has ${what}, which the CSP would block.`);
@@ -245,4 +287,7 @@ console.log(
   `  ${rows.length} prerendered pages checked, no framework runtime present, no inline code.`,
 );
 console.log(`  ${images.length} images shipped, each used by a page.`);
+console.log(
+  `  ${titles.size} indexable pages, each with its own title and a description that fits.`,
+);
 process.exit(failed ? 1 : 0);

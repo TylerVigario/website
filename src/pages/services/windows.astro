@@ -1,4 +1,5 @@
 ---
+import { areaServed, SEARCH_PLACE } from "@/lib/business";
 import Base from "@/layouts/Base.astro";
 
 // Built from Astro.site so the canonical domain lives in one place.
@@ -20,6 +21,7 @@ const jsonLd = {
     "Active Directory Management",
     "Windows Application Support",
   ],
+  areaServed,
 };
 
 const capabilities = [
@@ -59,7 +61,7 @@ const capabilities = [
 ];
 ---
 
-<Base title="Windows Systems" description="Windows deployment, management, and support for small businesses in Fresno, CA. Workstations, servers, Active Directory, Group Policy, and patching." jsonLd={jsonLd}>
+<Base title={`Windows Systems in ${SEARCH_PLACE}`} description="Windows deployment, management, and support for small businesses in Fresno, CA. Workstations, servers, Active Directory, Group Policy, and patching." jsonLd={jsonLd}>
 
     <>
       {/* Hero */}
