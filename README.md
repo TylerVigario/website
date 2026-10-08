@@ -85,8 +85,10 @@ self-contained tarball, attests it through Sigstore, writes the bump and
 changelog to `main` as a forge-signed commit, and publishes the artifact,
 which creates the tag. Nothing is written anywhere until the artifact
 exists and is attested. A failure after that, while publishing, leaves the
-release commit without a tag, and re-dispatching with that version
-finishes the job.
+release commit without a tag, and dispatching again finishes that
+version before any other. The dispatch asks only how far to move (auto,
+patch, minor or major), never for a number, so no version can be skipped
+or reused.
 
 Merging and releasing are separate decisions, so nothing ships on merge.
 Installing a release is the host's business — the repo carries no tool

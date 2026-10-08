@@ -69,8 +69,12 @@ artifact attached, then published, which is what creates the tag.
 Nothing is written until the artifact is built, run and attested, so a
 failure up to then leaves no commit, no tag and no release. A failure
 while publishing leaves the release commit on `main` without a tag;
-dispatching again with that version completes it. A version whose tag
-already exists is refused before anything runs.
+dispatching again completes it, and a run asking for a bump level is
+refused until it has, since that would skip the unfinished version. The
+dispatch takes a bump (`auto`, `patch`, `minor`, `major`), never a
+version: a level is one step from the last release tag, so a version is
+never skipped or reused, and one whose tag already exists is refused
+before anything runs.
 
 The artifact is `dist/`, `node_modules/` (better-sqlite3 only, for the
 native addon that cannot be bundled), a generated `package.json`,
