@@ -10,7 +10,10 @@ name: Release
 # from the commits since the last tag, using cliff.toml's commit_parsers:
 # feat bumps minor; fix, revert, perf, refactor and build bump patch; ci,
 # docs, test, chore and style never bump. A run with nothing bump-worthy
-# exits without releasing.
+# exits without releasing. The operator may say how far to move instead
+# (patch, minor or major), but never to which number: a level is always
+# one step from the last release, so no version is skipped and none is
+# reused, which a typed version could do either way.
 #
 # WHY THIS WRITES TO main. A tag has to point at a commit carrying the
 # matching version and changelog. A tag on a commit whose package.json
@@ -43,10 +46,12 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "Override the computed version, as MAJOR.MINOR.PATCH (rarely needed; blank lets the commits decide)"
-        required: false
-        type: string
+      bump:
+        description: "How far to move from the last release. auto lets the commits decide; patch, minor or major overrides them."
+        required: true
+        type: choice
+        options: [auto, patch, minor, major]
+        default: auto
 
 concurrency:
   group: release
@@ -93,75 +98,91 @@ jobs:
 
       - name: Decide
         id: decide
-        # Inputs arrive through env, never interpolated into the script.
-        # `${{ }}` pastes the value in as source text before bash sees it,
-        # so a version string containing shell metacharacters would run as
-        # code. Only collaborators can dispatch this, which lowers the
-        # stakes without changing the rule.
+        # The input arrives through env, never interpolated into the
+        # script. `${{ }}` pastes the value in as source text before bash
+        # sees it. The form offers four choices, but a dispatch through the
+        # API can send any string, so the choice is checked here too.
         #
-        # The tag decided here is validated here, at the one place it
-        # enters. Every later step receives it through env and quotes it,
-        # but a malformed tag is refused before any of them runs rather
-        # than trusted to each. Both sources are checked: the override
-        # because a person typed it, the computed bump because it is text
-        # another program produced. Nothing mechanical checks this for us
-        # — CodeQL's workflow queries do not treat dispatch inputs as
-        # untrusted — which is why it is a refusal in code rather than a
-        # rule in a comment.
+        # The tag decided here is validated here, at the one place it is
+        # made. Every later step receives it through env and quotes it, but
+        # a malformed tag is refused before any of them runs rather than
+        # trusted to each: it is text another program produced. Nothing
+        # mechanical checks this for us — CodeQL's workflow queries do not
+        # treat dispatch inputs as untrusted — which is why it is a refusal
+        # in code rather than a rule in a comment.
         env:
-          FORCED: ${{ inputs.version }}
+          BUMP: ${{ inputs.bump }}
         run: |
           set -euo pipefail
+          case "$BUMP" in
+            auto | patch | minor | major) ;;
+            *)
+              printf '::error::Not a bump (expected auto, patch, minor or major): %q\n' "$BUMP"
+              exit 1
+              ;;
+          esac
+
+          last=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
           current="v$(node -p "require('./package.json').version")"
-          computed=$(npx --no-install git-cliff --config cliff.toml --bumped-version)
-          # One leading "v" is tolerated on the override: typing the tag
-          # instead of the version is the obvious slip, and it is not the
-          # kind of input this guard exists for.
-          forced="${FORCED#v}"
-          next="${forced:+v$forced}"
-          next="${next:-$computed}"
-          if [ -n "$next" ] && ! [[ "$next" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            # %q, not the raw value. A newline in the input would
-            # otherwise start a line of its own, and a line beginning
-            # `::` is a workflow command.
-            printf '::error::Not a version (expected MAJOR.MINOR.PATCH): %q\n' "$next"
+
+          # A release that wrote its commit to main and then failed while
+          # publishing leaves main carrying a version that has no tag. That
+          # version is finished first, at its own number, or the next
+          # release would skip it. Only the release commit ever changes the
+          # version in package.json, so a version with no tag means exactly
+          # this. A level is refused here rather than quietly ignored: it
+          # asks for a number past the unfinished one.
+          if [ "$current" != "$last" ] && ! git rev-parse -q --verify "refs/tags/$current" >/dev/null; then
+            if [ "$(printf '%s\n%s\n' "$last" "$current" | sort -V | tail -n 1)" != "$current" ]; then
+              echo "::error::main is at $current, behind the last release $last, and $current has no tag."
+              exit 1
+            fi
+            if [ "$BUMP" != auto ]; then
+              echo "::error::$current's release commit is on main without its tag. Run with auto to finish $current first; a $BUMP bump now would skip it."
+              exit 1
+            fi
+            next="$current"
+            echo "Finishing $current: its release commit is on main, its tag is not."
+          else
+            # A level moves a release the commits make; it cannot make one.
+            # With nothing bump-worthy since the last tag, git-cliff returns
+            # that tag for every choice, because ci, docs, test, chore and
+            # style commits never change the artifact.
+            if [ "$BUMP" = auto ]; then
+              next=$(npx --no-install git-cliff --config cliff.toml --bumped-version)
+            else
+              next=$(npx --no-install git-cliff --config cliff.toml --bumped-version --bump "$BUMP")
+            fi
+            if [ -z "$next" ] || [ "$next" = "$last" ]; then
+              echo "release=false" >> "$GITHUB_OUTPUT"
+              echo "Nothing bump-worthy since $last. No release."
+              exit 0
+            fi
+          fi
+
+          if ! [[ "$next" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            # %q, not the raw value. A newline in it would otherwise start
+            # a line of its own, and a line beginning `::` is a workflow
+            # command.
+            printf '::error::Not a version (expected vMAJOR.MINOR.PATCH): %q\n' "$next"
             exit 1
           fi
-          echo "current=$current  next=$next  forced=${forced:-no}"
+          echo "last=$last  main=$current  bump=$BUMP  next=$next"
 
           # A version is released once. The tag ruleset makes tags
           # permanent, so a second release of one could never produce its
-          # tag — and it would get as far as writing a release commit to
-          # main, with a changelog carrying the version twice, before
-          # failing. Checked here, before anything runs, from the tags the
+          # tag. Nothing above can choose a tagged version, and this says
+          # so in code: checked before anything runs, from the tags the
           # full-history checkout brought down.
-          release() {
-            if git rev-parse -q --verify "refs/tags/$next" >/dev/null; then
-              echo "::error::$next is already released: the tag exists, and tags are permanent."
-              exit 1
-            fi
-            {
-              echo "release=true"
-              echo "version=${next#v}"
-              echo "tag=$next"
-            } >> "$GITHUB_OUTPUT"
-          }
-
-          # An explicit version input is an instruction, not a suggestion,
-          # so it skips the equality veto. That is what makes a partial
-          # release recoverable: if a run wrote the release commit and then
-          # failed while publishing, main already carries the version and
-          # the computed bump would match it, so without this the retry
-          # would report "nothing to release" and refuse. The tag check
-          # above still applies — a retry is for a version that has no tag.
-          if [ -n "$forced" ]; then
-            release
-          elif [ -z "$next" ] || [ "$next" = "$current" ]; then
-            echo "release=false" >> "$GITHUB_OUTPUT"
-            echo "Nothing bump-worthy since $current. No release."
-          else
-            release
+          if git rev-parse -q --verify "refs/tags/$next" >/dev/null; then
+            echo "::error::$next is already released: the tag exists, and tags are permanent."
+            exit 1
           fi
+          {
+            echo "release=true"
+            echo "version=${next#v}"
+            echo "tag=$next"
+          } >> "$GITHUB_OUTPUT"
 
   # THE gate, not a copy of it. ci.yml is callable for exactly this: the
   # checks every pull request passes — pins, actionlint, typecheck, lint,
