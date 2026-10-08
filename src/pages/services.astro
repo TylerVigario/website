@@ -1,8 +1,17 @@
 ---
+import type { ImageMetadata } from "astro";
 import { areaServed } from "@/lib/business";
 import Base from "@/layouts/Base.astro";
 import ServiceIcon from "@/components/ServiceIcon.astro";
+import BandPicture from "@/components/BandPicture.astro";
 import { services } from "@/lib/services";
+import italesowell from "@/assets/images/work/italesowell/hero.webp";
+import pipetree from "@/assets/images/work/pipetree/project-addresses.webp";
+import pipetreePhone from "@/assets/images/work/pipetree/mobile-draft-form.webp";
+import patchCables from "@/assets/images/stock/network-patch-cables.jpg";
+import camera from "@/assets/images/stock/security-camera-wall.jpg";
+import rack from "@/assets/images/infrastructure/rack.jpg";
+import serverBuild from "@/assets/images/infrastructure/server-build.jpg";
 
 // Built from Astro.site so the canonical domain lives in one place.
 const site = Astro.site!.href.replace(/\/$/, "");
@@ -26,108 +35,234 @@ const jsonLd = {
   areaServed,
 };
 
-/* The catalog, one card per service, each linking to its page.
-   "Computers & Servers" has two, Windows and Linux, so its card links to
-   both and carries the anchor the catalog's href points at. */
-const systems = [
-  { title: "Windows Systems", href: "/services/windows" },
-  { title: "Linux Systems", href: "/services/linux" },
-];
+/* One band per service in the catalog, in the catalog's order. Each band
+   is the service's own section of the page: a picture, what it is, a few
+   points from its page, and the way to that page. The pictures are our
+   own work and our own hardware where there is some; the rest are
+   public-domain photographs that show no brand. Each is shown whole, at
+   its own shape, so a screenshot keeps its edges. */
+interface Band {
+  image: ImageMetadata;
+  alt: string;
+  /** A phone screen laid over the picture's corner, for software that
+   *  has both halves. */
+  phone?: { image: ImageMetadata; alt: string };
+  /** The case study to point to from the band. */
+  work?: { title: string; href: string };
+  /** The picture comes from that case study, so it links there too. */
+  fromWork?: boolean;
+  points: string[];
+  /** Where "Learn more" goes; Computers & Servers has two pages. */
+  links: { title: string; href: string }[];
+  /** The anchor, where the catalog links to something other than the slug. */
+  id?: string;
+}
+
+const bands: Record<string, Band> = {
+  "websites-hosting": {
+    image: italesowell,
+    alt: "The iTaleSoWell site, which we built and host: a darkened cinema with a cursed reel on the screen",
+    work: { title: "iTaleSoWell", href: "/work/italesowell" },
+    fromWork: true,
+    points: [
+      "Designed around your business, not a template",
+      "Built for phones first, and fast on them",
+      "Hosted and backed up on servers we run",
+      "Changes made by the people who built it",
+    ],
+    links: [{ title: "Websites & Hosting", href: "/services/websites" }],
+  },
+  "custom-software": {
+    image: pipetree,
+    alt: "Pipetree, field-operations software we built: a project's addresses, each with its inspection status",
+    phone: {
+      image: pipetreePhone,
+      alt: "Pipetree on a phone: the form a crew fills in for a mainline inspection",
+    },
+    work: { title: "Pipetree", href: "/work/pipetree" },
+    fromWork: true,
+    points: [
+      "Field apps for crews, web apps for the office",
+      "Spreadsheets turned into real databases",
+      "Your data in a database you own",
+      "Tested, versioned releases with documentation",
+    ],
+    links: [{ title: "Custom Software", href: "/services/software" }],
+  },
+  "managed-it": {
+    image: rack,
+    alt: "Our rack, where our servers run and client backups land: a power strip, a 4U server, a battery backup and a 24-bay disk shelf",
+    work: { title: "Bravo Farms", href: "/work/bravo-farms" },
+    points: [
+      "Remote management and updates for every machine",
+      "Backups verified before they leave the building",
+      "Phones, business email and accounts",
+      "Help from people who already know your setup",
+    ],
+    links: [{ title: "Managed IT & Support", href: "/services/managed-it" }],
+  },
+  "networking-wifi": {
+    image: patchCables,
+    alt: "Patch cables plugged into a labelled patch panel",
+    points: [
+      "WiFi planning for homes and businesses",
+      "Switching, routing, firewalls and VPNs",
+      "Structured cabling, terminated and tested",
+      "Documented, so the next change is easy",
+    ],
+    links: [{ title: "Network Engineering", href: "/services/networking" }],
+  },
+  "security-cameras": {
+    image: camera,
+    alt: "A white security camera mounted on a pale wall",
+    points: [
+      "Local AI detection, no cloud subscription",
+      "Footage kept on hardware you own",
+      "Check in from anywhere",
+      "Placement, mounting and network integration",
+    ],
+    links: [{ title: "Security Cameras", href: "/services/security-cameras" }],
+  },
+  "computers-servers": {
+    image: serverBuild,
+    alt: "One of our servers, pulled out of the rack: the motherboard, cooler, expansion cards and power supply inside a 4U case",
+    id: "systems",
+    points: [
+      "Builds, repairs and upgrades",
+      "Windows desktops, servers and Active Directory",
+      "Linux servers, Docker and self-hosted services",
+      "Backups and patching, kept current",
+    ],
+    links: [
+      { title: "Windows Systems", href: "/services/windows" },
+      { title: "Linux Systems", href: "/services/linux" },
+    ],
+  },
+};
+
+const sections = services.map((s) => {
+  const band = bands[s.slug];
+  if (!band) throw new Error(`No band on /services for "${s.slug}"`);
+  return { ...s, ...band, anchor: band.id ?? s.slug };
+});
 ---
 
-<Base title="IT Services" description="Full-stack IT in Fresno, CA — websites and hosting, custom software, managed IT, networking, security cameras, and Windows and Linux. Transparent hourly rate, no retainers." jsonLd={jsonLd}>
+<Base title="IT Services" description="Websites, custom software, managed IT, networking, security cameras, and Windows and Linux in Fresno, CA — one team, from the website to the wiring." jsonLd={jsonLd}>
 
     <>
       {/* Header */}
-      <section class="pt-32 pb-16 lg:pb-20 lg:pt-36">
+      <section class="pt-32 pb-12 lg:pb-16 lg:pt-36">
         <div class="mx-auto max-w-6xl px-6">
           <div data-reveal="up">
-            <h1 class="text-3xl font-bold tracking-tight text-navy sm:text-4xl md:text-5xl">
-              You know the cost upfront.
+            <p class="text-sm font-medium text-accent-ink">Services</p>
+            <h1 class="mt-4 text-3xl font-bold tracking-tight text-navy sm:text-4xl md:text-5xl">
+              From the website to the wiring.
             </h1>
-            <p class="mt-4 max-w-xl text-lg text-muted">
-              Transparent hourly rate, no retainers, no surprises. We&apos;ll scope it before we
-              start &mdash; whether it&apos;s a full network buildout or just getting your WiFi
-              working again.
+            <p class="mt-4 max-w-2xl text-lg text-muted">
+              Six kinds of work, from code to cable, done by one team. Each section below says
+              what it covers and links to the full page and the work behind it. Most jobs touch
+              more than one, and you only ever explain your setup once.
             </p>
           </div>
-
-          <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {services.map((s) =>
-              s.slug === "computers-servers" ? (
-                <div data-reveal id="systems">
-                  <div class="flex h-full flex-col rounded-2xl border border-border bg-surface-light p-6 sm:p-8">
-                    <div class="mb-5 inline-flex self-start rounded-xl bg-accent-soft p-3 text-accent-ink">
-                      <ServiceIcon slug={s.slug} />
-                    </div>
-                    <h2 class="mb-3 text-xl font-semibold text-navy">{s.title}</h2>
-                    <p class="leading-relaxed text-muted">{s.desc}</p>
-                    <div class="mt-4 flex flex-wrap gap-x-6 gap-y-2">
-                      {systems.map((sys) => (
-                        <a
-                          href={sys.href}
-                          class="inline-flex items-center gap-1 text-sm font-medium text-accent-ink transition-colors hover:text-navy"
-                        >
-                          {sys.title}
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                            class="h-4 w-4"
-                            aria-hidden="true"
-                          >
-                            <path
-                              fill-rule="evenodd"
-                              d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
-                              clip-rule="evenodd"
-                            />
-                          </svg>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div data-reveal>
-                  <a
-                    href={s.href}
-                    class="group flex h-full flex-col rounded-2xl border border-border bg-surface-light p-6 transition-all sm:p-8 hover:border-accent/30 hover:-translate-y-1 hover:shadow-lg"
-                  >
-                    <div class="mb-5 inline-flex self-start rounded-xl bg-accent-soft p-3 text-accent-ink">
-                      <ServiceIcon slug={s.slug} />
-                    </div>
-                    <h2 class="mb-3 text-xl font-semibold text-navy">{s.title}</h2>
-                    <p class="leading-relaxed text-muted">{s.desc}</p>
-                    <span class="mt-4 inline-flex items-center gap-1 text-sm font-medium text-accent-ink opacity-0 transition-opacity group-hover:opacity-100">
-                      Learn more
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        class="h-4 w-4"
-                        aria-hidden="true"
-                      >
-                        <path
-                          fill-rule="evenodd"
-                          d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
-                          clip-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </a>
-                </div>
-              ),
-            )}
-          </div>
-          {/* Beside the cabling and cameras it covers; the footer repeats it on every page. */}
-          <p class="mt-8 text-sm text-muted">
-            Vigario Technology Solutions is not a licensed contractor.
-          </p>
+          <nav aria-label="Services on this page" class="mt-8 flex flex-wrap gap-2">
+            {sections.map((s) => (
+              <a
+                href={`#${s.anchor}`}
+                class="rounded-full border border-border bg-surface-light px-4 py-2 text-sm text-foreground transition-colors hover:border-accent/30 hover:text-accent-ink"
+              >
+                {s.title}
+              </a>
+            ))}
+          </nav>
         </div>
       </section>
 
+      {/* One band per service, the picture alternating sides */}
+      {sections.map((s, i) => (
+        <section id={s.anchor} class:list={["py-16 lg:py-24", i % 2 === 0 ? "bg-surface" : ""]}>
+          <div class="mx-auto grid max-w-6xl items-center gap-10 px-6 lg:grid-cols-2 lg:gap-12">
+            <div data-reveal="scale" class:list={[i % 2 === 1 && "lg:order-last"]}>
+              {/* A picture from a case study links to it. The link repeats
+                  the one under the text, so keyboard and screen reader
+                  skip it. */}
+              {s.work && s.fromWork ? (
+                <a href={s.work.href} tabindex="-1" aria-hidden="true" class="group block">
+                  <BandPicture image={s.image} alt={s.alt} phone={s.phone} />
+                </a>
+              ) : (
+                <BandPicture image={s.image} alt={s.alt} phone={s.phone} />
+              )}
+            </div>
+            <div data-reveal="up">
+              <div class="flex items-center gap-4">
+                <div class="inline-flex shrink-0 rounded-xl bg-accent-soft p-2.5 text-accent-ink">
+                  <ServiceIcon slug={s.slug} />
+                </div>
+                <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-3xl">{s.title}</h2>
+              </div>
+              <p class="mt-4 text-lg leading-relaxed text-muted">{s.desc}</p>
+              <ul class="mt-6 space-y-2.5">
+                {s.points.map((point) => (
+                  <li class="flex items-start gap-2.5 text-muted">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      class="mt-1 h-4 w-4 shrink-0 text-accent-ink"
+                      aria-hidden="true"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
+                        clip-rule="evenodd"
+                      />
+                    </svg>
+                    {point}
+                  </li>
+                ))}
+              </ul>
+              <div class="mt-8 flex flex-wrap gap-x-8 gap-y-3">
+                {[
+                  ...s.links.map((link) => ({
+                    href: link.href,
+                    // Six "Learn more" links read alike in a list of links,
+                    // so each says where it goes to a screen reader.
+                    text: s.links.length > 1 ? link.title : "Learn more",
+                    hidden: s.links.length > 1 ? "" : ` about ${s.title}`,
+                  })),
+                  ...(s.work
+                    ? [{ href: s.work.href, text: `See the ${s.work.title} case study`, hidden: "" }]
+                    : []),
+                ].map((link) => (
+                  <a
+                    href={link.href}
+                    class="inline-flex items-center gap-1.5 font-semibold text-accent-ink transition-colors hover:text-navy"
+                  >
+                    {link.text}
+                    {link.hidden && <span class="sr-only">{link.hidden}</span>}
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      class="h-4 w-4"
+                      aria-hidden="true"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M3 10a.75.75 0 01.75-.75h10.638L10.23 5.29a.75.75 0 111.04-1.08l5.5 5.25a.75.75 0 010 1.08l-5.5 5.25a.75.75 0 11-1.04-1.08l4.158-3.96H3.75A.75.75 0 013 10z"
+                        clip-rule="evenodd"
+                      />
+                    </svg>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+      ))}
+
       {/* CTA */}
-      <section class="py-16 lg:py-20">
+      <section class:list={["py-16 lg:py-20", sections.length % 2 === 0 ? "bg-surface" : ""]}>
         <div class="mx-auto max-w-6xl px-6">
           <div data-reveal="up">
             <div class="mx-auto max-w-3xl text-center">
@@ -160,6 +295,10 @@ const systems = [
                   </svg>
                 </a>
               </div>
+              {/* Under the bands for cabling and cameras, which it covers; the footer repeats it on every page. */}
+              <p class="mt-8 text-sm text-muted">
+                Vigario Technology Solutions is not a licensed contractor.
+              </p>
             </div>
           </div>
         </div>

@@ -60,3 +60,18 @@ export const PHOTO_PAIR: ImageGrid = {
   class: "grid gap-6 sm:grid-cols-2",
   sizes: "(min-width: 1152px) 538px, (min-width: 640px) calc(50vw - 38px), calc(100vw - 50px)",
 };
+
+/** A /services band's picture: half of lg:grid-cols-2 with gap-12 from
+ *  1024px, (100vw - 48 - 48) / 2 - 2 = 50vw - 50px, until the container
+ *  stops growing at 1152px: (1104 - 48) / 2 - 2 = 526px. Full width below. */
+export const BAND_IMAGE_SIZES =
+  "(min-width: 1152px) 526px, (min-width: 1024px) calc(50vw - 50px), calc(100vw - 50px)";
+
+/** A /services band's picture with a phone screen over its corner. The
+ *  band's column is 528px from 1152px, 50vw - 48px from 1024px, and
+ *  100vw - 48px below; the screenshot takes 85% of it and the phone 30%,
+ *  each 2px less for its border. */
+export const BAND_PAIR = {
+  desktop: "(min-width: 1152px) 447px, (min-width: 1024px) calc(42.5vw - 43px), calc(85vw - 43px)",
+  phone: "(min-width: 1152px) 156px, (min-width: 1024px) calc(15vw - 16px), calc(30vw - 16px)",
+};
