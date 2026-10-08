@@ -5,7 +5,7 @@ export const GET: APIRoute = () =>
     JSON.stringify({
       name: "Vigario Technology Solutions",
       short_name: "VTS",
-      description: "IT Services in Fresno, CA",
+      description: "IT services in the Central Valley",
       start_url: "/",
       display: "standalone",
       background_color: "#fafaf9",

@@ -12,13 +12,48 @@ const california = { "@type": "State", name: "California" } as const;
 
 const city = (name: string) => ({ "@type": "City", name, containedInPlace: california }) as const;
 
-/** Where the business works on site. Remote work is not limited to these. */
+/** The place a page's title names. The region rather than one city: the
+ *  business is in Riverdale, on the Fresno-Kings county line, and works
+ *  across the valley around it, not in Fresno alone. One value, so titles
+ *  cannot drift page by page. */
+export const SEARCH_PLACE = "the Central Valley";
+
+/** Where the business works on site: about 90 minutes' drive from
+ *  Riverdale in any direction. Measured 2026-10-07 as free-flow drive
+ *  times from the town centre, so real driving runs a little longer;
+ *  Delano and Merced, at 92 and 97 minutes, are left out. Remote work is
+ *  not limited to these. */
 export const areaServed = [
+  // Fresno County
+  city("Riverdale"),
+  city("Laton"),
+  city("Caruthers"),
+  city("Selma"),
+  city("Fowler"),
+  city("Kingsburg"),
   city("Fresno"),
   city("Clovis"),
-  city("Madera"),
+  city("Sanger"),
+  city("Reedley"),
+  city("Kerman"),
+  city("Coalinga"),
+  // Kings County
+  city("Lemoore"),
+  city("Hanford"),
+  city("Corcoran"),
+  city("Avenal"),
+  city("Kettleman City"),
+  // Tulare County
+  city("Traver"),
+  city("Dinuba"),
   city("Visalia"),
-  city("Riverdale"),
+  city("Tulare"),
+  city("Exeter"),
+  city("Lindsay"),
+  city("Porterville"),
+  // Madera County
+  city("Madera"),
+  city("Chowchilla"),
   { "@type": "Place", name: "Central Valley, CA", containedInPlace: california },
 ] as const;
 

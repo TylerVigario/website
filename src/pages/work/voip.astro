@@ -1,6 +1,7 @@
 ---
 import { businessRef, founderRef } from "@/lib/business";
 import Base from "@/layouts/Base.astro";
+import ogCard from "@/assets/images/og-card.png";
 import OutcomePanel from "@/components/OutcomePanel.astro";
 import { caseStudies } from "@/lib/work";
 
@@ -19,6 +20,9 @@ const jsonLd = {
     "A telecom-advocacy and VoIP-migration case study — auditing a legacy POTS account, defeating an unauthorized contract via an FCC complaint, and migrating to VoIP.",
   url: `${site}/work/voip`,
   datePublished: "2026-07-22",
+  // The site's own card: the store photos on this page are other people's,
+  // under a licence whose credit a search result would not show.
+  image: new URL(ogCard.src, site).href,
   author: founderRef(site),
   publisher: businessRef(site),
   about: { "@type": "Thing", name: "POTS to VoIP migration and telecom carrier advocacy" },

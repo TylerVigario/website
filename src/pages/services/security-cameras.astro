@@ -1,4 +1,5 @@
 ---
+import { areaServed, SEARCH_PLACE } from "@/lib/business";
 import Base from "@/layouts/Base.astro";
 
 // Built from Astro.site so the canonical domain lives in one place.
@@ -21,6 +22,7 @@ const jsonLd = {
     "Video Surveillance",
     "AI Object Detection",
   ],
+  areaServed,
 };
 
 const advantages = [
@@ -79,7 +81,7 @@ const capabilities = [
 ];
 ---
 
-<Base title="Security Cameras" description="Security camera installation with local AI detection via Frigate NVR. No cloud subscriptions, no monthly fees — private and affordable for small businesses." jsonLd={jsonLd}>
+<Base title={`Security Cameras in ${SEARCH_PLACE}`} description="Security camera installation with local AI detection via Frigate NVR. No cloud subscriptions, no monthly fees — private and affordable for small businesses." jsonLd={jsonLd}>
 
     <>
       {/* Hero */}
@@ -221,7 +223,7 @@ const capabilities = [
               </p>
               <div class="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                 <a
-                  href="/contact?service=Security%20%26%20Cameras"
+                  href="/contact?service=Security%20Cameras"
                   class="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-base font-semibold text-white transition-all hover:bg-accent-ink hover:shadow-lg hover:shadow-accent/15"
                 >
                   Get a free quote

@@ -39,7 +39,7 @@ export const services: ServiceItem[] = [
   },
   {
     slug: "security-cameras",
-    title: "Security & Cameras",
+    title: "Security Cameras",
     desc: "Camera systems with local AI detection and no cloud subscription. Check in from anywhere, and keep the footage on hardware you own.",
     href: "/services/security-cameras",
   },

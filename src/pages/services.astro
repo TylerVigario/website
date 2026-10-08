@@ -1,6 +1,6 @@
 ---
 import type { ImageMetadata } from "astro";
-import { areaServed } from "@/lib/business";
+import { areaServed, SEARCH_PLACE } from "@/lib/business";
 import Base from "@/layouts/Base.astro";
 import ServiceIcon from "@/components/ServiceIcon.astro";
 import BandPicture from "@/components/BandPicture.astro";
@@ -110,7 +110,7 @@ const bands: Record<string, Band> = {
       "Structured cabling, terminated and tested",
       "Documented, so the next change is easy",
     ],
-    links: [{ title: "Network Engineering", href: "/services/networking" }],
+    links: [{ title: "Networking & WiFi", href: "/services/networking" }],
   },
   "security-cameras": {
     image: camera,
@@ -147,7 +147,7 @@ const sections = services.map((s) => {
 });
 ---
 
-<Base title="IT Services" description="Websites, custom software, managed IT, networking, security cameras, and Windows and Linux in Fresno, CA — one team, from the website to the wiring." jsonLd={jsonLd}>
+<Base title={`Web, Software & IT Services in ${SEARCH_PLACE}`} description="Websites, custom software, managed IT, networking, security cameras, and Windows and Linux in the Central Valley — one team, from the website to the wiring." jsonLd={jsonLd}>
 
     <>
       {/* Header */}
