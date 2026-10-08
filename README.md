@@ -64,7 +64,7 @@ decision: `feat` bumps minor; `fix`, `revert`, `perf`, `refactor` and
 src/pages/                     # ROUTES — one file, one URL. No router config.
   index about contact services services/* work/* pots-migration
   404 500                      # prerendered like any other page
-  robots.txt.ts                # generated from `site`, so the domain lives in one place
+  robots.txt.ts                # generated, so its sitemap URL comes from `site`
   manifest.webmanifest.ts      # generated, so icon paths cannot drift from reality
   api/quote                    # POST: zod-validated, writes to sqlite, optionally emails me
   api/pots-audit               # POST: same flow, scoped to the POTS landing page
