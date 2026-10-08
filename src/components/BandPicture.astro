@@ -1,0 +1,74 @@
+---
+import { Picture } from "astro:assets";
+import type { ImageMetadata } from "astro";
+import { BAND_IMAGE_SIZES, BAND_PAIR } from "@/lib/image-sizes";
+
+/**
+ * The picture in a /services band, shown whole at its own shape. With a
+ * phone screen, the screenshot takes 85% of the column and the phone sits
+ * over its lower right corner, so software with a desktop and a field
+ * half shows both. Inside a link, it lifts on hover.
+ *
+ * Astro leaves out any width larger than the image itself, so the lists
+ * below need no filtering. Filtering here would mean reading the image's
+ * width, and any read of an imported image's properties makes the build
+ * ship the full-size original beside the variants.
+ */
+interface Props {
+  image: ImageMetadata;
+  alt: string;
+  phone?: { image: ImageMetadata; alt: string } | undefined;
+}
+const { image, alt, phone } = Astro.props;
+const frame =
+  "overflow-hidden border border-border bg-surface-light transition-transform duration-500 ease-out";
+---
+
+{
+  phone ? (
+    <div class="relative pb-10">
+      <div class:list={[frame, "w-[85%] rounded-xl shadow-lg group-hover:-translate-y-1"]}>
+        <Picture
+          src={image}
+          alt={alt}
+          formats={["avif"]}
+          fallbackFormat="webp"
+          pictureAttributes={{ class: "contents" }}
+          widths={[480, 768, 1024]}
+          sizes={BAND_PAIR.desktop}
+          class="h-auto w-full"
+        />
+      </div>
+      <div
+        class:list={[
+          frame,
+          "absolute right-0 bottom-0 w-[30%] rounded-2xl shadow-2xl group-hover:-translate-y-2",
+        ]}
+      >
+        <Picture
+          src={phone.image}
+          alt={phone.alt}
+          formats={["avif"]}
+          fallbackFormat="webp"
+          pictureAttributes={{ class: "contents" }}
+          widths={[200, 320, 480]}
+          sizes={BAND_PAIR.phone}
+          class="h-auto w-full"
+        />
+      </div>
+    </div>
+  ) : (
+    <div class:list={[frame, "rounded-xl shadow-lg group-hover:-translate-y-1"]}>
+      <Picture
+        src={image}
+        alt={alt}
+        formats={["avif"]}
+        fallbackFormat="webp"
+        pictureAttributes={{ class: "contents" }}
+        widths={[480, 768, 1024, 1536]}
+        sizes={BAND_IMAGE_SIZES}
+        class="h-auto w-full"
+      />
+    </div>
+  )
+}

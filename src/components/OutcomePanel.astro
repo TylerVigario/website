@@ -11,8 +11,8 @@ import PhotoCredit from "@/components/PhotoCredit.astro";
  * the hero of the case study itself, so the two cannot show different
  * numbers.
  *
- * The logo is drawn at a fixed height, so its width is that height times
- * the logo's aspect ratio, and `sizes` says so per breakpoint.
+ * The logo is drawn at a fixed height, so it is served at that height and
+ * twice it, and Astro works out the width.
  *
  * A backdrop, when the outcome has one, is the client's own place, faded
  * behind the logo. The wash is white at 90% in the middle, where the text
@@ -35,19 +35,14 @@ const images = import.meta.glob<{ default: ImageMetadata }>("/src/assets/images/
 });
 const logo = images[`/src/assets/images/${outcome.logo}`]?.default;
 if (!logo) throw new Error(`No image at src/assets/images/${outcome.logo}`);
-const ratio = logo.width / logo.height;
+// The logo's height in px at its largest, from the classes below (sm:h-11
+// on a card, sm:h-16 in a hero). Astro sizes it from that and serves a
+// 2x copy for dense screens. Reading the logo's own width or height here
+// would make the build ship the original file as well, so nothing does.
+const height = lead ? 64 : 44;
 
-// Heights in px, from the classes below: h-9 sm:h-11 on a card, h-12
-// sm:h-16 in a hero.
-const small = lead ? 48 : 36;
-const large = lead ? 64 : 44;
-const sizes = `(min-width: 640px) ${Math.round(large * ratio)}px, ${Math.round(small * ratio)}px`;
-// Each height at 1x and 2x.
 // A hero with a backdrop is a figure, so its credit can be its caption.
 const Frame = lead && outcome.backdrop ? "figure" : Fragment;
-const widths = [...new Set([small, large, small * 2, large * 2])]
-  .map((h) => Math.round(h * ratio))
-  .sort((a, b) => a - b);
 ---
 
 <Frame>
@@ -87,8 +82,8 @@ const widths = [...new Set([small, large, small * 2, large * 2])]
       fallbackFormat="webp"
       pictureAttributes={{ class: "contents" }}
       priority={lead}
-      widths={widths}
-      sizes={sizes}
+      height={height}
+      densities={[1, 2]}
       class:list={[
         "w-auto",
         lead

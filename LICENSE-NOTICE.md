@@ -82,6 +82,18 @@ appear:
 They are not reserved above, this licence grants nothing in them, and
 their licence is theirs to pass on, not ours.
 
+Two photographs on /services are in the public domain, dedicated under
+CC0 1.0 (<https://creativecommons.org/publicdomain/zero/1.0/>), which
+asks for no credit. They are named here so that nobody reads them as
+ours:
+
+- `src/assets/images/stock/network-patch-cables.jpg`, "Free networking
+  cables image", rawpixel
+  (<https://www.rawpixel.com/image/5919227/image-background-public-domain-technology>)
+- `src/assets/images/stock/security-camera-wall.jpg`, "Surveillance
+  camera shadow" by Siarhei Horbach, via Wikimedia Commons
+  (<https://commons.wikimedia.org/wiki/File:Surveillance_camera_shadow_(Unsplash).jpg>)
+
 ## Why the distinction is drawn rather than implied
 
 Copyright in the content is held regardless of what any file says; a

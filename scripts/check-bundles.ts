@@ -45,6 +45,16 @@
  * INLINE CODE OF ANY KIND FAILS. The CSP has no 'unsafe-inline', so an
  * inline script, a <style> element or a style= attribute would be
  * blocked on the page rather than caught here. See inline-code.ts.
+ *
+ * NO IMAGE SHIPS THAT NOTHING USES. Astro keeps an imported image's
+ * full-size original beside its resized copies whenever page code reads
+ * one of the image's properties (its width, say), even when no page ever
+ * points at that file. That is how four 1.2 MB JPEG masters reached the
+ * build: unseen by any visitor, but inside the release tarball and public
+ * under /_astro/. So every image the build emits must be named somewhere:
+ * in a built page, stylesheet or script, or in the server chunk of a page
+ * that renders at request time. The server entry is left out, because
+ * its manifest lists every emitted file whether used or not.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -197,8 +207,42 @@ if (rows.length === 0) {
   process.exit(1);
 }
 
+const IMAGE = /\.(avif|webp|png|jpe?g|gif|svg)$/;
+const TEXT = /\.(html|css|js|mjs|json|xml|txt|webmanifest)$/;
+
+function filesUnder(dir: string, keep: RegExp): string[] {
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .flatMap((e) =>
+      e.isDirectory()
+        ? filesUnder(path.join(dir, e.name), keep)
+        : keep.test(e.name)
+          ? [path.join(dir, e.name)]
+          : [],
+    );
+}
+
+const users = [
+  ...filesUnder(ROOT, TEXT),
+  ...filesUnder("dist/server", TEXT).filter((f) => path.basename(f) !== "entry.mjs"),
+]
+  .map((f) => fs.readFileSync(f, "utf8"))
+  .join("\n");
+const images = filesUnder(path.join(ROOT, "_astro"), IMAGE).map((f) => path.basename(f));
+const unused = images.filter((name) => !users.includes(name));
+for (const name of unused) {
+  console.error(
+    `error: ${LOCAL_PREFIX}${name} (${fs.statSync(path.join(ROOT, "_astro", name)).size} B) ` +
+      `is shipped but nothing uses it. Usually an original kept because code read the ` +
+      `imported image's properties; let <Picture> or getImage() size it instead.`,
+  );
+  failed = true;
+}
+
 console.log(rows.join("\n"));
 console.log(
   `  ${rows.length} prerendered pages checked, no framework runtime present, no inline code.`,
 );
+console.log(`  ${images.length} images shipped, each used by a page.`);
 process.exit(failed ? 1 : 0);
