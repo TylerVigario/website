@@ -1,4 +1,11 @@
 # Changelog
+## [1.19.1](https://github.com/TylerVigario/website/compare/v1.19.0...v1.19.1) (2026-10-15)
+
+### Build & Packaging
+
+* **deps:** Bump the astro group with 2 updates 
+* **deps:** Bump nodemailer from 10.0.13 to 10.1.0 
+
 ## [1.19.0](https://github.com/TylerVigario/website/compare/v1.18.0...v1.19.0) (2026-10-08)
 
 ### Features
