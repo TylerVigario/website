@@ -35,13 +35,13 @@
     "check:install-scripts": "node scripts/check-install-scripts.ts"
   },
   "dependencies": {
-    "@astrojs/node": "^11.1.6",
+    "@astrojs/node": "^11.1.7",
     "@astrojs/sitemap": "^3.7.4",
     "@fontsource-variable/geist": "^5.3.0",
     "@tailwindcss/vite": "^4.3.3",
-    "astro": "^7.3.5",
+    "astro": "^7.3.8",
     "better-sqlite3": "^13.0.3",
-    "nodemailer": "^10.0.13",
+    "nodemailer": "^10.1.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -49,22 +49,22 @@
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
     "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^24.19.1",
+    "@types/node": "^24.19.2",
     "browserslist": "^4.29.3",
-    "caniuse-lite": "^1.0.30001814",
-    "eslint": "^10.11.0",
+    "caniuse-lite": "^1.0.30001815",
+    "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-astro": "^3.2.1",
     "git-cliff": "^2.14.2",
     "husky": "^9.1.7",
-    "jsdom": "^30.1.1",
+    "jsdom": "^30.1.2",
     "lint-staged": "^17.6.0",
     "markdownlint-cli2": "^0.23.3",
-    "prettier": "^3.9.9",
+    "prettier": "^3.9.10",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.71.0",
-    "vitest": "^5.0.3"
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.4"
   },
   "lint-staged": {
     "*.astro": [
