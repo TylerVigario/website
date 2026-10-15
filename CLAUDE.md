@@ -112,15 +112,14 @@ account of what was built. `make-release.ts` dates everything from the
 commit (`SOURCE_DATE_EPOCH`), pins the runtime tree from the lockfile and
 writes the archive deterministically with GNU tar. A rebuild needs the
 same Node, Linux x64, and the same checkout path, because Astro writes
-absolute source paths into the server bundle. Two fields in
-`dist/server/entry.mjs` still differ between builds, both Astro's: the
-order of the manifest's `assets` (sorted upstream in withastro/astro#18155,
-not yet in a release), and `key`. The key stays random per build on
-purpose. It encrypts the props of server islands, so a key fixed in
-public would make any future island's props readable and forgeable; a
-matching hash is not worth that. Once the upstream sort ships, a rebuild
-matches a release in every byte but that field (measured with the fix
-applied).
+absolute source paths into the server bundle. One field in
+`dist/server/entry.mjs` still differs between builds: Astro's `key`. It
+stays random per build on purpose. It encrypts the props of server
+islands, so a key fixed in public would make any future island's props
+readable and forgeable; a matching hash is not worth that. Every other
+byte of a rebuild matches (measured on astro 7.3.8). The order of the
+manifest's `assets` differed too, until astro 7.3.6 shipped the sort
+from withastro/astro#18155.
 
 What is true about the app regardless of what ships it: `astro build`
 emits `dist/client/` (the static tree, which a web server serves
