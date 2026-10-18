@@ -15,6 +15,12 @@ name: Release
 # one step from the last release, so no version is skipped and none is
 # reused, which a typed version could do either way.
 #
+# A DRY RUN rehearses all of it but the writes. It decides the version,
+# previews the release notes in the run summary, runs the gate, and
+# builds and runs the artifact; publish, the only job that writes, does
+# not run. Writing nothing, it may run from a branch, which is how a
+# change to this workflow is tried before it merges.
+#
 # WHY THIS WRITES TO main. A tag has to point at a commit carrying the
 # matching version and changelog. A tag on a commit whose package.json
 # says something else makes "what is this artifact" unanswerable — the
@@ -47,11 +53,16 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: "How far to move from the last release. auto lets the commits decide; patch, minor or major overrides them."
-        required: true
+        description: "The step from the last release: auto lets the commits decide; patch, minor or major overrides them"
         type: choice
         options: [auto, patch, minor, major]
         default: auto
+        required: true
+      dry-run:
+        description: "Decide the version, preview the changelog and run the gate; write nothing"
+        type: boolean
+        default: false
+        required: false
 
 concurrency:
   group: release
@@ -70,10 +81,11 @@ jobs:
   # with an empty version and then tried to tag it. A guard that must be
   # remembered per step is a guard that eventually is not.
   decide:
-    # From main only. The release environment refuses any other ref too,
-    # but only at publish, after a gate and a build that a branch would
-    # have run for nothing.
-    if: github.ref == 'refs/heads/main'
+    # From main only, unless it is a dry run. The release environment
+    # refuses any other ref too, but only at publish, after a gate and a
+    # build that a branch would have run for nothing. A dry run never
+    # reaches publish, so on a branch those are the point of it.
+    if: github.ref == 'refs/heads/main' || inputs.dry-run
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
@@ -183,6 +195,21 @@ jobs:
             echo "version=${next#v}"
             echo "tag=$next"
           } >> "$GITHUB_OUTPUT"
+
+      - name: Preview the release notes
+        # In the run summary, which is what a dry run is read from. The
+        # published notes are rendered again in build, from the same
+        # commit by the same git-cliff and cliff.toml.
+        if: steps.decide.outputs.release == 'true'
+        env:
+          TAG: ${{ steps.decide.outputs.tag }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## $TAG"
+            echo
+            npx --no-install git-cliff --config cliff.toml --tag "$TAG" --unreleased --strip all
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # THE gate, not a copy of it. ci.yml is callable for exactly this: the
   # checks every pull request passes — pins, actionlint, typecheck, lint,
@@ -296,7 +323,8 @@ jobs:
 
   publish:
     needs: [decide, build]
-    if: needs.decide.outputs.release == 'true'
+    # Every write the run makes is in this job, so a dry run ends before it.
+    if: needs.decide.outputs.release == 'true' && !inputs.dry-run
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # The environment holds the App's secrets and admits main alone, so a
