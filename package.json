@@ -51,20 +51,20 @@
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24.19.2",
     "browserslist": "^4.29.3",
-    "caniuse-lite": "^1.0.30001815",
+    "caniuse-lite": "^1.0.30001816",
     "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-astro": "^3.2.1",
     "git-cliff": "^2.14.2",
     "husky": "^9.1.7",
-    "jsdom": "^30.1.2",
+    "jsdom": "^30.1.3",
     "lint-staged": "^17.6.0",
     "markdownlint-cli2": "^0.23.3",
     "prettier": "^3.9.10",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.71.1",
-    "vitest": "^5.0.4"
+    "typescript-eslint": "^8.71.2",
+    "vitest": "^5.0.5"
   },
   "lint-staged": {
     "*.astro": [
