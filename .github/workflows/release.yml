@@ -476,7 +476,7 @@ jobs:
         # creating a draft left zero tags on the remote, and deleting it
         # left zero behind.
         #
-        # Publishing is what creates the tag, at --target. Rule 18 is
+        # Publishing is what creates the tag, at --target. Rule 19 is
         # explicit that annotated or lightweight makes no difference, so
         # the lightweight tag this produces costs nothing.
         env:
