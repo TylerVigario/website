@@ -20,6 +20,7 @@
  *   importing it, so zod stays out of the browser, and matches `errors[]`
  *   back to the form's fields.
  */
+import { TOO_SOON_MESSAGE } from "@/lib/api/fill-time";
 
 /** One field-level validation issue, as it appears in `errors[]`. */
 interface FieldError {
@@ -57,6 +58,12 @@ export interface SafeParseFailure {
 /** The problem type of a validation failure. Stable: a client may switch on it. */
 export const VALIDATION_TYPE = "tag:vigario.tech,2026:validation";
 
+/** The problem type of a form sent faster than a person fills one in.
+ *  Its own type rather than about:blank, because it means more than its
+ *  status: nothing in the content was wrong, and sending it again later
+ *  will succeed. Stable, like VALIDATION_TYPE. */
+export const TOO_SOON_TYPE = "tag:vigario.tech,2026:too-soon";
+
 /** A Problem Details response. */
 function problem(body: ProblemDetails, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -92,6 +99,19 @@ export function zodError(result: SafeParseFailure): Response {
     errors,
   };
   return problem(body);
+}
+
+/** 422 for a form sent within MIN_FILL_MS of being served (fill-time.ts).
+ *  422 because the page that takes the no-JS submit answers it so, and
+ *  the two ways in should agree. No `errors`: no field is at fault, so the
+ *  form shows `detail` at the top and every field keeps what was typed. */
+export function sentTooSoon(): Response {
+  return problem({
+    type: TOO_SOON_TYPE,
+    title: "Sent Too Soon",
+    status: 422,
+    detail: TOO_SOON_MESSAGE,
+  });
 }
 
 /** 400 for a body that could not be read: malformed JSON, or a form body
