@@ -101,6 +101,17 @@ describe("an invalid submission", () => {
     expect(insertSubmission).not.toHaveBeenCalled();
   });
 
+  it("is refused with one message for a services list longer than the catalog, however long", async () => {
+    // The longest list the body limit lets through; one error per entry
+    // used to make this throw, and a shorter one a 4 MB response.
+    const out = await submitQuote({ ...QUOTE, services: Array(131_000).fill("x") });
+    expect(out.kind).toBe("invalid");
+    if (out.kind !== "invalid") return;
+    expect(out.errors).toEqual({ services: "Pick from the listed services." });
+    expect(out.failure.error.issues).toHaveLength(1);
+    expect(insertSubmission).not.toHaveBeenCalled();
+  });
+
   it("that is not an object at all still comes back as a validation failure", async () => {
     const out = await submitQuote(null);
     expect(out.kind === "invalid" && out.values).toEqual({});
