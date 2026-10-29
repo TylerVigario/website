@@ -35,7 +35,15 @@ export const QuoteRequest = z.object({
         "Pick from the listed services.",
       ),
     )
-    .check(z.minLength(1, "Pick at least one service.")),
+    .check(
+      z.minLength(1, "Pick at least one service."),
+      // No more than the catalog holds, which is all the form can send.
+      // zod reads a bound before the items (since 4.6.6), so a list of
+      // thousands of junk entries is one error, not one per entry: without
+      // it, a 120 KB list came back as a 4 MB error response, and the
+      // longest list the body limit allows made the parse throw.
+      z.maxLength(catalog.length, "Pick from the listed services."),
+    ),
   details: z.optional(z.string().check(z.trim(), z.maxLength(MAX.details, tooLong(MAX.details)))),
 });
 export type QuoteRequest = z.infer<typeof QuoteRequest>;

@@ -334,6 +334,19 @@ await check(
     contains(text, REFUSED),
 );
 await check(
+  "the API answers a services list as long as the body limit allows with one small 422",
+  () => {
+    const junk = Array(Math.floor((BODY_LIMIT_BYTES - 1024) / 2)).fill(0);
+    return post("/api/quote", JSON.stringify({ ...QUOTE, services: junk }), {
+      type: "application/json",
+    });
+  },
+  (res, text) =>
+    status(res, 422) ||
+    (text.length < 1024 ? "" : `the response is ${text.length} bytes`) ||
+    contains(text, "Pick from the listed services."),
+);
+await check(
   "the API answers a body it cannot read 400",
   () => post("/api/quote", "{not json", { type: "application/json" }),
   (res) => status(res, 400),
