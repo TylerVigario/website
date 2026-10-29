@@ -4,6 +4,7 @@ import { BODY_LIMIT_BYTES } from "@/lib/forms/limits";
 import { QuoteRequest } from "@/lib/api/quote";
 import { POTS_AUDIT_MARKER, PotsAuditRequest } from "@/lib/api/pots-audit";
 import { isTrapped } from "@/lib/api/honeypot";
+import { tooSoon } from "@/lib/api/fill-time";
 import { sendPotsAuditNotification, sendQuoteNotification } from "@/lib/email/mailer";
 
 /**
@@ -24,6 +25,10 @@ export type Outcome =
   /** Caught by the honeypot. Answered exactly like "saved", never stored. */
   | { kind: "dropped" }
   | { kind: "invalid"; values: Values; errors: Record<string, string>; failure: SafeParseFailure }
+  /** Sent sooner after its form was served than a person fills one in
+   *  (fill-time.ts). Refused and never stored, with what was sent handed
+   *  back for the form. */
+  | { kind: "too-soon"; values: Values }
   /** The body could not be read, so there is nothing to validate or echo. */
   | { kind: "unreadable"; status: 400 | 413 };
 
@@ -125,11 +130,27 @@ function trapped(form: string, body: unknown): boolean {
   return true;
 }
 
+/** After validation, unlike the honeypot: a person who was quick and also
+ *  missed a field hears about the field first, and fixing it takes the
+ *  seconds the floor asks for. The log line says which form and how soon,
+ *  and nothing about what was in it, so the floor's catch rate can be
+ *  read from the journal like the honeypot's. */
+function early(form: string, body: unknown): boolean {
+  const elapsed = tooSoon(body);
+  if (elapsed === null) return false;
+  const seconds = (Math.max(0, elapsed) / 1000).toFixed(1);
+  console.log(
+    `[fill-time] refused a ${form} submission sent ${seconds} s after its form was served`,
+  );
+  return true;
+}
+
 export async function submitQuote(body: unknown): Promise<Outcome> {
   if (body instanceof Unreadable) return { kind: "unreadable", status: body.status };
   if (trapped("quote", body)) return { kind: "dropped" };
   const parsed = QuoteRequest.safeParse(body);
   if (!parsed.success) return invalid(body, parsed);
+  if (early("quote", body)) return { kind: "too-soon", values: echo(body) };
 
   const { name, contact, services, details } = parsed.data;
   const id = insertSubmission({
@@ -147,6 +168,7 @@ export async function submitPotsAudit(body: unknown): Promise<Outcome> {
   if (trapped("POTS audit", body)) return { kind: "dropped" };
   const parsed = PotsAuditRequest.safeParse(body);
   if (!parsed.success) return invalid(body, parsed);
+  if (early("POTS audit", body)) return { kind: "too-soon", values: echo(body) };
 
   const { business, name, contact, bill, details } = parsed.data;
   // Both forms land in one table; `services` carries the literal marker

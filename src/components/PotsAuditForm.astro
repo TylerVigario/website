@@ -1,5 +1,6 @@
 ---
 import { BILL_RANGES } from "@/lib/api/pots-audit";
+import { servedStamp } from "@/lib/api/fill-time";
 // The audit form from the POTS landing page. Same machinery as
 // QuoteForm — one enhancement module, one never-erase guarantee, one
 // no-JS path — differing only in fields.
@@ -65,6 +66,10 @@ const fields = [
           autocomplete="off"
         />
       </div>
+      {/* When the server rendered this form, so a submission can be told
+          from one posted straight back by a script. A re-render after a
+          failed send keeps the stamp it was sent with. See fill-time.ts. */}
+      <input type="hidden" name="served" value={servedStamp(values)} />
       <p
         data-form-error
         role="alert"

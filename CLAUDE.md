@@ -255,7 +255,7 @@ should not be told something laxer.
 - **Quote** — a "request a quote" submission from the main contact form. Schema in [`src/lib/api/quote.ts`](src/lib/api/quote.ts). Submitted through `submitQuote()` in [`src/lib/api/submit.ts`](src/lib/api/submit.ts), which both ways in call: `/api/quote` for JSON, and `/contact` itself for a no-JS form post.
 - **POTS audit** — a "free phone-bill audit" submission from the `/pots-migration` landing page. Different schema ([`src/lib/api/pots-audit.ts`](src/lib/api/pots-audit.ts)), same destination row, submitted through `submitPotsAudit()` the same two ways (`/api/pots-audit`, `/pots-migration`).
 - **`quotes` table** — single SQLite table that holds both kinds of submission. The `services` column distinguishes: the chosen services, comma-joined, for quote submissions, the literal string `"POTS Migration Audit"` for audit submissions. `notified_at` is when the row's notification reached the relay: NULL if it never did, `'unknown'` for rows older than the column. Its schema is versioned: `getDb()` runs the migrations in `src/lib/db.ts` against `PRAGMA user_version`. A migration that has shipped is never edited; append a new one.
-- **Problem Details** — the API error shape, per RFC 9457, `application/problem+json`. Validation failures via `zodError()` (422, type `VALIDATION_TYPE`, a tag URI rather than a path that would 404), a body that cannot be read at all via `badRequest()` (400) or `contentTooLarge()` (413, over `BODY_LIMIT_BYTES`), an unsupported method via `methodNotAllowed()` (which sets `Allow`), an unclaimed path via `notFound()` from the `[...path].ts` catch-all. Everything but validation is `about:blank`, which means no more than its status. Two errors are NOT this shape and cannot be: a cross-site write is refused by Astro before middleware or routes run (`403 text/plain`), and an unhandled route fault returns the site's `500 text/html` — catching that is the blanket try/catch the guardrails forbid. `error.ts` records both, with the measurement. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()`, whose response body is annotated with the `ProblemDetails` type so a change to the shape fails the build. The client does **not** import that schema: [`enhance.ts`](src/lib/forms/enhance.ts) reads the shape by hand, because validating it in the browser would pull zod into a bundle that is otherwise ~2 KB in order to re-check a response this server just produced. See "Form patterns" below.
+- **Problem Details** — the API error shape, per RFC 9457, `application/problem+json`. Validation failures via `zodError()` (422, type `VALIDATION_TYPE`, a tag URI rather than a path that would 404), a form sent faster than a person fills one in via `sentTooSoon()` (422, type `TOO_SOON_TYPE`, see `fill-time.ts`), a body that cannot be read at all via `badRequest()` (400) or `contentTooLarge()` (413, over `BODY_LIMIT_BYTES`), an unsupported method via `methodNotAllowed()` (which sets `Allow`), an unclaimed path via `notFound()` from the `[...path].ts` catch-all. Everything but those two 422s is `about:blank`, which means no more than its status. Two errors are NOT this shape and cannot be: a cross-site write is refused by Astro before middleware or routes run (`403 text/plain`), and an unhandled route fault returns the site's `500 text/html` — catching that is the blanket try/catch the guardrails forbid. `error.ts` records both, with the measurement. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()`, whose response body is annotated with the `ProblemDetails` type so a change to the shape fails the build. The client does **not** import that schema: [`enhance.ts`](src/lib/forms/enhance.ts) reads the shape by hand, because validating it in the browser would pull zod into a bundle that is otherwise ~2 KB in order to re-check a response this server just produced. See "Form patterns" below.
 
 ## Key paths
 
@@ -350,8 +350,11 @@ fail.
 
 One submission path, two ways in. [`submit.ts`](src/lib/api/submit.ts)
 does the work once: honeypot before validation, the zod schema, the
-insert, and the best-effort email. The API route and the page both call
-it, so they cannot disagree about what is trapped, valid or stored.
+fill-time floor, the insert, and the best-effort email. The API route
+and the page both call it, so they cannot disagree about what is
+trapped, valid, too soon or stored. A form sent within seconds of being
+served is refused rather than dropped, because a person can be that
+fast; `fill-time.ts` says why.
 
 ```ts
 // src/pages/api/quote.ts: the enhanced path, JSON in and out.
@@ -366,6 +369,7 @@ export const POST: APIRoute = async ({ request }) => {
   const outcome = await submitQuote(await readSubmission(request, ["services"]));
   if (outcome.kind === "unreadable") return outcome.status === 413 ? contentTooLarge() : badRequest();
   if (outcome.kind === "invalid") return zodError(outcome.failure); // 422, RFC 9457
+  if (outcome.kind === "too-soon") return sentTooSoon(); // 422: posted straight back
   return json({ success: true }); // "dropped" by the honeypot answers the same
 };
 ```
@@ -380,6 +384,10 @@ if (Astro.request.method === "POST") {
     Astro.response.status = outcome.status;
   } else if (outcome.kind === "invalid") {
     ({ values, errors } = outcome); // re-rendered into the form; never in a URL
+    Astro.response.status = 422;
+  } else if (outcome.kind === "too-soon") {
+    ({ values } = outcome); // the stamp too, so sending again counts from the first render
+    errors = { "(root)": TOO_SOON_MESSAGE };
     Astro.response.status = 422;
   } else return Astro.redirect("/contact?sent=1", 303);
 }

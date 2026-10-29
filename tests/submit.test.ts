@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BODY_LIMIT_BYTES, MAX, tooLong } from "@/lib/forms/limits";
+import { MIN_FILL_MS, SERVED_FIELD } from "@/lib/api/fill-time";
 import type { insertSubmission as InsertSubmission } from "@/lib/db";
 
 /**
@@ -126,6 +127,46 @@ describe("the honeypot", () => {
     expect(insertSubmission).not.toHaveBeenCalled();
     expect(sendQuoteNotification).not.toHaveBeenCalled();
     expect(sendPotsAuditNotification).not.toHaveBeenCalled();
+  });
+});
+
+describe("a form sent within seconds of being served", () => {
+  const fresh = () => ({ [SERVED_FIELD]: String(Date.now()) });
+  const settled = () => ({ [SERVED_FIELD]: String(Date.now() - MIN_FILL_MS - 1000) });
+  beforeEach(() => void vi.spyOn(console, "log").mockImplementation(() => {}));
+
+  it("is refused, stores and sends nothing, and hands back everything sent", async () => {
+    const body = { ...QUOTE, ...fresh() };
+    expect(await submitQuote(body)).toEqual({ kind: "too-soon", values: body });
+    expect(await submitPotsAudit({ ...AUDIT, ...fresh() })).toMatchObject({ kind: "too-soon" });
+    expect(insertSubmission).not.toHaveBeenCalled();
+    expect(sendQuoteNotification).not.toHaveBeenCalled();
+    expect(sendPotsAuditNotification).not.toHaveBeenCalled();
+  });
+
+  it("is saved once the floor has passed, and so is one with no stamp at all", async () => {
+    expect(await submitQuote({ ...QUOTE, ...settled() })).toEqual({ kind: "saved" });
+    expect(await submitPotsAudit(AUDIT)).toEqual({ kind: "saved" });
+    expect(insertSubmission).toHaveBeenCalledTimes(2);
+  });
+
+  it("hears about a missing field first, and keeps its stamp for the re-render", async () => {
+    const body = { ...QUOTE, name: "", ...fresh() };
+    const out = await submitQuote(body);
+    expect(out.kind === "invalid" && out.values[SERVED_FIELD]).toBe(body[SERVED_FIELD]);
+  });
+
+  it("is still dropped without a word when it also filled the honeypot", async () => {
+    expect(await submitQuote({ ...QUOTE, ...fresh(), website: "x" })).toEqual({ kind: "dropped" });
+  });
+
+  it("logs which form and how soon, and nothing that was in it", async () => {
+    await submitPotsAudit({ ...AUDIT, ...fresh() });
+    const [[line]] = vi.mocked(console.log).mock.calls as [[string]];
+    expect(line).toMatch(
+      /^\[fill-time\] refused a POTS audit submission sent \d+\.\d s after its form was served$/,
+    );
+    expect(line).not.toMatch(/Acme|Dana|559/);
   });
 });
 

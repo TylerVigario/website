@@ -27,6 +27,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { BODY_LIMIT_BYTES } from "../src/lib/forms/limits.ts";
+import { MIN_FILL_MS, SERVED_FIELD } from "../src/lib/api/fill-time.ts";
 import { inlineCodeIn } from "./inline-code.ts";
 
 const ENTRY = "dist/server/entry.mjs";
@@ -166,6 +167,17 @@ const contains = (text: string, ...needles: string[]) =>
     .map((n) => `the page does not contain "${n}"`)
     .join("; ");
 
+/** The stamp a page served its form with, read the way a script that
+ *  posts the form straight back reads it. */
+const stampIn = (text: string) =>
+  new RegExp(`<input[^>]*name="${SERVED_FIELD}"[^>]*value="(\\d+)"`).exec(text)?.[1] ?? "";
+const servedNow = async (pathname: string) =>
+  stampIn(await (await fetch(`${BASE}${pathname}`)).text());
+/** A stamp from long enough ago that a person could have filled the form. */
+const settled = () => String(Date.now() - MIN_FILL_MS - 1000);
+/** Part of the refusal's message without an apostrophe, which the page escapes. */
+const REFUSED = "the way spam does";
+
 const QUOTE = {
   name: "check-forms quote",
   contact: "dana@example.com",
@@ -217,6 +229,37 @@ await check(
   (res) => redirectTo(res, 303, "/contact?sent=1"),
 );
 await check(
+  "/contact stamps its form with the time it was served",
+  () => fetch(`${BASE}/contact`),
+  (res, text) =>
+    status(res, 200) ||
+    (Math.abs(Date.now() - Number(stampIn(text))) < 60_000
+      ? ""
+      : `the form's stamp is "${stampIn(text)}"`),
+);
+const served = await servedNow("/contact");
+await check(
+  "a quote posted straight back from its form is refused 422, with everything typed still in it",
+  () =>
+    post("/contact", {
+      ...QUOTE,
+      name: "check-forms too soon",
+      details: "kept, not lost",
+      [SERVED_FIELD]: served,
+    }),
+  (res, text) =>
+    status(res, 422) ||
+    noStore(res) ||
+    // The stamp it was sent with, so sending again counts from the first render.
+    contains(text, "kept, not lost", REFUSED, `value="${served}"`) ||
+    noInlineCode(text),
+);
+await check(
+  `a quote sent more than ${MIN_FILL_MS / 1000} s after its form was served is saved`,
+  () => post("/contact", { ...QUOTE, name: "check-forms settled", [SERVED_FIELD]: settled() }),
+  (res) => redirectTo(res, 303, "/contact?sent=1"),
+);
+await check(
   "a post from another site is refused",
   () => post("/contact", QUOTE, { headers: { origin: "https://elsewhere.example" } }),
   (res) => status(res, 403),
@@ -235,6 +278,16 @@ await check(
   "an invalid POTS audit comes back 422 with what was typed",
   () => post("/pots-migration", { ...AUDIT, bill: "", business: "kept business" }),
   (res, text) => status(res, 422) || contains(text, "kept business", "Pick a range."),
+);
+await check(
+  "a POTS audit posted straight back from its form is refused 422 too",
+  async () =>
+    post("/pots-migration", {
+      ...AUDIT,
+      business: "check-forms too soon",
+      [SERVED_FIELD]: await servedNow("/pots-migration"),
+    }),
+  (res, text) => status(res, 422) || contains(text, "check-forms too soon", REFUSED),
 );
 await check(
   "a form post to the API is handed to the page with its body (307)",
@@ -261,6 +314,26 @@ await check(
       : `Content-Type is ${res.headers.get("content-type")}`),
 );
 await check(
+  "the API refuses a JSON quote sent too soon as Problem Details, with the same message",
+  () =>
+    post(
+      "/api/quote",
+      JSON.stringify({
+        ...QUOTE,
+        name: "check-forms api too soon",
+        services: [QUOTE.services],
+        [SERVED_FIELD]: String(Date.now()),
+      }),
+      { type: "application/json" },
+    ),
+  (res, text) =>
+    status(res, 422) ||
+    ((res.headers.get("content-type") ?? "").includes("application/problem+json")
+      ? ""
+      : `Content-Type is ${res.headers.get("content-type")}`) ||
+    contains(text, REFUSED),
+);
+await check(
   "the API answers a body it cannot read 400",
   () => post("/api/quote", "{not json", { type: "application/json" }),
   (res) => status(res, 400),
@@ -271,7 +344,7 @@ await check(
   (res) => status(res, 200),
 );
 
-// What the database holds is the point of all of the above: the three
+// What the database holds is the point of all of the above: the four
 // valid submissions, and nothing from the rest.
 const db = new Database(env.SQLITE_PATH, { readonly: true });
 const stored = db
@@ -279,7 +352,7 @@ const stored = db
   .all()
   .map((r) => (r as { name: string }).name);
 db.close();
-const want = ["check-forms quote", "Dana", "check-forms api"];
+const want = ["check-forms quote", "check-forms settled", "Dana", "check-forms api"];
 const same = stored.length === want.length && stored.every((n, i) => n === want[i]);
 console.log(`  ${same ? "✓" : "✗"} exactly the valid submissions were stored`);
 if (!same) {

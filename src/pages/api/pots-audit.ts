@@ -1,5 +1,11 @@
 import type { APIRoute } from "astro";
-import { badRequest, contentTooLarge, methodNotAllowed, zodError } from "@/lib/api/error";
+import {
+  badRequest,
+  contentTooLarge,
+  methodNotAllowed,
+  sentTooSoon,
+  zodError,
+} from "@/lib/api/error";
 import { readSubmission, submitPotsAudit } from "@/lib/api/submit";
 
 export const prerender = false;
@@ -23,6 +29,7 @@ export const POST: APIRoute = async ({ request }) => {
     return outcome.status === 413 ? contentTooLarge() : badRequest();
   }
   if (outcome.kind === "invalid") return zodError(outcome.failure);
+  if (outcome.kind === "too-soon") return sentTooSoon();
   // "dropped" answers exactly as "saved" does: see submit.ts.
   return new Response(JSON.stringify({ success: true }), {
     status: 200,
