@@ -21,7 +21,7 @@
  * with SMTP_* set must not send notifications for test leads.
  */
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { createServer, type AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -350,6 +350,20 @@ await check(
   "the API answers a body it cannot read 400",
   () => post("/api/quote", "{not json", { type: "application/json" }),
   (res) => status(res, 400),
+);
+// The release ships no sharp, so the server's image service is passthrough
+// (astro.config.ts): /_image answers with the file it was asked for,
+// unchanged. With sharp as that service it answered 500 in the release,
+// and a resized image wherever sharp is installed, so this fails in both.
+const IMAGE = readdirSync("dist/client/_astro").find((f) => /\.(jpe?g|png)$/.test(f)) ?? "";
+await check(
+  "/_image passes an image through unchanged, so the server needs no sharp",
+  () => fetch(`${BASE}/_image?href=/_astro/${IMAGE}&w=200&f=webp`),
+  (res, text) =>
+    status(res, 200) ||
+    (text === new TextDecoder().decode(readFileSync(`dist/client/_astro/${IMAGE}`))
+      ? ""
+      : `${IMAGE} came back changed`),
 );
 await check(
   "the health check passes",

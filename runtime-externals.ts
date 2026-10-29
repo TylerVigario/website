@@ -18,7 +18,8 @@
  *
  * NOTE: this list cannot be derived by scanning the built bundle.
  * Bundled vendor code contains specifier strings of its own — sharp's
- * optional-dependency probing mentions @img/sharp-libvips-dev, which is
- * a dead path, not a dependency. Declaring the list is the honest way.
+ * optional-dependency probing, while sharp was bundled, mentioned
+ * @img/sharp-libvips-dev, which was a dead path, not a dependency.
+ * Declaring the list is the honest way.
  */
 export const RUNTIME_EXTERNALS = ["better-sqlite3"];
