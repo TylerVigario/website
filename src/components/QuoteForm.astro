@@ -1,5 +1,6 @@
 ---
 import { services as serviceCatalog } from "@/lib/services";
+import { servedStamp } from "@/lib/api/fill-time";
 
 // Without JavaScript the form posts to its own page (/contact), which
 // re-renders this component with `values` and `errors` populated when
@@ -54,6 +55,10 @@ const inputClass =
           autocomplete="off"
         />
       </div>
+      {/* When the server rendered this form, so a submission can be told
+          from one posted straight back by a script. A re-render after a
+          failed send keeps the stamp it was sent with. See fill-time.ts. */}
+      <input type="hidden" name="served" value={servedStamp(values)} />
       <p
         data-form-error
         role="alert"

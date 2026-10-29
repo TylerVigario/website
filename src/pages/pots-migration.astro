@@ -4,6 +4,7 @@ import Base from "@/layouts/Base.astro";
 import POTSLanding from "@/components/POTSLanding.astro";
 import LandingHeader from "@/components/LandingHeader.astro";
 import { readSubmission, submitPotsAudit, unreadableMessage, type Values } from "@/lib/api/submit";
+import { TOO_SOON_MESSAGE } from "@/lib/api/fill-time";
 
 // Built from Astro.site so the canonical domain lives in one place.
 const site = Astro.site!.href.replace(/\/$/, "");
@@ -69,6 +70,13 @@ if (Astro.request.method === "POST") {
     Astro.response.status = outcome.status;
   } else if (outcome.kind === "invalid") {
     ({ values, errors } = outcome);
+    Astro.response.status = 422;
+  } else if (outcome.kind === "too-soon") {
+    // Refused, not dropped: see fill-time.ts. Everything sent goes back
+    // into the form, the stamp it was sent with included, so sending
+    // again counts from when the form was first served.
+    values = outcome.values;
+    errors = { "(root)": TOO_SOON_MESSAGE };
     Astro.response.status = 422;
   } else {
     return Astro.redirect("/pots-migration?sent=1#audit", 303);

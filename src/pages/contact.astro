@@ -2,6 +2,7 @@
 import Base from "@/layouts/Base.astro";
 import QuoteForm from "@/components/QuoteForm.astro";
 import { readSubmission, submitQuote, unreadableMessage, type Values } from "@/lib/api/submit";
+import { TOO_SOON_MESSAGE } from "@/lib/api/fill-time";
 import { services as catalog } from "@/lib/services";
 
 // Rendered per request, not prerendered: this page takes the form's
@@ -41,6 +42,13 @@ if (Astro.request.method === "POST") {
     Astro.response.status = outcome.status;
   } else if (outcome.kind === "invalid") {
     ({ values, errors } = outcome);
+    Astro.response.status = 422;
+  } else if (outcome.kind === "too-soon") {
+    // Refused, not dropped: see fill-time.ts. Everything sent goes back
+    // into the form, the stamp it was sent with included, so sending
+    // again counts from when the form was first served.
+    values = outcome.values;
+    errors = { "(root)": TOO_SOON_MESSAGE };
     Astro.response.status = 422;
   } else {
     return Astro.redirect("/contact?sent=1", 303);
