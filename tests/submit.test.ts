@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { BODY_LIMIT_BYTES, MAX, tooLong } from "@/lib/forms/limits";
 import { MIN_FILL_MS, SERVED_FIELD } from "@/lib/api/fill-time";
 import type { insertSubmission as InsertSubmission } from "@/lib/db";
@@ -178,6 +181,63 @@ describe("a form sent within seconds of being served", () => {
       /^\[fill-time\] refused a POTS audit submission sent \d+\.\d s after its form was served$/,
     );
     expect(line).not.toMatch(/Acme|Dana|559/);
+  });
+});
+
+describe("a sender on a spam list", () => {
+  let dir: string;
+  beforeEach(() => {
+    dir = mkdtempSync(path.join(tmpdir(), "vts-submit-lists-"));
+    writeFileSync(path.join(dir, "emails.txt"), "dana@example.com\n");
+    writeFileSync(path.join(dir, "ips.txt"), "203.0.113.7\n");
+    vi.stubEnv("SPAM_LISTS_DIR", dir);
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("is stored and announced like anyone else, with the match in the notification", async () => {
+    expect(await submitQuote(QUOTE, { ip: "203.0.113.7" })).toEqual({ kind: "saved" });
+    expect(insertSubmission).toHaveBeenCalledTimes(1);
+    expect(sendQuoteNotification).toHaveBeenCalledWith(
+      42,
+      expect.objectContaining({ listed: ["email", "IP address"] }),
+    );
+    expect(markNotified).toHaveBeenCalledWith(42);
+  });
+
+  it("is flagged on the POTS audit too, here by IP with a phone number to reach them", async () => {
+    expect(await submitPotsAudit(AUDIT, { ip: "203.0.113.7" })).toEqual({ kind: "saved" });
+    expect(sendPotsAuditNotification).toHaveBeenCalledWith(
+      42,
+      expect.objectContaining({ listed: ["IP address"] }),
+    );
+  });
+
+  it("is not flagged when nothing it sent is listed", async () => {
+    await submitQuote({ ...QUOTE, contact: "lee@example.com" }, { ip: "198.51.100.1" });
+    expect(sendQuoteNotification).toHaveBeenCalledWith(42, expect.objectContaining({ listed: [] }));
+  });
+
+  it("logs the row and what matched, and keeps its address out of the row, the mail and the log", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await submitQuote(QUOTE, { ip: "203.0.113.7" });
+    expect(log).toHaveBeenCalledWith("[spam-list] submission #42 matched email and IP address");
+    const kept = JSON.stringify([
+      insertSubmission.mock.calls,
+      sendQuoteNotification.mock.calls,
+      log.mock.calls,
+    ]);
+    expect(kept).not.toContain("203.0.113.7");
+  });
+
+  it("is checked only once the row is stored, so a list that will not read costs nothing", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    rmSync(dir, { recursive: true, force: true });
+    expect(await submitQuote(QUOTE, { ip: "203.0.113.7" })).toEqual({ kind: "saved" });
+    expect(sendQuoteNotification).toHaveBeenCalledWith(42, expect.objectContaining({ listed: [] }));
+    expect(markNotified).toHaveBeenCalledWith(42);
   });
 });
 

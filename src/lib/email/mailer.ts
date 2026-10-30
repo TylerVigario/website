@@ -1,6 +1,7 @@
 import { lookup } from "node:dns/promises";
 import nodemailer from "nodemailer";
 import { renderPotsAuditEmail, renderQuoteEmail } from "@/emails/templates";
+import { describeListing, LISTED_TAG, type Listing } from "@/lib/api/spam-list";
 import {
   describeRelay,
   readRelay,
@@ -185,11 +186,23 @@ function formatSubmittedAt(): string {
   });
 }
 
+/** The subject, tagged when the sender is on a spam list. */
+function subject(text: string, listed: Listing[] = []): string {
+  return listed.length ? `${LISTED_TAG} ${text}` : text;
+}
+
+/** The body's closing lines, with the match said in words when there is one. */
+function footer(submittedAt: string, listed: Listing[] = []): string[] {
+  return ["", `Submitted: ${submittedAt}`, ...(listed.length ? [describeListing(listed)] : [])];
+}
+
 export interface SendQuoteNotificationArgs {
   name: string;
   contact: string;
   services: string[];
   details?: string;
+  /** What of the sender's is on a spam list (spam-list.ts), if anything. */
+  listed?: Listing[];
 }
 
 /**
@@ -203,7 +216,8 @@ export async function sendQuoteNotification(
   args: SendQuoteNotificationArgs,
 ): Promise<boolean> {
   const submittedAtFormatted = formatSubmittedAt();
-  const html = renderQuoteEmail({ ...args, submittedAtFormatted });
+  const listing = args.listed?.length ? describeListing(args.listed) : undefined;
+  const html = renderQuoteEmail({ ...args, submittedAtFormatted, listing });
 
   const servicesStr = args.services.join(", ") || "(none selected)";
   const text = [
@@ -211,14 +225,13 @@ export async function sendQuoteNotification(
     `Contact: ${args.contact}`,
     `Services: ${servicesStr}`,
     `Details: ${args.details || "(none)"}`,
-    "",
-    `Submitted: ${submittedAtFormatted}`,
+    ...footer(submittedAtFormatted, args.listed),
   ].join("\n");
 
   return sendEmail({
     id,
     to: NOTIFY_EMAIL,
-    subject: `New Quote Request #${id} from ${args.name}`,
+    subject: subject(`New Quote Request #${id} from ${args.name}`, args.listed),
     replyTo: replyAddress(args.contact),
     text,
     html,
@@ -231,6 +244,8 @@ export interface SendPotsAuditNotificationArgs {
   contact: string;
   bill: string;
   details?: string;
+  /** What of the sender's is on a spam list (spam-list.ts), if anything. */
+  listed?: Listing[];
 }
 
 /**
@@ -242,7 +257,8 @@ export async function sendPotsAuditNotification(
   args: SendPotsAuditNotificationArgs,
 ): Promise<boolean> {
   const submittedAtFormatted = formatSubmittedAt();
-  const html = renderPotsAuditEmail({ ...args, submittedAtFormatted });
+  const listing = args.listed?.length ? describeListing(args.listed) : undefined;
+  const html = renderPotsAuditEmail({ ...args, submittedAtFormatted, listing });
 
   const text = [
     `Business: ${args.business}`,
@@ -250,15 +266,14 @@ export async function sendPotsAuditNotification(
     `Contact: ${args.contact}`,
     `Monthly bill: ${args.bill}`,
     `Details: ${args.details || "(none)"}`,
-    "",
-    `Submitted: ${submittedAtFormatted}`,
+    ...footer(submittedAtFormatted, args.listed),
     `Source: /pots-migration landing page`,
   ].join("\n");
 
   return sendEmail({
     id,
     to: NOTIFY_EMAIL,
-    subject: `POTS Audit Request #${id} from ${args.business}`,
+    subject: subject(`POTS Audit Request #${id} from ${args.business}`, args.listed),
     replyTo: replyAddress(args.contact),
     text,
     html,

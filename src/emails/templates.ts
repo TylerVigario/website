@@ -42,6 +42,12 @@ function row(label: string, value: string): string {
     </tr>`;
 }
 
+/** The row a match on a spam list adds, or nothing. The text is the
+ *  site's own sentence (spam-list.ts), escaped all the same. */
+function listingRow(listing: string | undefined): string {
+  return listing ? row("Listed", esc(listing)) : "";
+}
+
 function layout(heading: string, submittedAt: string, body: string): string {
   return `<!doctype html>
 <html lang="en"><body style="margin:0;padding:24px;background:#fafaf9;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;line-height:1.5">
@@ -59,6 +65,8 @@ export interface QuoteEmailArgs {
   services: string[];
   details?: string;
   submittedAtFormatted: string;
+  /** Said when the sender is on a spam list. */
+  listing?: string;
 }
 
 export function renderQuoteEmail(a: QuoteEmailArgs): string {
@@ -68,7 +76,8 @@ export function renderQuoteEmail(a: QuoteEmailArgs): string {
     row("Name", esc(a.name)) +
       row("Contact", esc(a.contact)) +
       row("Services", esc(a.services.join(", "))) +
-      row("Details", paragraphs(a.details)),
+      row("Details", paragraphs(a.details)) +
+      listingRow(a.listing),
   );
 }
 
@@ -79,6 +88,8 @@ export interface PotsAuditEmailArgs {
   bill: string;
   details?: string;
   submittedAtFormatted: string;
+  /** Said when the sender is on a spam list. */
+  listing?: string;
 }
 
 export function renderPotsAuditEmail(a: PotsAuditEmailArgs): string {
@@ -89,6 +100,7 @@ export function renderPotsAuditEmail(a: PotsAuditEmailArgs): string {
       row("Name", esc(a.name)) +
       row("Contact", esc(a.contact)) +
       row("Monthly bill", esc(a.bill)) +
-      row("Details", paragraphs(a.details)),
+      row("Details", paragraphs(a.details)) +
+      listingRow(a.listing),
   );
 }

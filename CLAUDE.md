@@ -200,8 +200,15 @@ is what makes a no-JS form POST's `Origin: https://…` match the request.
 with a build that ignores forwarded headers and breaks every no-JS
 submission with one that trusts them.
 
-The Node process needs `SQLITE_PATH` (absolute) and reads `HOST`/`PORT`;
-it is `node dist/server/entry.mjs`. Nothing else about the machine —
+Under the same trust, Astro takes the client's address from
+`X-Forwarded-For`, and it takes the first value. So the proxy sets that
+header from the connection rather than appending to one the client sent;
+otherwise a sender names whatever address it likes to the spam-list
+lookup (`src/lib/api/spam-list.ts`), which is the only thing that reads it.
+
+The Node process needs `SQLITE_PATH` (absolute), reads `HOST`/`PORT`, and
+reads `SPAM_LISTS_DIR` where the host keeps spam lists for it; it is
+`node dist/server/entry.mjs`. Nothing else about the machine —
 process supervision, TLS, DNS, where the files live — belongs in this
 repository.
 
@@ -350,7 +357,8 @@ fail.
 
 One submission path, two ways in. [`submit.ts`](src/lib/api/submit.ts)
 does the work once: honeypot before validation, the zod schema, the
-fill-time floor, the insert, and the best-effort email. The API route
+fill-time floor, the insert, and the best-effort email, which says when
+the sender is on the host's spam lists. The API route
 and the page both call it, so they cannot disagree about what is
 trapped, valid, too soon or stored. A form sent within seconds of being
 served is refused rather than dropped, because a person can be that

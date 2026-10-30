@@ -17,9 +17,10 @@ describe("notification templates", () => {
       services: [HOSTILE, HOSTILE],
       details: `${HOSTILE}\n\n${HOSTILE}`,
       submittedAtFormatted: HOSTILE,
+      listing: HOSTILE,
     });
     expect(html).not.toContain("<img");
-    expect(html.split(ESCAPED).length - 1).toBe(7);
+    expect(html.split(ESCAPED).length - 1).toBe(8);
   });
 
   it("escape every field of a POTS audit", () => {
@@ -30,9 +31,10 @@ describe("notification templates", () => {
       bill: HOSTILE,
       details: HOSTILE,
       submittedAtFormatted: HOSTILE,
+      listing: HOSTILE,
     });
     expect(html).not.toContain("<img");
-    expect(html.split(ESCAPED).length - 1).toBe(6);
+    expect(html.split(ESCAPED).length - 1).toBe(7);
   });
 
   it("keep the line breaks someone typed, and nothing else of theirs", () => {

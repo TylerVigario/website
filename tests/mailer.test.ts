@@ -158,6 +158,33 @@ describe("a notification", () => {
     expect(sent).not.toHaveProperty("replyTo");
   });
 
+  it("is tagged in its subject, and says in its body what matched, when the sender is listed", async () => {
+    const { mod } = await load(LOCAL_RELAY);
+    await mod.sendQuoteNotification(12, { ...QUOTE, listed: ["email"] });
+    await mod.sendPotsAuditNotification(13, {
+      business: "Acme",
+      name: "Dana",
+      contact: "559 555 0100",
+      bill: "$100–$300",
+      listed: ["email", "IP address"],
+    });
+    const [quote, audit] = sendMail.mock.calls.map((c) => c[0] as Record<string, string>);
+    expect(quote!.subject).toBe("[Listed] New Quote Request #12 from Dana");
+    for (const body of [quote!.text, quote!.html]) {
+      expect(body).toContain("Its email is on a list of known spam senders.");
+    }
+    expect(audit!.subject).toBe("[Listed] POTS Audit Request #13 from Acme");
+    expect(audit!.text).toContain("Its email and IP address are on a list of known spam senders.");
+  });
+
+  it("is untagged, and says nothing of lists, when nothing matched", async () => {
+    const { mod } = await load(LOCAL_RELAY);
+    await mod.sendQuoteNotification(14, { ...QUOTE, listed: [] });
+    const sent = sendMail.mock.calls[0]![0] as { subject: string; text: string; html: string };
+    expect(sent.subject).toBe("New Quote Request #14 from Dana");
+    expect(sent.text + sent.html).not.toContain("spam");
+  });
+
   it("is rethrown on a relay failure, logged by row id rather than by name", async () => {
     const { mod, error } = await load(LOCAL_RELAY);
     sendMail.mockRejectedValueOnce(new Error("relay down"));

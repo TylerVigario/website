@@ -4,6 +4,7 @@ import { statfsSync } from "node:fs";
 import path from "node:path";
 import { getDb, getDbPath, SUBMISSION_COLUMNS, insertSubmission, unannouncedCount } from "@/lib/db";
 import { mailState } from "@/lib/email/mailer";
+import { listsProblem } from "@/lib/api/spam-list";
 
 export const prerender = false;
 
@@ -21,10 +22,13 @@ export const prerender = false;
  * SELECT working. A check that only reads passes cleanly while every
  * form on the site is losing leads.
  *
- * Two checks are advisory: whether mail is on, and whether every lead
- * older than ten minutes was announced. They answer "would I hear about
- * a submission", which matters, but a failure there is the relay's or the
- * host's configuration rather than this release. The updater rolls a
+ * Three checks are advisory: whether mail is on, whether every lead
+ * older than ten minutes was announced, and whether the spam lists the
+ * host refreshes are still being refreshed. The first two answer "would I
+ * hear about a submission", which matters, and the third whether its
+ * notification would say the sender is a known spammer; but a failure in
+ * any of them is the relay's or the host's configuration rather than this
+ * release. The updater rolls a
  * release back on anything but a 200, and rolling back cannot fix SMTP
  * settings, so an advisory failure reports "degraded" and keeps the 200.
  *
@@ -168,6 +172,15 @@ export const GET: APIRoute = () => {
           "mail is misconfigured: the [Mailer] MISCONFIGURED line at startup says why",
         );
       }
+    },
+    true,
+  );
+
+  record(
+    "spam-lists",
+    () => {
+      const problem = listsProblem();
+      if (problem) throw new Error(problem);
     },
     true,
   );
