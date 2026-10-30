@@ -1,4 +1,24 @@
 # Changelog
+## [1.20.0](https://github.com/TylerVigario/website/compare/v1.19.1...v1.20.0) (2026-10-30)
+
+### Features
+
+* **forms:** Refuse a form sent within seconds of being served 
+
+### Bug Fixes
+
+* **api:** Refuse a services list longer than the catalog with one message 
+* **images:** Pass images through at runtime instead of answering /_image with 500 
+
+### Build & Packaging
+
+* **deps:** Bump zod from 4.6.5 to 4.6.7 
+* **deps:** Bump nodemailer from 10.1.0 to 10.1.4 
+* **deps:** Bump the astro group across 1 directory with 2 updates 
+* **deps:** Bump undici from 8.11.2 to 8.12.3 
+* **deps:** Bump fast-uri from 3.1.8 to 3.1.9 
+* **deps:** Bump nodemailer from 10.1.4 to 10.2.1 
+
 ## [1.19.1](https://github.com/TylerVigario/website/compare/v1.19.0...v1.19.1) (2026-10-15)
 
 ### Build & Packaging
