@@ -8,8 +8,9 @@ import path from "node:path";
  * What gets past the honeypot and the fill-time floor is advertising,
  * sent by services whose addresses are already on public spam lists. Of
  * the seven sources that posted to /contact between 25 and 30 October
- * 2026, StopForumSpam listed six by IP, and it listed the contact email
- * of every ad that was stored. So the host downloads its lists into
+ * 2026, StopForumSpam had six on record by IP. Of the three ads that were
+ * stored, the lists it publishes name the contact email of two and the
+ * email's domain of the third. So the host downloads those lists into
  * SPAM_LISTS_DIR, and a submission is looked up there: nothing about
  * anyone who sends a form leaves the server.
  *
@@ -25,9 +26,18 @@ import path from "node:path";
  * stopped refreshing.
  */
 
-/** What can match, and the file in SPAM_LISTS_DIR that lists it. */
-export const LISTS = { email: "emails.txt", "IP address": "ips.txt" } as const;
-export type Listing = keyof typeof LISTS;
+/** What of a sender's can be listed. */
+export type Listing = "email" | "email domain" | "IP address";
+
+interface List {
+  /** What a match says was listed. */
+  listing: Listing;
+  /** An entry written the way a looked-up value is, or undefined for a
+   *  line that is no entry. */
+  normalise: (entry: string) => string | undefined;
+  /** Whether a value is among the entries. */
+  has: (entries: Set<string>, value: string) => boolean;
+}
 
 /** Older than this, a list is reported stale. The host refreshes daily,
  *  so three days is two missed refreshes, not one slow one. */
@@ -51,22 +61,34 @@ export function canonicalIp(raw: string): string | undefined {
   return new URL(`http://[${ip}]/`).hostname.slice(1, -1);
 }
 
-const normalise: Record<Listing, (entry: string) => string | undefined> = {
-  email: (entry) => entry.trim().toLowerCase() || undefined,
-  "IP address": canonicalIp,
+const lower = (entry: string) => entry.trim().toLowerCase() || undefined;
+const whole = (entries: Set<string>, value: string) => entries.has(value);
+/** A fragment marks any value it appears in, which is how StopForumSpam
+ *  lists a domain that spams from whatever subdomain it makes up. */
+const part = (entries: Set<string>, value: string) => {
+  for (const entry of entries) if (value.includes(entry)) return true;
+  return false;
+};
+
+/** The files in SPAM_LISTS_DIR, and what each one lists. A domain listed
+ *  whole is that domain and not its subdomains. */
+const LISTS: Record<string, List> = {
+  "emails.txt": { listing: "email", normalise: lower, has: whole },
+  "domains.txt": { listing: "email domain", normalise: lower, has: whole },
+  "domain-fragments.txt": { listing: "email domain", normalise: lower, has: part },
+  "ips.txt": { listing: "IP address", normalise: canonicalIp, has: whole },
 };
 
 const loaded = new Map<string, { mtimeMs: number; entries: Set<string> }>();
 
 /** The entries of one list, reread only when the file has changed. */
-function entries(listing: Listing, dir: string): Set<string> {
-  const file = path.join(dir, LISTS[listing]);
+function entries(file: string, list: List): Set<string> {
   const { mtimeMs } = statSync(file);
   const cached = loaded.get(file);
   if (cached?.mtimeMs === mtimeMs) return cached.entries;
   const set = new Set<string>();
   for (const line of readFileSync(file, "utf8").split("\n")) {
-    const entry = normalise[listing](line);
+    const entry = list.normalise(line);
     if (entry !== undefined) set.add(entry);
   }
   loaded.set(file, { mtimeMs, entries: set });
@@ -74,9 +96,9 @@ function entries(listing: Listing, dir: string): Set<string> {
 }
 
 /**
- * Which of a submission's contact email and IP address are listed. Empty
- * when they are not, when the contact is a phone number, or when no lists
- * are configured.
+ * Which of a submission's contact email, that email's domain and its IP
+ * address are listed. Empty when none is or no lists are configured; a
+ * phone number has no email or domain to look up.
  *
  * A list that cannot be read counts as listing nothing. That costs one
  * flag; throwing would cost the notification, whose sender this runs
@@ -85,25 +107,30 @@ function entries(listing: Listing, dir: string): Set<string> {
 export function listed(contact: string, ip: string | undefined): Listing[] {
   const dir = process.env.SPAM_LISTS_DIR;
   if (!dir) return [];
+  const email = contact.includes("@") ? lower(contact) : undefined;
   const sent: Record<Listing, string | undefined> = {
-    email: contact.includes("@") ? normalise.email(contact) : undefined,
+    email,
+    "email domain": email?.slice(email.lastIndexOf("@") + 1) || undefined,
     "IP address": ip === undefined ? undefined : canonicalIp(ip),
   };
-  return (Object.keys(LISTS) as Listing[]).filter((listing) => {
-    const value = sent[listing];
-    if (value === undefined) return false;
+  const found = new Set<Listing>();
+  for (const [file, list] of Object.entries(LISTS)) {
+    const value = sent[list.listing];
+    if (value === undefined || found.has(list.listing)) continue;
     try {
-      return entries(listing, dir).has(value);
+      if (list.has(entries(path.join(dir, file), list), value)) found.add(list.listing);
     } catch (err) {
-      console.warn(`[spam-list] ${LISTS[listing]} unreadable, so not checked:`, err);
-      return false;
+      console.warn(`[spam-list] ${file} unreadable, so not checked:`, err);
     }
-  });
+  }
+  return [...found];
 }
+
+const and = new Intl.ListFormat("en", { type: "conjunction" });
 
 /** The line a notification carries for a match. */
 export function describeListing(found: Listing[]): string {
-  return `Its ${found.join(" and ")} ${found.length > 1 ? "are" : "is"} on a list of known spam senders.`;
+  return `Its ${and.format(found)} ${found.length > 1 ? "are" : "is"} on a list of known spam senders.`;
 }
 
 /** What is wrong with the lists, or undefined when they are fresh or
@@ -111,7 +138,7 @@ export function describeListing(found: Listing[]): string {
 export function listsProblem(now = Date.now()): string | undefined {
   const dir = process.env.SPAM_LISTS_DIR;
   if (!dir) return undefined;
-  for (const file of Object.values(LISTS)) {
+  for (const file of Object.keys(LISTS)) {
     let mtimeMs: number;
     try {
       ({ mtimeMs } = statSync(path.join(dir, file)));

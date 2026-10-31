@@ -189,6 +189,8 @@ describe("a sender on a spam list", () => {
   beforeEach(() => {
     dir = mkdtempSync(path.join(tmpdir(), "vts-submit-lists-"));
     writeFileSync(path.join(dir, "emails.txt"), "dana@example.com\n");
+    writeFileSync(path.join(dir, "domains.txt"), "");
+    writeFileSync(path.join(dir, "domain-fragments.txt"), "");
     writeFileSync(path.join(dir, "ips.txt"), "203.0.113.7\n");
     vi.stubEnv("SPAM_LISTS_DIR", dir);
   });

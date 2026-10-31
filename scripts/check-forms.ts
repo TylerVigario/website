@@ -65,10 +65,13 @@ for (const key of Object.keys(env)) {
 }
 
 // Spam lists as the host leaves them (src/lib/api/spam-list.ts): one
-// email and one address that nothing else here sends from.
+// email and one address that nothing else here sends from, and domains
+// that nothing here sends from either.
 const LISTED_EMAIL = "listed@spam.example";
 const LISTED_IP = "203.0.113.7";
 writeFileSync(path.join(dir, "emails.txt"), `${LISTED_EMAIL}\n`);
+writeFileSync(path.join(dir, "domains.txt"), "bulk.example\n");
+writeFileSync(path.join(dir, "domain-fragments.txt"), "adshop.example\n");
 writeFileSync(path.join(dir, "ips.txt"), `${LISTED_IP}\n`);
 env.SPAM_LISTS_DIR = dir;
 

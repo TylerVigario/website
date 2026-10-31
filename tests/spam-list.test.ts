@@ -40,6 +40,8 @@ afterEach(() => {
 const fresh = () => {
   vi.stubEnv("SPAM_LISTS_DIR", dir);
   write("emails.txt", ["sales@spam.example", "Hello@Leads.Example "]);
+  write("domains.txt", ["Bulk.Example"]);
+  write("domain-fragments.txt", ["adshop.example"]);
   write("ips.txt", ["203.0.113.7", "2001:DB8:0:0:0:0:0:1", "not an address"]);
 };
 
@@ -70,6 +72,17 @@ describe("a sender", () => {
     expect(listed("hello@leads.example", undefined)).toEqual(["email"]);
   });
 
+  it("is found by its email's domain, listed whole or by a fragment of it", () => {
+    fresh();
+    expect(listed("anyone@bulk.example", undefined)).toEqual(["email domain"]);
+    expect(listed(" Anyone@BULK.example", undefined)).toEqual(["email domain"]);
+    // A domain listed whole is not its subdomains; a fragment is anywhere.
+    expect(listed("anyone@mail.bulk.example", undefined)).toEqual([]);
+    expect(listed("boyle@boyle.adshop.example", undefined)).toEqual(["email domain"]);
+    // Only the domain: a fragment in the name before the @ is no match.
+    expect(listed("adshop.example@clean.example", undefined)).toEqual([]);
+  });
+
   it("is found by IP address, however either side writes it", () => {
     fresh();
     expect(listed("559 555 0100", "203.0.113.7")).toEqual(["IP address"]);
@@ -85,6 +98,9 @@ describe("a sender", () => {
       "Its email and IP address are on a list of known spam senders.",
     );
     expect(describeListing(["email"])).toBe("Its email is on a list of known spam senders.");
+    expect(describeListing(["email", "email domain", "IP address"])).toBe(
+      "Its email, email domain, and IP address are on a list of known spam senders.",
+    );
   });
 
   it("is not found when nothing it sent is listed", () => {
@@ -112,7 +128,7 @@ describe("a sender", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.stubEnv("SPAM_LISTS_DIR", path.join(dir, "nowhere"));
     expect(listed("sales@spam.example", "203.0.113.7")).toEqual([]);
-    expect(warn).toHaveBeenCalledTimes(2);
+    expect(warn).toHaveBeenCalledTimes(4);
     // The warning names the file, never what was looked up.
     const logged = JSON.stringify(warn.mock.calls.map((c) => String(c[0])));
     expect(logged).toContain("emails.txt");

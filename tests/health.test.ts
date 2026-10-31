@@ -86,7 +86,9 @@ describe("the health check", () => {
         ok: false,
         advisory: true,
       });
-      for (const f of ["emails.txt", "ips.txt"]) writeFileSync(path.join(lists, f), "");
+      for (const f of ["emails.txt", "domains.txt", "domain-fragments.txt", "ips.txt"]) {
+        writeFileSync(path.join(lists, f), "");
+      }
       expect((await get()).state).toBe("ok");
     } finally {
       delete process.env.SPAM_LISTS_DIR;
