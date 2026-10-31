@@ -1,4 +1,15 @@
 # Changelog
+## [1.21.0](https://github.com/TylerVigario/website/compare/v1.20.0...v1.21.0) (2026-10-31)
+
+### Features
+
+* **forms:** Flag a submission from a known spam sender 
+
+### Bug Fixes
+
+* **site:** Show the rack in a sharper photograph 
+* **privacy:** Name everything the log keeps, and how long 
+
 ## [1.20.0](https://github.com/TylerVigario/website/compare/v1.19.1...v1.20.0) (2026-10-30)
 
 ### Features
