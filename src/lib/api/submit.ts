@@ -5,6 +5,7 @@ import { QuoteRequest } from "@/lib/api/quote";
 import { POTS_AUDIT_MARKER, PotsAuditRequest } from "@/lib/api/pots-audit";
 import { isTrapped } from "@/lib/api/honeypot";
 import { tooSoon } from "@/lib/api/fill-time";
+import { listed, type Listing } from "@/lib/api/spam-list";
 import { sendPotsAuditNotification, sendQuoteNotification } from "@/lib/email/mailer";
 
 /**
@@ -19,6 +20,13 @@ import { sendPotsAuditNotification, sendQuoteNotification } from "@/lib/email/ma
  */
 
 export type Values = Record<string, string | string[]>;
+
+/** Where a submission came from, as the proxy reported it. Used to look
+ *  the sender up in the spam lists, and then forgotten: it is never
+ *  stored, logged or put in the notification. */
+export interface Sender {
+  ip?: string;
+}
 
 export type Outcome =
   | { kind: "saved" }
@@ -145,7 +153,18 @@ function early(form: string, body: unknown): boolean {
   return true;
 }
 
-export async function submitQuote(body: unknown): Promise<Outcome> {
+/** After the insert, inside the notification's sender: the flag only
+ *  marks the notification, so a lookup can never cost the row. The log
+ *  line says which row and what matched, and nothing that was sent, so
+ *  the lists' catch rate can be read from the journal like the
+ *  honeypot's. */
+function flagged(id: number, contact: string, sender: Sender): Listing[] {
+  const found = listed(contact, sender.ip);
+  if (found.length) console.log(`[spam-list] submission #${id} matched ${found.join(" and ")}`);
+  return found;
+}
+
+export async function submitQuote(body: unknown, sender: Sender = {}): Promise<Outcome> {
   if (body instanceof Unreadable) return { kind: "unreadable", status: body.status };
   if (trapped("quote", body)) return { kind: "dropped" };
   const parsed = QuoteRequest.safeParse(body);
@@ -159,11 +178,19 @@ export async function submitQuote(body: unknown): Promise<Outcome> {
     services: services.join(", "),
     details: details || null,
   });
-  await notify(id, () => sendQuoteNotification(id, { name, contact, services, details }));
+  await notify(id, () =>
+    sendQuoteNotification(id, {
+      name,
+      contact,
+      services,
+      details,
+      listed: flagged(id, contact, sender),
+    }),
+  );
   return { kind: "saved" };
 }
 
-export async function submitPotsAudit(body: unknown): Promise<Outcome> {
+export async function submitPotsAudit(body: unknown, sender: Sender = {}): Promise<Outcome> {
   if (body instanceof Unreadable) return { kind: "unreadable", status: body.status };
   if (trapped("POTS audit", body)) return { kind: "dropped" };
   const parsed = PotsAuditRequest.safeParse(body);
@@ -179,6 +206,15 @@ export async function submitPotsAudit(body: unknown): Promise<Outcome> {
     services: POTS_AUDIT_MARKER,
     details: [`Business: ${business}`, `Monthly bill: ${bill}`, details].filter(Boolean).join("\n"),
   });
-  await notify(id, () => sendPotsAuditNotification(id, { business, name, contact, bill, details }));
+  await notify(id, () =>
+    sendPotsAuditNotification(id, {
+      business,
+      name,
+      contact,
+      bill,
+      details,
+      listed: flagged(id, contact, sender),
+    }),
+  );
   return { kind: "saved" };
 }

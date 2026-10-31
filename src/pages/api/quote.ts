@@ -15,7 +15,7 @@ export const prerender = false;
  * work itself is submitQuote(), shared with the page that takes the no-JS
  * submit, so the two cannot disagree.
  */
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress }) => {
   // A plain HTML submit belongs to the page, which can re-render the form
   // with what was typed. 307, not 303: it makes the browser repeat the
   // POST, body and all, so a page loaded before the forms stopped posting
@@ -24,7 +24,9 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response(null, { status: 307, headers: { Location: "/contact" } });
   }
 
-  const outcome = await submitQuote(await readSubmission(request, ["services"]));
+  const outcome = await submitQuote(await readSubmission(request, ["services"]), {
+    ip: clientAddress,
+  });
   if (outcome.kind === "unreadable") {
     return outcome.status === 413 ? contentTooLarge() : badRequest();
   }

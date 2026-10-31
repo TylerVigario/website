@@ -21,7 +21,7 @@
  * with SMTP_* set must not send notifications for test leads.
  */
 import { spawn } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -63,6 +63,17 @@ for (const key of Object.keys(env)) {
     delete env[key];
   }
 }
+
+// Spam lists as the host leaves them (src/lib/api/spam-list.ts): one
+// email and one address that nothing else here sends from, and domains
+// that nothing here sends from either.
+const LISTED_EMAIL = "listed@spam.example";
+const LISTED_IP = "203.0.113.7";
+writeFileSync(path.join(dir, "emails.txt"), `${LISTED_EMAIL}\n`);
+writeFileSync(path.join(dir, "domains.txt"), "bulk.example\n");
+writeFileSync(path.join(dir, "domain-fragments.txt"), "adshop.example\n");
+writeFileSync(path.join(dir, "ips.txt"), `${LISTED_IP}\n`);
+env.SPAM_LISTS_DIR = dir;
 
 const server = spawn(process.execPath, [ENTRY], { env, stdio: ["ignore", "pipe", "pipe"] });
 let output = "";
@@ -141,6 +152,14 @@ async function check(
     failures.push(`${name}: ${err instanceof Error ? err.message : String(err)}`);
     console.log(`  ✗ ${name} — threw ${String(err)}`);
   }
+}
+
+/** Whether the server has printed a line, waited for briefly: its output
+ *  arrives through a pipe, after the response it belongs to. */
+async function printed(line: RegExp) {
+  const until = Date.now() + 2000;
+  while (!line.test(output) && Date.now() < until) await new Promise((r) => setTimeout(r, 50));
+  return line.test(output) ? "" : `the server never logged ${line}`;
 }
 
 /** Each expectation returns a description of what was wrong, or nothing. */
@@ -351,6 +370,42 @@ await check(
   () => post("/api/quote", "{not json", { type: "application/json" }),
   (res) => status(res, 400),
 );
+// A sender on the spam lists is stored like anyone else and flagged, and
+// the address looked up is the one the proxy forwards, so these two
+// prove the lookup end to end through the headers the host sends.
+const FLAGGED_EMAIL = /\[spam-list\] submission #\d+ matched email\n/;
+const FLAGGED_IP = /\[spam-list\] submission #\d+ matched IP address\n/;
+let flagged = "";
+await check(
+  "a quote from an email on the spam lists is stored all the same, and flagged",
+  async () => {
+    const res = await post("/contact", {
+      ...QUOTE,
+      name: "check-forms listed email",
+      contact: LISTED_EMAIL,
+    });
+    flagged = await printed(FLAGGED_EMAIL);
+    return res;
+  },
+  (res) => redirectTo(res, 303, "/contact?sent=1") || flagged,
+);
+await check(
+  "an audit from an address on the spam lists, as the proxy forwards it, is flagged too",
+  async () => {
+    const res = await post(
+      "/pots-migration",
+      { ...AUDIT, name: "check-forms listed ip" },
+      { headers: { "x-forwarded-for": LISTED_IP } },
+    );
+    flagged = await printed(FLAGGED_IP);
+    return res;
+  },
+  (res) => redirectTo(res, 303, "/pots-migration?sent=1#audit") || flagged,
+);
+const flags = output.match(/\[spam-list\] .*/g) ?? [];
+console.log(`  ${flags.length === 2 ? "✓" : "✗"} nothing else was flagged`);
+if (flags.length !== 2) failures.push(`the spam lists flagged ${JSON.stringify(flags)}`);
+
 // The release ships no sharp, so the server's image service is passthrough
 // (astro.config.ts): /_image answers with the file it was asked for,
 // unchanged. With sharp as that service it answered 500 in the release,
@@ -366,20 +421,33 @@ await check(
       : `${IMAGE} came back changed`),
 );
 await check(
-  "the health check passes",
+  "the health check passes, and finds the spam lists",
   () => fetch(`${BASE}/api/health`),
-  (res) => status(res, 200),
+  (res, text) =>
+    status(res, 200) ||
+    ((JSON.parse(text) as { checks: { name: string; ok: boolean }[] }).checks.find(
+      (c) => c.name === "spam-lists",
+    )?.ok
+      ? ""
+      : "its spam-lists check failed"),
 );
 
-// What the database holds is the point of all of the above: the four
-// valid submissions, and nothing from the rest.
+// What the database holds is the point of all of the above: the six
+// valid submissions, flagged or not, and nothing from the rest.
 const db = new Database(env.SQLITE_PATH, { readonly: true });
 const stored = db
   .prepare("SELECT name FROM quotes ORDER BY id")
   .all()
   .map((r) => (r as { name: string }).name);
 db.close();
-const want = ["check-forms quote", "check-forms settled", "Dana", "check-forms api"];
+const want = [
+  "check-forms quote",
+  "check-forms settled",
+  "Dana",
+  "check-forms api",
+  "check-forms listed email",
+  "check-forms listed ip",
+];
 const same = stored.length === want.length && stored.every((n, i) => n === want[i]);
 console.log(`  ${same ? "✓" : "✗"} exactly the valid submissions were stored`);
 if (!same) {

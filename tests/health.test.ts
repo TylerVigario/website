@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import Database from "better-sqlite3";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { APIContext } from "astro";
@@ -69,6 +69,32 @@ describe("the health check", () => {
     mail.mailState = "on";
     expect((await get()).state).toBe("ok");
     mail.mailState = "off";
+  });
+
+  it("reports spam lists the host stopped refreshing as degraded, and passes none at all", async () => {
+    mail.mailState = "on";
+    const lists = mkdtempSync(path.join(tmpdir(), "vts-health-lists-"));
+    try {
+      delete process.env.SPAM_LISTS_DIR;
+      expect((await get()).state).toBe("ok");
+      process.env.SPAM_LISTS_DIR = lists;
+      const missing = await get();
+      expect(missing.status).toBe(200);
+      expect(missing.state).toBe("degraded");
+      expect(missing.checks.find((c) => c.name === "spam-lists")).toEqual({
+        name: "spam-lists",
+        ok: false,
+        advisory: true,
+      });
+      for (const f of ["emails.txt", "domains.txt", "domain-fragments.txt", "ips.txt"]) {
+        writeFileSync(path.join(lists, f), "");
+      }
+      expect((await get()).state).toBe("ok");
+    } finally {
+      delete process.env.SPAM_LISTS_DIR;
+      rmSync(lists, { recursive: true, force: true });
+      mail.mailState = "off";
+    }
   });
 
   it("counts a lead that was saved but never announced", async () => {

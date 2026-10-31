@@ -61,7 +61,9 @@ Astro.response.headers.set("Cache-Control", "no-store");
 let values: Values = {};
 let errors: Record<string, string> = {};
 if (Astro.request.method === "POST") {
-  const outcome = await submitPotsAudit(await readSubmission(Astro.request));
+  const outcome = await submitPotsAudit(await readSubmission(Astro.request), {
+    ip: Astro.clientAddress,
+  });
   if (outcome.kind === "unreadable") {
     // Nothing was read, so nothing can be echoed back: the form comes
     // back empty, with a message that says so rather than one that

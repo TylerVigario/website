@@ -9,8 +9,8 @@ import { DRAFT_DAYS, RETENTION_MONTHS } from "@/lib/retention";
 // change to either is a change to this page. Both periods below are the
 // numbers the code enforces, read from src/lib/retention.ts: submissions
 // by src/lib/db.ts, drafts by src/lib/forms/enhance.ts.
-const effective = "2026-10-05";
-const effectiveLabel = "October 5, 2026";
+const effective = "2026-10-31";
+const effectiveLabel = "October 31, 2026";
 ---
 
 <Base title="Privacy" description="What this site collects when you send a form, what it is used for, who else handles it, and how long it is kept." mainClass="mx-auto max-w-3xl px-6 pt-32 pb-24">
@@ -37,14 +37,14 @@ const effectiveLabel = "October 5, 2026";
     <section>
       <h2 class="text-xl font-semibold text-navy">How it's used</h2>
       <p class="mt-3">
-        To reply to you about what you asked, and for nothing else. It is never sold or rented, never shared for marketing, and never added to a mailing list.
+        To reply to you about what you asked, and to sort out spam: the email address you give and the IP address you send from are checked, on this server, against public lists of known spam senders, and a match only marks the notification I get and is noted in the server's log. Nothing else. It is never sold or rented, never shared for marketing, and never added to a mailing list.
       </p>
     </section>
 
     <section>
       <h2 class="text-xl font-semibold text-navy">Who else handles it</h2>
       <p class="mt-3">
-        What you send is stored on Vigario Technology Solutions' own server. A notification with the same details is emailed to me so I can reply, so it also passes through the email providers that deliver, forward and hold my mail. No one else receives it.
+        What you send is stored on Vigario Technology Solutions' own server. A notification of what you sent is emailed to me so I can reply, so it also passes through the email providers that deliver, forward and hold my mail. No one else receives it.
       </p>
     </section>
 
