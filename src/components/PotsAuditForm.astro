@@ -141,7 +141,16 @@ const fields = [
         <label for="details" class="mb-1.5 block text-sm font-medium text-foreground">
           Anything else? <span class="font-normal text-muted">(optional)</span>
         </label>
-        <textarea id="details" name="details" rows="3" class={inputClass}>{str("details")}</textarea>
+        <p id="details-hint" class="mb-1.5 text-sm text-muted">
+          Please don't include passwords, account numbers or health details.
+        </p>
+        <textarea
+          id="details"
+          name="details"
+          rows="3"
+          aria-describedby="details-hint"
+          class={inputClass}
+        >{str("details")}</textarea>
       </div>
 
       <button
