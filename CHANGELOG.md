@@ -1,4 +1,10 @@
 # Changelog
+## [1.21.1](https://github.com/TylerVigario/website/compare/v1.21.0...v1.21.1) (2026-11-01)
+
+### Bug Fixes
+
+* **site:** Straighten the rack and server photographs 
+
 ## [1.21.0](https://github.com/TylerVigario/website/compare/v1.20.0...v1.21.0) (2026-10-31)
 
 ### Features
