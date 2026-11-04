@@ -24,12 +24,12 @@ in turn. That is the whole reason this licence was chosen.
 ## Reserved — © Vigario Technology Solutions, All Rights Reserved
 
 **Brand and imagery.** `src/assets/images/` in full, apart from the
-photographs under `stock/` (below), which are other people's — the VTS logo and symbol, the
-social-sharing card, and every client screenshot under
-`src/assets/images/work/`. Also every file in `public/`, which is the
-logo mark in the formats browsers and home screens ask for:
-`favicon.ico`, `apple-touch-icon.png`, `icon-192.png` and
-`icon-512.png`. The reservation follows the files, not the path.
+photographs under `stock/` and the Bravo Farms logo, which are other
+people's (below) — the VTS logo and symbol, the social-sharing card, and
+every client screenshot under `src/assets/images/work/`. Also every file
+in `public/`, which is the logo mark in the formats browsers and home
+screens ask for: `favicon.ico`, `apple-touch-icon.png`, `icon-192.png`
+and `icon-512.png`. The reservation follows the files, not the path.
 
 **Written content.** The prose, not the markup that arranges it:
 
@@ -52,6 +52,10 @@ The GitHub and LinkedIn marks in `src/components/icons/` belong to
 GitHub and LinkedIn. They label links to profiles on those sites, and
 this licence grants neither. The glyph in `LinkedIn.astro` comes from
 Bootstrap Icons, under MIT, and carries that notice in the file.
+
+The Bravo Farms logo, `src/assets/images/work/voip/bravo-farms-logo.png`,
+belongs to Bravo Farms. It names the client beside the work done for
+them, and this licence grants nothing in it.
 
 The photograph behind the homepage hero,
 `src/assets/images/stock/blue-cables-switch.jpg`, is by Scott Rodgerson
