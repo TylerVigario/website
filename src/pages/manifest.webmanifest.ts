@@ -9,7 +9,7 @@ export const GET: APIRoute = () =>
       start_url: "/",
       display: "standalone",
       background_color: "#fafaf9",
-      theme_color: "#2970b5",
+      theme_color: "#fafaf9",
       // PNG at the two sizes install prompts actually look for. The single
       // SVG this replaced satisfied Chrome and nothing else, and the file
       // it pointed at was a generic mark rather than the VTS logo.
