@@ -29,10 +29,11 @@ the menu is `<details>`, the reveal is one CSS rule armed by a 500-byte
 script, the lightbox is `<dialog>` plus scroll-snap, page changes
 cross-fade by one CSS at-rule (`@view-transition`), instant navigation is
 a speculation-rules file the server points at, and the forms post HTML.
-No page ships a framework: a plain page carries 508 B (the scroll
-reveal), a case study about 4.9 KB (plus the image viewer), and the two
-input pages about 5.4 KB (plus the form script). `npm run check:bundles`
-budgets every prerendered page, following imports, locally and in CI. If
+No page ships a framework: a plain page carries about 500 B (the scroll
+reveal), a case study with screenshots about 5.2 KB (plus the image
+viewer), and the two input pages about 5.7 KB (plus the form script).
+`npm run check:bundles` budgets every prerendered page, following
+imports, locally and in CI. If
 something ever genuinely needs a framework, argue for it then — do not
 reintroduce one to solve a problem the platform already solves.
 
@@ -76,12 +77,13 @@ version: a level is one step from the last release tag, so a version is
 never skipped or reused, and one whose tag already exists is refused
 before anything runs.
 
-The artifact is `dist/`, `node_modules/` (better-sqlite3 only, for the
-native addon that cannot be bundled), a generated `package.json`,
+The artifact is `dist/`, `node_modules/` (better-sqlite3, for the
+native addon that cannot be bundled, and the one package it depends on,
+both at the lockfile's versions), a generated `package.json`,
 `CHANGELOG.md`, `RELEASE` (version + the commit the source came from),
 and `MANIFEST.sha256` — a sha256 of every other file in the tree. It runs
 on `node dist/server/entry.mjs` with `SQLITE_PATH` set, needs no
-toolchain and no network, and is about 10 MB.
+toolchain and no network, and is about 21 MB, most of it image variants.
 
 **Installing it is the host's job, and the tools for that live on the
 host.** Fetching, verifying and swapping a release are operations on a
@@ -117,9 +119,7 @@ absolute source paths into the server bundle. One field in
 stays random per build on purpose. It encrypts the props of server
 islands, so a key fixed in public would make any future island's props
 readable and forgeable; a matching hash is not worth that. Every other
-byte of a rebuild matches (measured on astro 7.3.8). The order of the
-manifest's `assets` differed too, until astro 7.3.6 shipped the sort
-from withastro/astro#18155.
+byte of a rebuild matches (measured on astro 7.3.8).
 
 What is true about the app regardless of what ships it: `astro build`
 emits `dist/client/` (the static tree, which a web server serves
@@ -141,7 +141,7 @@ as though one of them is the way.
 
 | Path | Handling |
 | --- | --- |
-| `/_astro/*` | Static file. `Cache-Control: public, max-age=31536000, immutable` — every filename is content-hashed (verified: 0 unhashed of 177), so a stale cache is impossible and revalidation is wasted. |
+| `/_astro/*` | Static file. `Cache-Control: public, max-age=31536000, immutable` — every filename is content-hashed (verified 2026-11-04: 0 unhashed of 420), so a stale cache is impossible and revalidation is wasted. |
 | `/api/*` | Reaches the Node process. |
 | `/.well-known/security.txt`, `/robots.txt` | Static file, `Content-Type: text/plain; charset=utf-8` (RFC 9116 requires it for `security.txt`). Prerendered, so the headers set in their `.ts` endpoints are never sent in production; the server chooses them. |
 | `/manifest.webmanifest` | Static file, `Content-Type: application/manifest+json`, for the same reason. |
@@ -180,7 +180,7 @@ accident and neither is visible from the config alone:
 
 **The immutable rule has to match the prefix Astro actually emits.**
 That is `/_astro/`. A rule matching some other prefix is not a no-op —
-it silently drops caching on all 177 hashed assets, fonts and every
+it silently drops caching on every hashed asset, fonts and every
 image variant included, on a site whose weight is almost entirely
 images. This is precisely how it was wrong before: the rule still named
 `/_next/static/`, inherited from the framework this site no longer uses.
@@ -206,11 +206,12 @@ header from the connection rather than appending to one the client sent;
 otherwise a sender names whatever address it likes to the spam-list
 lookup (`src/lib/api/spam-list.ts`), which is the only thing that reads it.
 
-The Node process needs `SQLITE_PATH` (absolute), reads `HOST`/`PORT`, and
-reads `SPAM_LISTS_DIR` where the host keeps spam lists for it; it is
-`node dist/server/entry.mjs`. Nothing else about the machine —
-process supervision, TLS, DNS, where the files live — belongs in this
-repository.
+The Node process needs `SQLITE_PATH` (absolute). It reads `HOST`/`PORT`,
+`SPAM_LISTS_DIR` where the host keeps spam lists for it,
+`HEALTH_MIN_FREE_MB`, and the mail settings (`SMTP_*`, `NOTIFY_EMAIL`);
+`.env.example` says what each does. It is `node dist/server/entry.mjs`.
+Nothing else about the machine — process supervision, TLS, DNS, where
+the files live — belongs in this repository.
 
 ## Security headers the server must send
 
@@ -241,9 +242,7 @@ the file from here inside its own page, falls back to its own thumbnail.
 things would force one, and all three are currently zero across every
 page including the two that render at request time: inline `<script>`
 (scripts are emitted as files — `build.assetsInlineLimit: 0` in
-`astro.config.ts`), inline `<style>`, and `style=` attributes. The last
-`style=` the build had was a decorative grid in the hero, moved to a class
-and since removed with it.
+`astro.config.ts`), inline `<style>`, and `style=` attributes.
 
 Any of them would be blocked by the browser rather than by the build, or
 "fixed" by weakening the policy, which is the sort of thing that gets
@@ -262,7 +261,7 @@ should not be told something laxer.
 - **Quote** — a "request a quote" submission from the main contact form. Schema in [`src/lib/api/quote.ts`](src/lib/api/quote.ts). Submitted through `submitQuote()` in [`src/lib/api/submit.ts`](src/lib/api/submit.ts), which both ways in call: `/api/quote` for JSON, and `/contact` itself for a no-JS form post.
 - **POTS audit** — a "free phone-bill audit" submission from the `/pots-migration` landing page. Different schema ([`src/lib/api/pots-audit.ts`](src/lib/api/pots-audit.ts)), same destination row, submitted through `submitPotsAudit()` the same two ways (`/api/pots-audit`, `/pots-migration`).
 - **`quotes` table** — single SQLite table that holds both kinds of submission. The `services` column distinguishes: the chosen services, comma-joined, for quote submissions, the literal string `"POTS Migration Audit"` for audit submissions. `notified_at` is when the row's notification reached the relay: NULL if it never did, `'unknown'` for rows older than the column. Its schema is versioned: `getDb()` runs the migrations in `src/lib/db.ts` against `PRAGMA user_version`. A migration that has shipped is never edited; append a new one.
-- **Problem Details** — the API error shape, per RFC 9457, `application/problem+json`. Validation failures via `zodError()` (422, type `VALIDATION_TYPE`, a tag URI rather than a path that would 404), a form sent faster than a person fills one in via `sentTooSoon()` (422, type `TOO_SOON_TYPE`, see `fill-time.ts`), a body that cannot be read at all via `badRequest()` (400) or `contentTooLarge()` (413, over `BODY_LIMIT_BYTES`), an unsupported method via `methodNotAllowed()` (which sets `Allow`), an unclaimed path via `notFound()` from the `[...path].ts` catch-all. Everything but those two 422s is `about:blank`, which means no more than its status. Two errors are NOT this shape and cannot be: a cross-site write is refused by Astro before middleware or routes run (`403 text/plain`), and an unhandled route fault returns the site's `500 text/html` — catching that is the blanket try/catch the guardrails forbid. `error.ts` records both, with the measurement. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()`, whose response body is annotated with the `ProblemDetails` type so a change to the shape fails the build. The client does **not** import that schema: [`enhance.ts`](src/lib/forms/enhance.ts) reads the shape by hand, because validating it in the browser would pull zod into a bundle that is otherwise ~2 KB in order to re-check a response this server just produced. See "Form patterns" below.
+- **Problem Details** — the API error shape, per RFC 9457, `application/problem+json`. Validation failures via `zodError()` (422, type `VALIDATION_TYPE`, a tag URI rather than a path that would 404), a form sent faster than a person fills one in via `sentTooSoon()` (422, type `TOO_SOON_TYPE`, see `fill-time.ts`), a body that cannot be read at all via `badRequest()` (400) or `contentTooLarge()` (413, over `BODY_LIMIT_BYTES`), an unsupported method via `methodNotAllowed()` (which sets `Allow`), an unclaimed path via `notFound()` from the `[...path].ts` catch-all. Everything but those two 422s is `about:blank`, which means no more than its status. Two errors are NOT this shape and cannot be: a cross-site write is refused by Astro before middleware or routes run (`403 text/plain`), and an unhandled route fault returns the site's `500 text/html` — catching that is the blanket try/catch the guardrails forbid. `error.ts` records both, with the measurement. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()`, whose response body is annotated with the `ProblemDetails` type so a change to the shape fails the build. The client does **not** check it with zod: [`enhance.ts`](src/lib/forms/enhance.ts) reads the three fields it uses by hand, because validating in the browser would pull zod into a bundle that is otherwise about 4.6 KB in order to re-check a response this server just produced. See "Form patterns" below.
 
 ## Key paths
 
@@ -272,19 +271,21 @@ the URL is the path under `src/pages/`.
 ```text
 src/
 ├── pages/                            # ROUTES. One file, one URL.
-│   ├── index.astro  about.astro  contact.astro  services.astro   # contact takes its own no-JS POST
-│   ├── services/                     # websites, software, managed-it (on ServicePage); linux, networking, security-cameras, windows
-│   ├── work/                         # case studies: italesowell, pipetree, voip, bravo-farms
+│   ├── index.astro  about.astro  contact.astro  privacy.astro   # contact takes its own no-JS POST
+│   ├── services.astro  services/     # websites, software, managed-it (on ServicePage); linux, networking, security-cameras, windows
+│   ├── work.astro  work/             # case studies: italesowell, pipetree, voip, bravo-farms
 │   ├── pots-migration.astro          # the campaign landing page; takes its own no-JS POST
 │   ├── 404.astro  500.astro          # error pages, prerendered to static HTML
 │   ├── robots.txt.ts                 # generated from `site` in astro.config.ts
 │   ├── manifest.webmanifest.ts       # generated, so icon paths cannot drift
 │   ├── speculation-rules.json.ts     # hover-to-prerender rules, loaded by header (the CSP forbids inline)
+│   ├── .well-known/security.txt.ts   # RFC 9116; Canonical from `site`, Expires computed per build
 │   └── api/                          # prerender = false, like contact + pots-migration
 │       ├── quote.ts                  # POST, JSON: submitQuote(); a form post is 307'd to /contact
 │       ├── pots-audit.ts             # POST, JSON: submitPotsAudit(); a form post is 307'd to the page
-│       └── health.ts                 # GET/HEAD: open, read, schema, write-probe, free space → 200 or 503;
-│                                     #   mail + unannounced leads are advisory: "degraded", still 200
+│       ├── health.ts                 # GET/HEAD: open, read, schema, write-probe, free space → 200 or 503;
+│       │                             #   mail, unannounced leads and spam lists are advisory: "degraded", still 200
+│       └── [...path].ts              # any other /api/ path: a Problem Details 404
 ├── components/                       # .astro, render to HTML at build time
 │   ├── QuoteForm.astro  PotsAuditForm.astro
 │   ├── Lightbox.astro                # <dialog> + scroll-snap viewer
@@ -294,15 +295,18 @@ src/
 │   └── icons/                        # inline SVG, incl. icons/services/*
 ├── layouts/Base.astro                # <head>, canonical, and the frame: nav, <main id="main">, footer
 ├── lib/
-│   ├── db.ts                         # better-sqlite3 singleton
+│   ├── db.ts                         # better-sqlite3 singleton, the schema's migrations, the purge
+│   ├── retention.ts                  # how long submissions and drafts are kept; /privacy states both
+│   ├── business.ts                   # the business as structured data names it, and where it works
 │   ├── services.ts  work.ts          # content catalogs: services (the quote form's options), case studies, projects in development
 │   ├── photos.ts                     # other people's photos, each with the credit its licence requires (CreditedPhoto renders both)
 │   ├── image-sizes.ts                # every image's `sizes`, derived from its container; images are <Picture>, AVIF + WebP
 │   ├── forms/
 │   │   ├── enhance.ts                # progressive enhancement; never erases input
-│   │   └── rules.ts                  # client rules mirroring the schemas
-│   ├── api/                          # submit.ts (the one submission path), error.ts (RFC 9457), schemas
-│   └── email/mailer.ts               # nodemailer; best-effort, logged on failure
+│   │   ├── rules.ts                  # client rules mirroring the schemas
+│   │   └── limits.ts                 # field lengths, shared by the schemas and the client rules
+│   ├── api/                          # submit.ts (the one submission path), error.ts (RFC 9457), schemas, spam-list.ts
+│   └── email/                        # mailer.ts (nodemailer; best-effort, logged on failure), relay.ts (SMTP_* settings)
 ├── emails/templates.ts               # HTML strings, escaped at every interpolation
 ├── scripts/                          # browser-side: reveal.ts, lightbox.ts
 ├── styles/global.css                 # @theme tokens + the reveal rules
@@ -368,17 +372,25 @@ fast; `fill-time.ts` says why.
 // src/pages/api/quote.ts: the enhanced path, JSON in and out.
 export const prerender = false; // six opt out: the four api routes + the two input pages
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, clientAddress }) => {
   // A plain form post belongs to the page, which can re-render the form.
-  // 307, not 303, so the browser repeats the POST with its body: a page
-  // loaded before the forms moved still lands its submission.
-  if (!isJson(request)) return new Response(null, { status: 307, headers: { Location: "/contact" } });
+  // 307, not 303, so the browser repeats the POST with its body and the
+  // page takes the submission.
+  if (!(request.headers.get("content-type") ?? "").includes("application/json")) {
+    return new Response(null, { status: 307, headers: { Location: "/contact" } });
+  }
 
-  const outcome = await submitQuote(await readSubmission(request, ["services"]));
+  const outcome = await submitQuote(await readSubmission(request, ["services"]), {
+    ip: clientAddress, // for the spam-list lookup, and nothing else
+  });
   if (outcome.kind === "unreadable") return outcome.status === 413 ? contentTooLarge() : badRequest();
   if (outcome.kind === "invalid") return zodError(outcome.failure); // 422, RFC 9457
   if (outcome.kind === "too-soon") return sentTooSoon(); // 422: posted straight back
-  return json({ success: true }); // "dropped" by the honeypot answers the same
+  // "dropped" by the honeypot answers the same.
+  return new Response(JSON.stringify({ success: true }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
 };
 ```
 
@@ -386,7 +398,9 @@ export const POST: APIRoute = async ({ request }) => {
 ---
 // src/pages/contact.astro: the no-JS path. The form posts to its own page.
 if (Astro.request.method === "POST") {
-  const outcome = await submitQuote(await readSubmission(Astro.request, ["services"]));
+  const outcome = await submitQuote(await readSubmission(Astro.request, ["services"]), {
+    ip: Astro.clientAddress,
+  });
   if (outcome.kind === "unreadable") {
     errors = { "(root)": unreadableMessage(outcome.status) }; // nothing was read to echo
     Astro.response.status = outcome.status;
@@ -422,12 +436,13 @@ npm run build                     # astro build → dist/client (static) + dist/
 npm start                         # node dist/server/entry.mjs (after build)
 npm run typecheck                 # astro check — sees .astro templates, which tsc alone does not
 npm test                          # vitest run
-npm run lint                      # eslint (js) + markdownlint (md)
+npm run lint                      # eslint (js) + markdownlint (md) + actionlint (workflows)
 npm run format                    # prettier --check
 npm run format:fix                # prettier --write
 npm run ci                        # check:install-scripts + lint + typecheck + format + test + build + check:bundles + check:forms
 npm run check:bundles             # every prerendered page: JS budget, no inline code; and no image shipped that nothing uses
 npm run check:forms               # both forms, no JS, against the built server on a scratch database
+npm run release                   # build the release tarball into dist-release/ (what Release runs)
 npm run check:release -- <tarball> # unpack a release, check its manifest, run check:forms in it (linux-x64)
 npm run lint:actions              # actionlint over .github/workflows
 npm run clean                     # rm dist, .astro, node_modules/.cache, .eslintcache
@@ -449,7 +464,7 @@ npm run check:install-scripts     # every dependency install script is approved 
 
 Hard rules. These mirror pipetree's; they exist because violating them produced concrete, hard-to-undo damage in the sibling repos.
 
-- **No direct commits to `main`.** Always branch first — `git branch --show-current` before any commit; if it says `main`, `git checkout -b <type>/<slug>` first. The release workflow's `chore(release)` push is the only thing that lands directly on `main`.
+- **No direct commits to `main`.** Always branch first — `git branch --show-current` before any commit; if it says `main`, `git checkout -b <type>/<slug>` first. The release workflow's `chore(release)` commit is the only thing that lands directly on `main`.
 - **Linear-only `main`, no force-push.** Rebase is the workflow. If a pull created a merge commit, fix it (reset + rebase + re-apply) rather than merging.
 - **Type = release impact, not change-nature.** The *type* carries "does this change the artifact" — `feat` `fix` `revert` `perf` `refactor` `build` do and bump; `ci` `docs` `test` `chore` `style` cannot and do not. The *scope* carries "where in the codebase." A bug fix inside CI infrastructure is `ci:` (no release), not `fix(ci):` (would bump patch).
 - **PR titles MUST be conventional.** Squash-merge uses the PR title as `main`'s commit message, so a non-conventional title pollutes `main` and breaks the release pipeline that walks commits to drive bumps. Enforced by [`.github/workflows/pr-title.yml`](.github/workflows/pr-title.yml), which reuses `.commitlintrc.js` as the single source of truth.
@@ -476,7 +491,7 @@ Don't introduce a permanent `develop` branch — the ceremony outweighs the bene
 
 - **`SQLITE_PATH` must be absolute.** [`getDbPath()`](src/lib/db.ts) rejects a missing or relative value when the first request opens the database. `/api/health` opens it, so a deploy checks that endpoint rather than treating a listening port as a working app; static pages keep serving either way. Don't default it, don't make it optional, don't fall back to cwd.
 
-  This was a `runtime-config.ts` module, a `required-env.json` list and a shape test — 99 lines guarding one `path.isAbsolute` call, sized for the five env vars the Next era had. It also spent weeks calling nothing at all, because the caller lived in Next's deleted `instrumentation.ts`. The rule is worth keeping; the framework around it was not.
+  This was a `runtime-config.ts` module, a `required-env.json` list and a shape test — 99 lines guarding one `path.isAbsolute` call, sized for the five env vars the Next era had. The rule is worth keeping; the framework around it was not.
 
   It ran nowhere at all between the Astro migration and 2026-09-02: the call lived in Next's `instrumentation.ts`, that file was deleted, nothing replaced it, and the docs kept promising the check for weeks. If you move the call, prove it still fires by booting with the variable unset.
 - **actionlint runs in `pre-push`, so a broken workflow no longer reaches CI to be discovered.** It is not installed by npm — a Go binary, found on PATH or in `~/.local/bin` — so it reports SKIPPED rather than failing where a developer does not have it, and CI stays authoritative. That leniency is for developers who never touch `.github/`; it is not cover for the person editing the workflow, who should confirm it actually ran rather than skipped.
