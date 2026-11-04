@@ -436,7 +436,7 @@ npm run build                     # astro build → dist/client (static) + dist/
 npm start                         # node dist/server/entry.mjs (after build)
 npm run typecheck                 # astro check — sees .astro templates, which tsc alone does not
 npm test                          # vitest run
-npm run lint                      # eslint (js) + markdownlint (md) + actionlint (workflows)
+npm run lint                      # eslint (code, css) + markdownlint (md) + actionlint (workflows)
 npm run format                    # prettier --check
 npm run format:fix                # prettier --write
 npm run ci                        # check:install-scripts + lint + typecheck + format + test + build + check:bundles + check:forms

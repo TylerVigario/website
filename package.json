@@ -48,6 +48,7 @@
     "@astrojs/check": "^0.9.12",
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.3",
+    "@eslint/css": "^2.0.1",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24.19.2",
     "browserslist": "^4.29.5",
@@ -61,6 +62,7 @@
     "lint-staged": "^17.6.0",
     "markdownlint-cli2": "^0.24.0",
     "prettier": "^3.9.10",
+    "tailwind-csstree": "^0.4.2",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.1",
@@ -70,14 +72,14 @@
     "*.astro": [
       "eslint --cache --fix --max-warnings=0 --no-warn-ignored"
     ],
-    "*.{ts,js}": [
+    "*.{ts,js,css}": [
       "eslint --cache --fix --max-warnings=0 --no-warn-ignored",
       "prettier --write"
     ],
     "*.md": [
       "markdownlint-cli2 --fix"
     ],
-    "*.{json,jsonc,css}": [
+    "*.{json,jsonc}": [
       "prettier --write"
     ],
     "*.{yml,yaml}": [
