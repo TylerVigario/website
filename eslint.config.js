@@ -39,6 +39,17 @@ export default defineConfig([
     },
   },
 
+  // Each <script> in an .astro file reaches ESLint as a virtual file,
+  // `Component.astro/1_1.ts`, which no tsconfig can contain. Left under
+  // the projectService above, it failed to parse, and eslint-plugin-astro
+  // drops a message with no line, so every script went unlinted and
+  // unreported. They get the rules that need no type information;
+  // `astro check` typechecks them, as it does the frontmatter.
+  {
+    files: ["**/*.astro/*.ts", "**/*.astro/*.js"],
+    ...tseslint.configs.disableTypeChecked,
+  },
+
   // The two JavaScript configs, which are in no tsconfig. Everything
   // else, scripts/ and astro.config.ts included, is TypeScript in the
   // project and linted with types.
