@@ -212,12 +212,12 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
   # THE gate, not a copy of it. ci.yml is callable for exactly this: the
-  # checks every pull request passes — pins, actionlint, typecheck, lint,
-  # format, tests, build, the bundle budget, the dev server — run here
-  # against the commit being released. This job used to run `npm run ci`
-  # and call that "the same gate", which it was not: it skipped the pins,
-  # the bundle budget and the dev server, and reported actionlint as
-  # SKIPPED because nothing installed it.
+  # checks every pull request passes — pins, install scripts, typecheck,
+  # lint with actionlint, format, tests, build, the bundle checks, the
+  # forms without JavaScript, the release artifact, the dev server — run
+  # here against the commit being released. `npm run ci` is not that
+  # gate: it skips the pins, the release artifact and the dev server,
+  # and reports actionlint SKIPPED wherever nothing installed it.
   gate:
     needs: decide
     if: needs.decide.outputs.release == 'true'
@@ -334,8 +334,7 @@ jobs:
       contents: read
       # Both required by actions/attest: the OIDC token is the
       # keyless signing identity, and attestations:write stores the
-      # result. This replaces the RPM's GPG key — no key on any host to
-      # store, rotate, or leak.
+      # result. There is no signing key to store, rotate, or leak.
       id-token: write
       attestations: write
     steps:

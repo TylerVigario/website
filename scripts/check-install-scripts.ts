@@ -12,9 +12,9 @@
  *
  * The policy itself: better-sqlite3 is approved, pinned to the reviewed
  * version, because its script is the compile-from-source fallback for a
- * platform without a bundled binary. esbuild and fsevents are denied,
- * because each ships its binary ready-made and the script only repeats
- * that work. Every build and test passes with all install scripts off.
+ * platform without a bundled binary. fsevents is denied, because it
+ * ships its binary ready-made and the script only repeats that work.
+ * Every build and test passes with all install scripts off.
  *
  * It asks npm rather than reading the lockfile, because the lockfile's
  * hasInstallScript flag misses better-sqlite3, whose script npm infers

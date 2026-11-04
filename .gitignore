@@ -27,5 +27,5 @@
 # OS noise
 .DS_Store
 
-# Claude Code per-developer overrides (settings.json stays tracked)
+# Claude Code's per-developer settings
 .claude/settings.local.json

@@ -4,7 +4,7 @@ import astro from "eslint-plugin-astro";
 import prettier from "eslint-config-prettier";
 
 export default defineConfig([
-  globalIgnores(["dist/**", "node_modules/**", ".astro/**"]),
+  globalIgnores(["dist/**", "dist-release/**", "node_modules/**", ".astro/**"]),
 
   // Type-aware rules across the TS surface. `projectService` picks up
   // tsconfig, which now includes .astro files.

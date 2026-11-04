@@ -12,8 +12,8 @@ export default defineConfig({
     include: ["tests/**/*.test.ts"],
     exclude: ["node_modules", "dist"],
     // Node by default. Most suites here are structural and a DOM would
-    // only slow them; the one that needs a browser opts in with a
+    // only slow them; the three that need a browser opt in with a
     // `@vitest-environment jsdom` docblock, which keeps the cost on the
-    // file that asked for it.
+    // files that asked for it.
   },
 });

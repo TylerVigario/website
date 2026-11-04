@@ -59,8 +59,6 @@ commit_preprocessors = [
 # .commitlintrc.js inherits the eleven Angular types from
 # config-conventional rather than declaring a subset — it simply cannot
 # reach the artifact, so it neither bumps nor appears.
-#
-# See .commitlintrc.js for the matching type-enum + rationale.
 commit_parsers = [
   { message = "^feat",     group = "<!-- 0 -->Features" },
   { message = "^fix",      group = "<!-- 1 -->Bug Fixes" },

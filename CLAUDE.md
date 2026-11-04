@@ -440,12 +440,12 @@ npm run lint                      # eslint (js) + markdownlint (md) + actionlint
 npm run format                    # prettier --check
 npm run format:fix                # prettier --write
 npm run ci                        # check:install-scripts + lint + typecheck + format + test + build + check:bundles + check:forms
-npm run check:bundles             # every prerendered page: JS budget, no inline code; and no image shipped that nothing uses
+npm run check:bundles             # every prerendered page: JS budget, no inline code, its own title and description; and no image shipped that nothing uses
 npm run check:forms               # both forms, no JS, against the built server on a scratch database
 npm run release                   # build the release tarball into dist-release/ (what Release runs)
 npm run check:release -- <tarball> # unpack a release, check its manifest, run check:forms in it (linux-x64)
 npm run lint:actions              # actionlint over .github/workflows
-npm run clean                     # rm dist, .astro, node_modules/.cache, .eslintcache
+npm run clean                     # rm dist, dist-release, .astro, the caches in node_modules, .eslintcache
 npm run check:pins                # .nvmrc and engines.node agree (also in pre-push)
 npm run check:install-scripts     # every dependency install script is approved or denied (also in pre-push)
 ```

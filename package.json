@@ -14,7 +14,7 @@
     "check:forms": "node scripts/check-forms.ts",
     "check:release": "node scripts/check-release.ts",
     "ci": "npm run check:install-scripts && npm run lint && npm run typecheck && npm run format && npm test && npm run build && npm run check:bundles && npm run check:forms",
-    "clean": "node -e \"const fs=require('fs'); ['dist','.astro','node_modules/.cache','.eslintcache'].forEach(p=>fs.rmSync(p,{recursive:true,force:true}))\"",
+    "clean": "node -e \"const fs=require('fs'); ['dist','dist-release','.astro','node_modules/.astro','node_modules/.vite','node_modules/.vitest-cache','.eslintcache'].forEach(p=>fs.rmSync(p,{recursive:true,force:true}))\"",
     "dev": "node --env-file-if-exists=.env.local node_modules/astro/bin/astro.mjs dev",
     "format": "prettier --check .",
     "format:fix": "prettier --write .",
@@ -97,7 +97,6 @@
   ],
   "allowScripts": {
     "better-sqlite3@13.0.3": true,
-    "esbuild": false,
     "fsevents": false
   }
 }

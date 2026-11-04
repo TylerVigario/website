@@ -11,8 +11,7 @@
 #   - Pushing while checked out on a malformed branch you aren't
 #     pushing is NOT blocked (only refs being pushed are checked)
 #   - Deletes (all-zero local_sha) skip the check
-#   - main pushes skip the check (the release workflow pushes
-#     chore(release) directly to main)
+#   - main skips the check, being the one branch outside the convention
 #
 # Bypass for one push: git push --no-verify. Don't make a habit of it.
 #
@@ -57,13 +56,12 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 done
 
 # Everything above validates the ref name. What follows validates the
-# tree: build the site and assert it still ships no framework runtime.
-# The build takes ~1.5s, so this costs less than discovering it in CI.
+# tree with the checks CI runs, all but the dev server and the release
+# artifact, so a failure is found here rather than there. Bypass with
+# --no-verify when you are pushing a known-broken WIP branch.
 #
-# Bypass with --no-verify when you are pushing a known-broken WIP branch.
-# Cheap, and previously only in CI — so a mismatched Node pin or a
-# broken workflow could only be discovered by pushing. Both are
-# sub-second; the build below is what actually costs time here.
+# The cheap ones first, so a mismatched Node pin, an unreviewed install
+# script or a broken workflow fails before the build.
 node --run check:pins
 node --run check:install-scripts
 node --run lint:actions
@@ -75,6 +73,7 @@ node --run lint:actions
 node --run lint
 node --run format
 
+# About two seconds once the image cache is warm.
 node --run build
 node --run check:bundles
 # Both forms, posted without JavaScript to the server just built. About a
