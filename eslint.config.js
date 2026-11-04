@@ -3,11 +3,12 @@ import tseslint from "typescript-eslint";
 import astro from "eslint-plugin-astro";
 import css from "@eslint/css";
 import { tailwind4 } from "tailwind-csstree";
+import baselineJs from "eslint-plugin-baseline-js";
 import prettier from "eslint-config-prettier";
 import pkg from "./package.json" with { type: "json" };
 
-// The Baseline year package.json's browserslist names, so the CSS is
-// checked against the browsers the build serves.
+// The Baseline year package.json's browserslist names, so the CSS and
+// the browser code are checked against the browsers the build serves.
 const BASELINE_YEAR = Number(/\bbaseline (\d{4})\b/.exec(pkg.browserslist.join(","))?.[1]);
 if (!BASELINE_YEAR) throw new Error("eslint.config.js: the browserslist names no Baseline year");
 
@@ -66,6 +67,35 @@ export default defineConfig([
   {
     files: ["*.js", ".*.js"],
     ...tseslint.configs.disableTypeChecked,
+  },
+
+  // The code that runs in the browser, against the browsers the site is
+  // built for. The rest runs on Node, which no Baseline year describes;
+  // a module the browser gets from anywhere else belongs in this list.
+  // With types, a method is checked by what it is called on, which is
+  // how `set.difference()` or `array.toSorted()` is found.
+  {
+    files: ["src/scripts/**/*.ts", "src/lib/forms/**/*.ts", "src/lib/retention.ts"],
+    plugins: { "baseline-js": baselineJs },
+    extends: [baselineJs.configs["recommended-ts"]({ available: BASELINE_YEAR })],
+  },
+  // The scripts in .astro files have no types, so they get the checks
+  // that need none: a global or a static such as `Object.groupBy()`, not
+  // a method. The plugin's preset for that applies only to .js files, and
+  // these arrive as .ts, so the rule is set here instead.
+  {
+    files: ["**/*.astro/*.ts", "**/*.astro/*.js"],
+    plugins: { "baseline-js": baselineJs },
+    rules: {
+      "baseline-js/use-baseline": [
+        "error",
+        {
+          available: BASELINE_YEAR,
+          includeWebApis: { preset: "auto" },
+          includeJsBuiltins: { preset: "auto" },
+        },
+      ],
+    },
   },
 
   // The CSS the site writes, against the browsers it is built for. Only
