@@ -86,7 +86,7 @@ describe("the request schemas and the table", () => {
 
   it("accounts for every field a POTS audit submits", () => {
     // A POTS audit carries two fields the table has no column for: they
-    // are folded into `details` by the route, deliberately, because both
+    // are folded into `details` by submit.ts, deliberately, because both
     // forms share one table. Listed explicitly so ADDING a third field
     // fails here rather than being silently dropped on the way to disk.
     const FOLDED_INTO_DETAILS = ["business", "bill"];

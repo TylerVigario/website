@@ -261,7 +261,7 @@ describe("reading a request", () => {
     });
   });
 
-  it("reads JSON, and treats malformed JSON as nothing", async () => {
+  it("reads JSON", async () => {
     const json = (body: string) =>
       new Request("http://x/", {
         method: "POST",
