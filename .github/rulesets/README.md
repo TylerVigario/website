@@ -17,12 +17,7 @@ protected. The payload is committed now so that a change to protection is a chan
 the repository, reviewable like any other.
 
 `main.json` names one bypass actor: the `website-release` App (id 4810355),
-owned by this account and installed on this repository alone. It replaces the
-App of the same name that belonged to the previous organisation — an App
-belongs to its owner, so the old one could never attach here, and a bypass
-entry naming an actor the forge cannot resolve fails the *entire* payload
-rather than just that entry. That is why the required-status-checks rule sat
-committed and unenforced.
+owned by this account and installed on this repository alone.
 
 The exemption exists for one reason: a release records itself, which means
 writing the default branch, which nothing else may do. Its blast radius is the
@@ -31,7 +26,7 @@ verified against the App's own credential, not read off a form. Notably absent
 is `workflows`, so an identity that bypasses branch protection still cannot
 rewrite the workflows that gate this repository.
 
-`main.json` now requires two status checks: `Gate` and `Validate PR title`.
+`main.json` requires two status checks: `Gate` and `Validate PR title`.
 Those strings are job *names*, not workflow filenames, and a required context
 naming no job wedges the branch on an answer that never comes — every check
 green and nothing mergeable. They were taken from what GitHub actually reports
@@ -67,6 +62,10 @@ rather than to a rule, so any actor listed here would be past `update` and
 `deletion` as readily as anything else — an exemption from the only property this
 ruleset exists to provide. A release creates tags and never moves them, so it needs
 nothing withheld here.
+
+The tags a release creates are lightweight: publishing the release creates its tag, so
+`git cat-file -t` on one reports `commit`. `update` does not care which kind a tag is, so
+the guarantee does not depend on annotated tags.
 
 `creation` is deliberately absent: anyone may name a version, nobody may change one.
 
@@ -138,30 +137,15 @@ rule in the ruleset, not only `pull_request` — so this App is past `deletion` 
 with the bypass and one without. Judged not worth the second apply step here; revisit if
 the repository stops being single-owner.
 
-There is no environment gate with required reviewers. Releases here are dispatched by
-hand, as greenroom-win's are, so a reviewer would not stall anything; the gate is simply
-not in place. The consequence is that any workflow in this repository can mint this App's
-token, which is the exposure such a gate would close.
+The App's credentials are not repository secrets. They live in the `release`
+environment, which admits `main` alone, and only the release workflow's `publish` job
+names it, minting the token after the artifact is built, run and attested. A workflow
+run on any other branch cannot reach them.
 
 ## Not included
 
-No publishing environment with required reviewers. The release App can write `main` and
-create tags the moment a dispatch starts; an environment gate would put a second person
-between the dispatch and the write. It is the remaining gap, and it is accepted knowingly
-rather than overlooked.
-
-## Corrected
-
-This section previously said there was no tag ruleset, that the artifact was an RPM built
-from the commit and tagged afterwards, and that tag protection "rests on `git tag -a`,
-which the release workflow uses". All three were false, and the third was the dangerous
-one: it named annotated tags as the thing the guarantee depends on.
-
-`tags.json` exists and is applied. The artifact is a tarball. And the release workflow
-does **not** create annotated tags — it publishes with `gh release create --target`, which
-creates a lightweight tag, so `git cat-file -t v1.11.0` reports `commit`.
-
-The protection holds anyway, for the reason given above rather than the one that was
-written here: `update` refuses any move of a ref that already exists, and it does not care
-whether the tag is annotated or lightweight. That is precisely why `update` is in the
-payload and why the two rules that "look like the whole of it" are not.
+No required reviewers on the `release` environment. A workflow on `main` that names the
+environment can mint the App's token, and nothing puts a second person between a
+dispatch and the write. Releases are dispatched by hand by the one owner, so a reviewer
+would be that same person. It is the remaining gap, and it is accepted knowingly rather
+than overlooked.

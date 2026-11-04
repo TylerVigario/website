@@ -29,14 +29,7 @@ social-sharing card, and every client screenshot under
 `src/assets/images/work/`. Also every file in `public/`, which is the
 logo mark in the formats browsers and home screens ask for:
 `favicon.ico`, `apple-touch-icon.png`, `icon-192.png` and
-`icon-512.png`. Those three PNGs replaced a `public/icon.svg`, which this
-notice went on naming after it was gone, so the files that replaced it
-were reserved nowhere.
-
-These moved from `public/images/` when the site was rebuilt on Astro, so
-that they could be processed at build time. An earlier version of this
-notice reserved `public/images/`, which is now empty — the reservation
-follows the files, not the path.
+`icon-512.png`. The reservation follows the files, not the path.
 
 **Written content.** The prose, not the markup that arranges it:
 
@@ -101,8 +94,3 @@ licence is a grant, and what is not granted is reserved. But an
 unstated reservation inside a repository published under a copyleft
 licence reads as an oversight, and a reader acting in good faith should
 not have to guess where the line is.
-
-An earlier version of this project's README described the marketing copy
-as "covered by AGPL" and then asked readers to lift the structure rather
-than the content. A request is not a licence term. That sentence granted
-the very thing it asked people not to take.
