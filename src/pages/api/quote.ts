@@ -18,8 +18,8 @@ export const prerender = false;
 export const POST: APIRoute = async ({ request, clientAddress }) => {
   // A plain HTML submit belongs to the page, which can re-render the form
   // with what was typed. 307, not 303: it makes the browser repeat the
-  // POST, body and all, so a page loaded before the forms stopped posting
-  // here still lands its submission, with nothing lost.
+  // POST, body and all, so a form posted here still lands its submission,
+  // with nothing lost.
   if (!(request.headers.get("content-type") ?? "").includes("application/json")) {
     return new Response(null, { status: 307, headers: { Location: "/contact" } });
   }

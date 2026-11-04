@@ -5,9 +5,6 @@ const credentials = [
   { value: "Founder-Led", label: "Real Accountability" },
   { value: "Central Valley", label: "On-Site & Remote" },
 ];
-
-interface Props { preview?: boolean }
-const { preview = false } = Astro.props;
 ---
 
 
@@ -46,13 +43,6 @@ const { preview = false } = Astro.props;
                 That means real accountability &mdash; not a rotating cast of contractors who
                 don&apos;t know your setup.
               </p>
-
-              {!preview && (
-                <p class="text-lg leading-relaxed text-muted">
-                  We&apos;re not a vendor collecting a toll &mdash; we&apos;re builders who stake
-                  our name on every project. No layers, no ticket queues, no runaround.
-                </p>
-              )}
             </div>
           </div>
 

@@ -24,12 +24,9 @@ export function getDbPath(): string {
 // bundle can be evaluated more than once, and a second Database handle
 // on the same file is a second connection with its own WAL view.
 //
-// It used to be reachable here so the Next-era server.js could close it
-// on shutdown and force a WAL checkpoint. That entrypoint is gone and
-// @astrojs/node installs no such hook, so nothing closes it now —
-// better-sqlite3's WAL survives an uncleaned exit, so this costs
-// durability nothing, but it does mean process death is the only
-// close.
+// Nothing closes it: @astrojs/node installs no shutdown hook, so process
+// death is the only close. better-sqlite3's WAL survives an uncleaned
+// exit, so that costs durability nothing.
 const g = globalThis as unknown as { __sqlite__?: Database.Database };
 
 /**
@@ -42,12 +39,12 @@ const g = globalThis as unknown as { __sqlite__?: Database.Database };
  * that already holds rows had no defined path — the CREATE is a no-op on
  * an existing table, so a new column would simply never appear, and the
  * failure would surface as an INSERT rejecting a field that exists in
- * the schema and not on disk. The live database is in that state now:
- * user_version 0, with real submissions in it.
+ * the schema and not on disk. The production database was in that state
+ * when migrations arrived: user_version 0, with real submissions in it.
  *
  * MIGRATION 1 IS DELIBERATELY THE EXISTING SCHEMA. On a fresh file it
- * creates the table; on the production file it does nothing, because the
- * table is already there and identical. Either way the file ends at
+ * creates the table; on the production file it did nothing, because the
+ * table was already there and identical. Either way the file ends at
  * version 1 and every later migration can assume that shape. A migration
  * that only works on an empty database is not a migration.
  *
@@ -150,8 +147,6 @@ export function getDb() {
   return g.__sqlite__;
 }
 
-export { RETENTION_MONTHS };
-
 /** Deletes submissions older than RETENTION_MONTHS and returns how many
  *  went. Logs a count, never the content. */
 export function purgeExpired(db: Database.Database): number {
@@ -199,11 +194,12 @@ export function unannouncedCount(minutes = 10): number {
 
 /** Writes one submission and returns its row id.
  *
- *  The single place the table is written. A field added to a request
- *  schema without a column here fails to compile rather than at INSERT
- *  time, on a real submission, in production — which is where the
- *  duplicated statements would have failed, on the one path this site
- *  exists to serve.
+ *  The single place the table is written, with its columns named once,
+ *  in SUBMISSION_COLUMNS: one named there without a field in `Submission`
+ *  fails to compile. A field added to a request schema does not, because
+ *  submit.ts stores fields by name and drops one it does not know;
+ *  tests/schema-table-agree.test.ts is what catches that, before a real
+ *  submission loses it.
  */
 export function insertSubmission(row: Submission): number {
   const cols = SUBMISSION_COLUMNS.join(", ");

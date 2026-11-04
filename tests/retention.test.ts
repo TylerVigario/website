@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { RETENTION_MONTHS } from "@/lib/retention";
 
 /**
  * The privacy page promises that a submission is deleted after
@@ -26,8 +27,7 @@ async function freshDb(file: string) {
 }
 
 describe("submissions are kept for RETENTION_MONTHS and no longer", () => {
-  it("promises 24 months, the number the privacy page states", async () => {
-    const { RETENTION_MONTHS } = await freshDb("a.db");
+  it("promises 24 months, the number the privacy page states", () => {
     expect(RETENTION_MONTHS).toBe(24);
   });
 
