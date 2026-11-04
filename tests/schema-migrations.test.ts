@@ -5,11 +5,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 /**
- * Migrations have to work on the database that already exists, not just
- * on a fresh one. The live file predates versioning — user_version 0,
- * with real submissions in it — so the interesting case is not "does it
- * build a schema" but "does it adopt one that is already there without
- * touching the rows".
+ * Migrations have to work on a database that already exists, not just
+ * on a fresh one. The production file was at user_version 0, with real
+ * submissions in it, when migrations arrived, so the interesting case is
+ * not "does it build a schema" but "does it adopt one that is already
+ * there without touching the rows".
  *
  * Each test opens its own file through the real getDb(), by pointing
  * SQLITE_PATH at it and re-importing, so what runs is the code that
@@ -50,8 +50,8 @@ describe("schema migrations", () => {
   });
 
   it("adopts a pre-versioning database without disturbing its rows", async () => {
-    // Exactly the live file's situation: the table exists, it holds
-    // submissions, and user_version has never been set.
+    // The production file's situation when migrations arrived: the table
+    // exists, it holds submissions, and user_version has never been set.
     const legacy = path.join(dir, "legacy.db");
     const seed = new Database(legacy);
     seed.exec(`
