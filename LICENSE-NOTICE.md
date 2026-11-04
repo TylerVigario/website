@@ -25,9 +25,9 @@ in turn. That is the whole reason this licence was chosen.
 
 **Brand and imagery.** `src/assets/images/` in full, apart from the
 photographs under `stock/` and the Bravo Farms logo, which are other
-people's (below) — the VTS logo and symbol, the social-sharing card, and
-every client screenshot under `src/assets/images/work/`. Also every file
-in `public/`, which is the logo mark in the formats browsers and home
+people's (below) — the VTS logo, the social-sharing card, and every
+client screenshot under `src/assets/images/work/`. Also every file in
+`public/`, which is the logo mark in the formats browsers and home
 screens ask for: `favicon.ico`, `apple-touch-icon.png`, `icon-192.png`
 and `icon-512.png`. The reservation follows the files, not the path.
 
