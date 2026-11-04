@@ -85,15 +85,7 @@
     ]
   },
   "browserslist": [
-    "> 0.2%",
-    "not dead",
-    "not op_mini all",
-    "not and_uc > 0",
-    "not op_mob > 0",
-    "not chrome < 111",
-    "not firefox < 128",
-    "not safari < 16.4",
-    "not ios_saf < 16.4"
+    "baseline 2022 with downstream"
   ],
   "allowScripts": {
     "better-sqlite3@13.0.3": true,

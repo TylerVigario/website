@@ -1,7 +1,9 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig, passthroughImageService, sharpImageService } from "astro/config";
 import node from "@astrojs/node";
 import sitemap from "@astrojs/sitemap";
 import tailwindcss from "@tailwindcss/vite";
+import browserslist from "browserslist";
 import { RUNTIME_EXTERNALS } from "./runtime-externals.ts";
 import { BODY_LIMIT_BYTES } from "./src/lib/forms/limits.ts";
 
@@ -21,6 +23,45 @@ import { BODY_LIMIT_BYTES } from "./src/lib/forms/limits.ts";
 // reason to touch, and one crashed process taking every static page
 // down with it. See "Serving contract" in CLAUDE.md.
 const SITE = "https://vigario.tech";
+
+// The browsers the site is built for are named once, as package.json's
+// browserslist: Baseline 2022. That is the oldest Baseline year in which
+// every browser has cascade layers. Tailwind puts every style in a layer,
+// and a browser without layers applies none of them.
+//
+// Vite cannot read a browserslist (vitejs/vite#11489), so this names the
+// same browsers its way: the oldest version of each engine it knows.
+// Chrome's oldest covers the browsers built on Chromium (Samsung
+// Internet, Opera Mobile and the rest), because a Baseline query picks
+// their versions by engine, so none runs an older one. When Vite reads
+// the browserslist itself, this goes.
+const VITE_BROWSERS: Record<string, string> = {
+  chrome: "chrome",
+  and_chr: "chrome",
+  android: "chrome",
+  edge: "edge",
+  opera: "opera",
+  firefox: "firefox",
+  and_ff: "firefox",
+  safari: "safari",
+  ios_saf: "ios",
+};
+
+function cssTarget(): string[] {
+  // With no config found, browserslist uses its own defaults, which would
+  // build for browsers nobody chose.
+  const queries = browserslist.loadConfig({ path: fileURLToPath(new URL(".", import.meta.url)) });
+  if (!queries) throw new Error("astro.config.ts: package.json names no browserslist");
+  const oldest = new Map<string, number>();
+  for (const entry of browserslist(queries)) {
+    const [name = "", version = ""] = entry.split(" ");
+    const browser = VITE_BROWSERS[name];
+    // parseFloat reads a range such as "15.2-15.3" as its first version.
+    const v = Number.parseFloat(version);
+    if (browser !== undefined && v < (oldest.get(browser) ?? Infinity)) oldest.set(browser, v);
+  }
+  return [...oldest].map(([browser, v]) => `${browser}${v}`);
+}
 
 export default defineConfig({
   site: SITE,
@@ -113,17 +154,20 @@ export default defineConfig({
     // and since HTML is no-cache while /_astro is immutable, inline
     // script was re-sent on every navigation where a file is fetched once.
     //
-    // cssTarget: the browsers Tailwind compiles for (Chrome 111, Firefox
-    // 128, Safari 16.4, hard-coded in @tailwindcss/node), so the minifier
-    // keeps what Tailwind added for them. Astro builds with `target:
-    // "esnext"`, which names no browser; Vite hands that to Lightning CSS
-    // to minify the CSS, and with no browser to serve it dropped prefixes
-    // Tailwind had added. The nav's blur lost -webkit-backdrop-filter,
-    // which Safari before 18 needs to render it. The JavaScript target
-    // stays esnext.
+    // cssTarget: the browsers above. Astro builds with `target: "esnext"`,
+    // which names no browser; Vite hands that to Lightning CSS to minify
+    // the CSS, and with no browser to serve it dropped prefixes Tailwind
+    // had added. The nav's blur lost -webkit-backdrop-filter, which Safari
+    // before 18 needs to render it. Tailwind compiles for newer browsers
+    // than these (Chrome 111, Firefox 128, Safari 16.4, hard-coded in
+    // @tailwindcss/node), so the minifier also writes what the older ones
+    // need: a hex fallback for each lab(), oklab() and oklch() colour,
+    // which Chrome before 111 and Firefox before 113 ignore, and min-width
+    // breakpoints, because Safari before 16.4 ignores `width >=`. The
+    // JavaScript target stays esnext.
     build: {
       assetsInlineLimit: 0,
-      cssTarget: ["chrome111", "firefox128", "safari16.4", "ios16.4"],
+      cssTarget: cssTarget(),
     },
     ssr: { external: RUNTIME_EXTERNALS },
   },
