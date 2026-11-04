@@ -70,8 +70,8 @@ const TAP_ZOOM = 2.5;
  *  `touch-action: pinch-zoom` would be the delegated version, but
  *  caniuse reports desktop Safari as no-support in every targeted
  *  release, so there it would silently do nothing. Pointer Events are
- *  supported across all 37 targeted browsers, so the maths lives here
- *  instead.
+ *  supported in all 259 targeted browser versions, so the maths lives
+ *  here instead.
  *
  *  Returns a reset, which the viewer calls when the slide changes and
  *  when it closes: a zoom belongs to the image it was made on.
