@@ -326,9 +326,8 @@ const faqs = [
               ))}
             </div>
 
-              {/* The React version restyled this box from a live count of
-                  ticked items. The checklist is plain checkboxes now, so
-                  :has() reads the same state in CSS, with no runtime. It
+              {/* This box restyles once an item is ticked: :has() reads
+                  the checkboxes' state in CSS, with no runtime. It
                   asks the shared parent (group-has), because the boxes
                   are this element's siblings, not its children, and a
                   plain has-[:checked] here could never match. */}

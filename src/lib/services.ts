@@ -1,7 +1,5 @@
-/** The service catalog. Data only — the icons were inline JSX in the
- *  previous .tsx version, which is why this file needed React types to
- *  hold a list of strings. They now live as .astro components in
- *  src/components/icons/services/, keyed by `slug`. */
+/** The service catalog. Data only: each service's icon is an .astro
+ *  component in src/components/icons/services/, keyed by `slug`. */
 export interface ServiceItem {
   slug: string;
   /** Also the quote form's checkbox label and the value the schema

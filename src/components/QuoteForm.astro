@@ -32,10 +32,9 @@ const inputClass =
     </div>
   ) : (
     <form method="post" action="/contact" novalidate data-quote-form class="group">
-      {/* Honeypot. Hidden from people, filled by bots — three of the four
-          submissions this site has ever had were spam, and each one ticked
-          every checkbox it could find. A crawler fills this; a visitor
-          never sees it.
+      {/* Honeypot. Hidden from people, filled by bots — the first spam
+          this site had ticked every checkbox it could find. A crawler
+          fills this; a visitor never sees it.
 
           Hidden by CLASS, not a style attribute: the site is served under
           style-src 'self' with no 'unsafe-inline', so an inline style here

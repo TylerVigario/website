@@ -336,9 +336,9 @@ export function enhance({
         // Server rejected. Map Problem Details back to the fields that
         // caused it. The form is not touched — the user's input stays
         // exactly as they left it and they fix one thing.
-        // Read Problem Details by hand. Importing the zod schema here
-        // would pull the whole library into the browser to inspect four
-        // keys, which is precisely what src/lib/forms/rules.ts exists to
+        // Read Problem Details by hand. Checking it with zod here would
+        // pull the whole library into the browser to inspect three keys,
+        // which is precisely what src/lib/forms/rules.ts exists to
         // avoid. Defensive because it is a network response: anything
         // unexpected falls through to the root message rather than
         // throwing.

@@ -1,8 +1,9 @@
 import { bravoFarmsKettlemanCity, bravoFarmsTraver, type CreditedPhoto } from "@/lib/photos";
 
-// Single source of truth for the /work index and any nav that lists case
-// studies. Each full case study lives at its own route under /work/<slug>;
-// this module carries only the summary metadata the index cards render.
+// Single source of truth for the case studies and projects: the /work
+// index renders both, the voip and bravo-farms pages take their outcome
+// panels from here, and /services/software lists the projects. Each full
+// case study lives at its own route under /work/<slug>.
 
 export type CaseStudy = {
   slug: string;
@@ -13,7 +14,6 @@ export type CaseStudy = {
   tags: string[];
   year: string;
   status: string;
-  lastModified: string;
   preview?: string;
   outcome?: {
     logo: string;
@@ -39,7 +39,6 @@ export const caseStudies: CaseStudy[] = [
     tags: ["Static site", "Editorial back office", "ePub generation", "Wattpad sync", "SES"],
     year: "2026",
     status: "Live",
-    lastModified: "2026-08-04",
     // Path relative to src/assets/images, resolved to a build-time
     // import by the page so Astro can size it. Not a public URL.
     preview: "work/italesowell/hero.webp",
@@ -54,7 +53,6 @@ export const caseStudies: CaseStudy[] = [
     tags: ["Next.js", "PostgreSQL", "PWA", "Self-hosted", "Open source"],
     year: "2026",
     status: "In production",
-    lastModified: "2026-07-17",
     preview: "work/pipetree/addresses-full.webp",
   },
   {
@@ -67,7 +65,6 @@ export const caseStudies: CaseStudy[] = [
     tags: ["Telecom audit", "FCC advocacy", "VoIP", "Number porting"],
     year: "2026",
     status: "Client engagement",
-    lastModified: "2026-07-22",
     outcome: {
       logo: "work/voip/bravo-farms-logo.png",
       logoAlt: "Bravo Farms",
@@ -87,7 +84,6 @@ export const caseStudies: CaseStudy[] = [
     tags: ["Remote management", "Verified backups", "Point of sale", "VoIP", "Online store"],
     year: "2021–",
     status: "Ongoing",
-    lastModified: "2026-10-07",
     outcome: {
       logo: "work/voip/bravo-farms-logo.png",
       logoAlt: "Bravo Farms",

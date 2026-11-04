@@ -68,10 +68,10 @@ const TAP_ZOOM = 2.5;
 /** Two-finger pinch, double-tap zoom and one-finger pan, on Pointer Events.
  *
  *  `touch-action: pinch-zoom` would be the delegated version, but
- *  caniuse reports desktop Safari as no-support and iOS Safari as
- *  partial in every release, so on Apple devices it would silently do
- *  nothing. Pointer Events are supported across all 28 targeted
- *  browsers, so the maths lives here instead.
+ *  caniuse reports desktop Safari as no-support in every targeted
+ *  release, so there it would silently do nothing. Pointer Events are
+ *  supported across all 37 targeted browsers, so the maths lives here
+ *  instead.
  *
  *  Returns a reset, which the viewer calls when the slide changes and
  *  when it closes: a zoom belongs to the image it was made on.

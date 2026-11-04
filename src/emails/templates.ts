@@ -1,11 +1,6 @@
 /**
  * Notification email bodies, as plain HTML.
  *
- * These were react-email components, which meant React and its types
- * stayed in the dependency tree solely to render two internal emails
- * that only ever reach one inbox. Templates are strings now and React
- * is gone entirely.
- *
  * Deliberately plain: one table to line labels up with values,
  * inline styles, no web fonts, no images. Mail clients are a worse rendering target than any browser,
  * and this only has to be legible in one — the recipient reads it,

@@ -1,19 +1,16 @@
 ---
 import imgVtsLogo0 from "@/assets/images/vts-logo.png";
-// Was a React client component holding `open` in useState and reading
-// the active route from usePathname(). Neither needs a runtime here:
+// Neither the active link nor the mobile menu needs a runtime:
 //
-//   active link  — every page is prerendered, so Astro.url.pathname is
-//                  known at build time and each page's HTML ships with
-//                  its own correct highlight baked in.
+//   active link  — Astro.url.pathname is known when the page renders,
+//                  at build time for all but the two input pages, so
+//                  each page's HTML ships with its own highlight.
 //   mobile menu  — <details>/<summary> is a native disclosure widget.
 //                  It opens with JavaScript disabled, is keyboard
 //                  operable, and announces expanded state to screen
 //                  readers without aria-expanded bookkeeping.
 //
-// The hamburger-to-X animation and the slide are pure CSS off
-// details[open], which is what they already were — only the state was
-// ever JavaScript.
+// The hamburger-to-X animation is pure CSS off details[open].
 const links = [
   { label: "Services", href: "/services" },
   { label: "Work", href: "/work" },

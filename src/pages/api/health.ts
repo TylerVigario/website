@@ -38,10 +38,8 @@ export const prerender = false;
  * the stack, where the person fixing it will look.
  */
 
-/** Columns the two POST routes write — imported, not restated. This
- *  file used to carry its own copy beside its own INSERT, which made
- *  four independent column lists across three files with nothing
- *  checking any of them against the table. */
+/** The columns insertSubmission() writes, imported rather than restated,
+ *  so the schema check asks for exactly what a submission needs. */
 const REQUIRED_COLUMNS: readonly string[] = SUBMISSION_COLUMNS;
 
 /** Free space below which the service reports itself unable to take

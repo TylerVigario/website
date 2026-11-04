@@ -2,9 +2,8 @@
 import ServiceIcon from "@/components/ServiceIcon.astro";
 import type { ServiceItem } from "@/lib/services";
 
-// Was a client component running an IntersectionObserver that added
-// .visible to each card on a 100ms stagger. The reveal is CSS now, so
-// this is markup.
+// Markup only: each card's data-reveal is animated by
+// src/scripts/reveal.ts and the rules in global.css.
 interface Props {
   services: ServiceItem[];
 }

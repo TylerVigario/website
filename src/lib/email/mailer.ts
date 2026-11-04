@@ -116,8 +116,9 @@ function replyAddress(contact: string): string | undefined {
 /**
  * Low-level send. Returns true once the message is handed to the relay,
  * false when mail is off or misconfigured. A real send failure is logged
- * with its recipient and subject, then re-thrown so the caller decides
- * whether to swallow it (best-effort) or surface it.
+ * with its recipient and the submission's row id, never the subject,
+ * which carries the sender's name; then it is re-thrown so the caller
+ * decides whether to swallow it (best-effort) or surface it.
  *
  * With mail off, development logs the whole would-be email so the forms
  * can be worked on without a relay. Production logs the row id and
@@ -125,9 +126,9 @@ function replyAddress(contact: string): string | undefined {
  * someone's name, number and message in the journal is one kept outside
  * every retention rule.
  */
-// Not exported: the two notification helpers below are the whole
-// public surface of this module, and an exported low-level sender
-// invites a caller that bypasses them.
+// Not exported: the two notification helpers below are the only way
+// to send, and an exported low-level sender invites a caller that
+// bypasses them.
 async function sendEmail(options: SendOptions): Promise<boolean> {
   if (!transporter) {
     if (import.meta.env.PROD) {

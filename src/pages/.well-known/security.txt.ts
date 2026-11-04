@@ -40,7 +40,7 @@ function buildTime(): number {
 }
 
 export const GET: APIRoute = ({ site }) => {
-  const origin = (site ?? new URL("https://vigario.tech")).origin;
+  const origin = new URL("/", site).origin;
   const expires = new Date(buildTime() + 364 * 24 * 60 * 60 * 1000).toISOString();
 
   const body = [

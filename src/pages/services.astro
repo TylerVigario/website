@@ -225,8 +225,8 @@ const sections = services.map((s) => {
                 {[
                   ...s.links.map((link) => ({
                     href: link.href,
-                    // Six "Learn more" links read alike in a list of links,
-                    // so each says where it goes to a screen reader.
+                    // "Learn more" links read alike in a list of links, so
+                    // each says where it goes to a screen reader.
                     text: s.links.length > 1 ? link.title : "Learn more",
                     hidden: s.links.length > 1 ? "" : ` about ${s.title}`,
                   })),
