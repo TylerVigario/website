@@ -112,7 +112,19 @@ export default defineConfig({
     // It costs nothing. The bytes are identical and the HTML is smaller;
     // and since HTML is no-cache while /_astro is immutable, inline
     // script was re-sent on every navigation where a file is fetched once.
-    build: { assetsInlineLimit: 0 },
+    //
+    // cssTarget: the browsers Tailwind compiles for (Chrome 111, Firefox
+    // 128, Safari 16.4, hard-coded in @tailwindcss/node), so the minifier
+    // keeps what Tailwind added for them. Astro builds with `target:
+    // "esnext"`, which names no browser; Vite hands that to Lightning CSS
+    // to minify the CSS, and with no browser to serve it dropped prefixes
+    // Tailwind had added. The nav's blur lost -webkit-backdrop-filter,
+    // which Safari before 18 needs to render it. The JavaScript target
+    // stays esnext.
+    build: {
+      assetsInlineLimit: 0,
+      cssTarget: ["chrome111", "firefox128", "safari16.4", "ios16.4"],
+    },
     ssr: { external: RUNTIME_EXTERNALS },
   },
 });
