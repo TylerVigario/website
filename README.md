@@ -25,12 +25,13 @@ the optional "someone filled out a form" notification, and zod for
 validation on the server. The browser runs hand-written rules instead,
 which a test holds to the same verdicts and messages as the schemas.
 
-No UI framework. A plain page ships 508 B of JavaScript (the scroll
-reveal), a case study about 4.9 KB with the image viewer, and the two
-input pages about 5.4 KB with the form script, all as files rather than inline.
-`npm run check:bundles` budgets every prerendered page, following
-imports, so the static figures are facts about the build rather than
-claims in a readme. Errors go to stdout, for whatever supervises the process to collect.
+No UI framework. A plain page ships about 500 B of JavaScript (the
+scroll reveal), a case study with screenshots about 5.2 KB, image viewer
+included, and the two input pages about 5.7 KB, form script included,
+all as files rather than inline. `npm run check:bundles` budgets every
+prerendered page, following imports, so a page that outgrows its budget
+fails the build. Logs go to stdout and errors to stderr, for whatever
+supervises the process to collect.
 
 ## Local dev
 
@@ -62,16 +63,19 @@ decision: `feat` bumps minor; `fix`, `revert`, `perf`, `refactor` and
 
 ```text
 src/pages/                     # ROUTES — one file, one URL. No router config.
-  index about contact services services/* work/* pots-migration
+  index about contact privacy services services/* work work/* pots-migration
   404 500                      # prerendered like any other page
   robots.txt.ts                # generated, so its sitemap URL comes from `site`
   manifest.webmanifest.ts      # generated, so icon paths cannot drift from reality
+  speculation-rules.json.ts    # which links to prerender on hover, loaded by header
+  .well-known/security.txt.ts  # RFC 9116, generated so its required fields cannot rot
   api/quote                    # POST: zod-validated, writes to sqlite, optionally emails me
   api/pots-audit               # POST: same flow, scoped to the POTS landing page
   api/health                   # GET/HEAD: open, read, schema, write probe, free space → 200 or 503
+  api/[...path]                # any other /api/ path: a Problem Details 404
 src/lib/
   db.ts                        # better-sqlite3 singleton on globalThis
-  api/                         # zod: QuoteRequest, PotsAuditRequest, ProblemDetails (RFC 9457)
+  api/                         # zod schemas (QuoteRequest, PotsAuditRequest), the one submission path, Problem Details (RFC 9457)
   forms/enhance.ts             # progressive enhancement. Never erases what you typed.
   forms/rules.ts               # client-side rules, proven equivalent to the schemas by a test
   services.ts work.ts          # content catalogs: the services (the quote form's options), case studies
@@ -117,11 +121,11 @@ check for you; `pre-commit` keeps to the fast checks (lint-staged,
 typecheck, test) so committing stays quick.
 
 `.github/workflows/ci.yml` is one job, `Gate`, on every PR and every
-push to main, and the first job of every release. It runs the same
-steps, plus a Node-major pin check, actionlint (which
-`npm run lint:actions` also runs locally; it is a Go binary, so it is
-found on your PATH rather than installed by npm), a run of the release
-artifact itself, and a dev-server boot.
+push to main, and the gate of every release. It runs the same steps,
+plus a Node-major pin check, a run of the release artifact itself, and a
+dev-server boot. It also installs actionlint, which `npm run lint` runs:
+a Go binary, found on your PATH rather than installed by npm, so locally
+it is skipped where you do not have it and in CI it always runs.
 
 CHANGELOG is regenerated from commit messages by git-cliff — don't
 hand-edit it. `cliff.toml` and the conventional-commit convention are
@@ -148,9 +152,10 @@ same commits.
   (open, read, schema, write probe, free space) and returns 503 naming
   the one that failed. The write probe is the point: a full disk, a
   read-only remount or a permissions change leaves SELECT working while
-  every submission fails. Two more are advisory — whether mail is on,
-  and whether every lead was announced — and report "degraded" with a
-  200, since a release rollback cannot fix a relay.
+  every submission fails. Three more are advisory — whether mail is on,
+  whether every lead was announced, and whether the spam lists are fresh
+  — and report "degraded" with a 200, since rolling back a release
+  fixes none of them.
 - **Type-aware ESLint** (`recommendedTypeChecked`) is on. `req.json()`
   is `any`. Parse through a zod schema in `src/lib/api/`.
 - **Tests run via vitest** — `npm test` (one-shot) or `npm run test:watch`.
@@ -171,7 +176,7 @@ over a network, §13 obliges you to offer your users your modified source
 in turn. That obligation runs to forkers, never to the author.
 
 **Two things are reserved and not granted under it:** the brand and
-imagery in `src/assets/images/` (logo, hero, every client screenshot),
+imagery in `src/assets/images/` (logo, our own photographs, every client screenshot),
 and the written content — the case studies, service descriptions and
 landing copy. Those are © Vigario Technology Solutions, All Rights
 Reserved.
