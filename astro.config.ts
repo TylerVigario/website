@@ -18,7 +18,7 @@ import { BODY_LIMIT_BYTES } from "./src/lib/forms/limits.ts";
 // server serves dist/client from disk and proxies just the dynamic
 // routes. Point a proxy at Node for everything and you get the old
 // shape back with extra steps: Node serving static bytes it has no
-// reason to touch, and one crashed process taking all 13 static pages
+// reason to touch, and one crashed process taking every static page
 // down with it. See "Serving contract" in CLAUDE.md.
 const SITE = "https://vigario.tech";
 

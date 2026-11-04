@@ -32,7 +32,7 @@ permissions:
 jobs:
   # =========================================================================
   # Gate — quality checks + full-build validation. Runs on every PR,
-  # every push to main, and as the first job of every release.
+  # every push to main, and in every release once its version is decided.
   # =========================================================================
   gate:
     name: Gate
@@ -48,11 +48,9 @@ jobs:
           persist-credentials: false
       - name: Verify Node major pins agree
         # .nvmrc and package.json#engines.node must declare the same
-        # Node major. CI reads .nvmrc directly (node-version-file in the
-        # setup composite + the release build job), so there's no separate
-        # workflow pin. These were two of four pins once; the other two
-        # belonged to the packaging tree and went with it, so this check
-        # is now the whole of it.
+        # Node major. CI reads .nvmrc directly (node-version-file, in the
+        # setup composite and in pr-title.yml), so there's no separate
+        # workflow pin.
         #
         # It is a script rather than inline bash so the pre-push hook runs
         # the identical comparison. Inline, the check existed only on the
@@ -115,16 +113,15 @@ jobs:
       - name: Validate build
         # `astro build` prerenders every page and compiles the server
         # entry. No secrets are needed: the build reads no credentials,
-        # and the two runtime env vars (SQLITE_PATH, SMTP_*) are only
-        # read when the server actually starts.
+        # and the server's settings (SQLITE_PATH, the mail settings and
+        # the rest .env.example lists) are only read when it runs.
         run: npm run build
 
-      - name: The site ships no framework runtime
-        # Identical logic to `npm run check:bundles`, because it IS that
-        # script. It previously lived inline here and nowhere else, so it
-        # could only fail after a push — and a stale shell fragment left
-        # below the heredoc meant it would have failed unconditionally
-        # under `set -u` the first time it ran.
+      - name: Page budgets, inline code, titles and unused images
+        # The same script as `npm run check:bundles`, so it fails locally
+        # first: each prerendered page's JavaScript against its budget, no
+        # inline code, a title and description of its own, and no image
+        # shipped that nothing uses.
         run: npm run check:bundles
 
       - name: The forms work without JavaScript

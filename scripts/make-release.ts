@@ -104,17 +104,17 @@ fs.writeFileSync(
 
 // Install ONLY what the server bundle actually imports at runtime.
 //
-// `npm ci --omit=dev` installs 199 MB, almost all of it Astro's build
-// toolchain — rolldown, vite, esbuild, shiki, lightningcss, sharp —
-// pulled in because `astro` is a runtime dependency. None of it is
-// reachable from the built server: with `ssr.noExternal` the bundle
-// carries its own code and leaves only genuinely external modules as
-// bare imports.
+// `npm ci --omit=dev` installs about 175 MB, almost all of it Astro's
+// build toolchain — rolldown, vite, shiki, lightningcss, sharp — pulled
+// in because `astro` is a runtime dependency. None of it is reachable
+// from the built server: with `ssr.noExternal` the bundle carries its
+// own code and leaves only genuinely external modules as bare imports.
 //
-// So rather than install everything and try to prune, read the answer
-// off the artifact itself: scan the emitted server for bare specifiers
-// and install exactly those. If a future dependency has to stay external,
-// it appears here on its own — nothing to remember to update.
+// So rather than install everything and try to prune, install exactly
+// the modules the build leaves external: RUNTIME_EXTERNALS, the same
+// list astro.config.ts hands to Vite, so the artifact and the build
+// cannot disagree. It is declared rather than scanned for;
+// runtime-externals.ts says why.
 //
 // Each is installed at the version the lockfile records, and so is
 // everything it depends on in turn. Naming only the externals left their
@@ -183,7 +183,7 @@ if (!fs.existsSync(prebuild)) {
 
 // better-sqlite3 publishes prebuilt binaries for eight platforms and
 // npm installs all of them. Seven cannot execute on the deploy target,
-// so they are ~20 MB of an artifact that gets downloaded on every
+// so they are about 15 MB of an artifact that gets downloaded on every
 // release. Dropping them is provably safe in a way that pruning
 // ordinary packages is not: these are alternative copies of the same
 // module, not code some path might reach.

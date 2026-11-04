@@ -8,10 +8,11 @@
  * artifact cannot disagree with the build about what the server needs.
  *
  * Keep it minimal. Everything not listed here gets bundled by
- * `ssr.noExternal`, which is what keeps the release artifact at about 10 MB
- * instead of the ~200 MB a plain `npm ci --omit=dev` produces — that
- * install is almost entirely Astro's build toolchain (rolldown, vite,
- * esbuild, shiki, sharp), none of which the running server touches.
+ * `ssr.noExternal`, which is what keeps the artifact's node_modules to
+ * better-sqlite3 and the one package it depends on, instead of the
+ * ~175 MB a plain `npm ci --omit=dev` produces — that install is almost
+ * entirely Astro's build toolchain (rolldown, vite, shiki, sharp), none
+ * of which the running server touches.
  *
  * better-sqlite3 is here because it is a native addon: a .node binary
  * cannot be bundled into JavaScript. Nothing else currently qualifies.
