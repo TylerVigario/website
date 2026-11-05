@@ -8,9 +8,9 @@ description: >-
   require the action.yml to already be on disk, so checkout has to
   land first.
 
-  Node-pin verification lives in its own step (the gate's "Verify
-  Node major pins agree") — a repo-state check (.nvmrc vs
-  package.json#engines.node), so running it once is enough.
+  Node-pin verification lives in its own job (ci.yml's "Node pins
+  agree") — a repo-state check (.nvmrc vs package.json#engines.node),
+  so running it once is enough.
 
 runs:
   using: composite

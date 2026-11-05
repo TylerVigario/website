@@ -31,20 +31,30 @@ permissions:
 
 jobs:
   # =========================================================================
-  # Gate — quality checks + full-build validation. Runs on every PR,
-  # every push to main, and in every release once its version is decided.
+  # One job per check, on every PR, every push to main, and in every
+  # release once its version is decided. Each job is its own required
+  # context in .github/rulesets/main.json, so a red check names what
+  # failed, and removing a check means removing its context there, which
+  # is a protection change, reviewed as one. tests/required-checks.test.ts
+  # holds the two lists to each other.
+  #
+  # Jobs share nothing. Each checks out and installs for itself, and a
+  # check that needs the build runs the build, so no result rests on
+  # another job having run. The repeated installs cost minutes, which a
+  # public repository is not billed for.
+  #
+  # Every checkout drops its token (persist-credentials: false). Nothing
+  # here talks to the remote after checkout, so the token has no reason
+  # to sit in .git/config while npm ci, the tests and the build run
+  # whatever the dependency tree contains.
   # =========================================================================
-  gate:
-    name: Gate
+  pins:
+    name: Node pins agree
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Nothing here talks to the remote after checkout, so the token
-          # has no reason to sit in .git/config while npm ci, the tests and
-          # the build run whatever the dependency tree contains.
           persist-credentials: false
       - name: Verify Node major pins agree
         # .nvmrc and package.json#engines.node must declare the same
@@ -56,6 +66,66 @@ jobs:
         # the identical comparison. Inline, the check existed only on the
         # far side of a push.
         run: node scripts/check-node-pins.ts
+
+  install-scripts:
+    name: Install scripts reviewed
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Node setup + npm cache + `npm ci`, factored into a composite so
+      # every job here and the release build install the same way. Reads
+      # the Node version from .nvmrc.
+      - uses: ./.github/actions/setup
+      - name: Every install script is reviewed
+        # A dependency that brought a new install script in, or moved past
+        # its pinned approval, is named here. See
+        # scripts/check-install-scripts.ts.
+        run: npm run check:install-scripts
+
+  typecheck:
+    name: Types
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: npm run typecheck
+
+  eslint:
+    name: ESLint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: npm run lint:js
+
+  markdown:
+    name: Markdown
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: npm run lint:md
+
+  workflows:
+    name: Workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Cache actionlint
         # Keyed on the pinned version, so the usual run downloads nothing.
         id: actionlint-cache
@@ -65,8 +135,9 @@ jobs:
           key: actionlint-${{ runner.os }}-${{ env.ACTIONLINT_VERSION }}
 
       - name: Install actionlint
-        # Onto PATH, NOT into the workspace — `npm run lint` is what lints
-        # the workflows, and its finder looks on PATH and in ~/.local/bin.
+        # Onto PATH, NOT into the workspace — `npm run lint:actions` is what
+        # lints the workflows, and its finder looks on PATH and in
+        # ~/.local/bin.
         # Downloading to the repo root left that finder reporting SKIPPED
         # inside CI while a separate step did the real work: two
         # mechanisms, and the one the repo ships was the one lying.
@@ -97,19 +168,40 @@ jobs:
 
       - name: Put actionlint on PATH
         run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
-      # Node setup + npm cache + `npm ci`, factored into a composite so
-      # the release build job (and future jobs) reuse the same block. Reads
-      # the Node version from .nvmrc.
       - uses: ./.github/actions/setup
-      - name: Every install script is reviewed
-        # Straight after the install, so a dependency that brought a new
-        # install script in, or moved past its pinned approval, is named
-        # before anything else is judged. See scripts/check-install-scripts.ts.
-        run: npm run check:install-scripts
-      - run: npm run typecheck
-      - run: npm run lint
+      - run: npm run lint:actions
+
+  format:
+    name: Formatting
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
       - run: npm run format
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
       - run: npm test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
       - name: Validate build
         # `astro build` prerenders every page and compiles the server
         # entry. No secrets are needed: the build reads no credentials,
@@ -117,6 +209,16 @@ jobs:
         # the rest .env.example lists) are only read when it runs.
         run: npm run build
 
+  bundles:
+    name: Page budgets
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: npm run build
       - name: Page budgets, inline code, titles and unused images
         # The same script as `npm run check:bundles`, so it fails locally
         # first: each prerendered page's JavaScript against its budget, no
@@ -124,6 +226,16 @@ jobs:
         # shipped that nothing uses.
         run: npm run check:bundles
 
+  forms:
+    name: Forms without JavaScript
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: npm run build
       - name: The forms work without JavaScript
         # The built server on a scratch database, posted to the way a
         # browser behind the proxy posts: both pages, the API, the origin
@@ -131,6 +243,15 @@ jobs:
         # as `npm run check:forms`, so it fails locally first.
         run: npm run check:forms
 
+  release-artifact:
+    name: Release artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
       - name: The release artifact runs
         # The tarball a release would publish, built from this
         # commit, unpacked, checked against its manifest and booted from
@@ -146,8 +267,17 @@ jobs:
           version=$(node -p "require('./package.json').version")
           npm run check:release -- "$RUNNER_TEMP/release/vigario-website-$version.tar.gz"
 
+  dev-server:
+    name: Dev server
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
       - name: The dev server boots
-        # Everything above tests the BUILT output. Nothing tested the
+        # Every other job tests the BUILT output. Nothing tested the
         # thing developers actually run, which is how `ssr.noExternal:
         # true` left `astro dev` dead for weeks with every check green —
         # rolldown does the CJS interop at build time that Vite's dev

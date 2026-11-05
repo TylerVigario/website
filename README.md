@@ -119,12 +119,14 @@ Run it before pushing and CI should hold no surprises. The `pre-push`
 hook runs all of it for you; `pre-commit` keeps to the fast checks
 (lint-staged, typecheck, test) so committing stays quick.
 
-`.github/workflows/ci.yml` is one job, `Gate`, on every PR and every
-push to main, and the gate of every release. It runs the same steps,
-plus a Node-major pin check, a run of the release artifact itself, and a
-dev-server boot. It also installs actionlint, which `npm run lint` runs:
-a Go binary, found on your PATH rather than installed by npm, so locally
-it is skipped where you do not have it and in CI it always runs.
+`.github/workflows/ci.yml` runs each of those checks as its own job, on
+every PR and every push to main, and as the gate of every release, plus
+a Node-major pin check, a run of the release artifact itself, and a
+dev-server boot. Each job is a required check of its own, so a red one
+names what failed. The `Workflows` job installs actionlint, which
+`npm run lint` runs: a Go binary, found on your PATH rather than
+installed by npm, so locally it is skipped where you do not have it and
+in CI it always runs.
 
 CHANGELOG is regenerated from commit messages by git-cliff — don't
 hand-edit it. `cliff.toml` and the conventional-commit convention are
