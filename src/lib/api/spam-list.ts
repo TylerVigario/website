@@ -1,4 +1,4 @@
-import { readFileSync, statSync } from "node:fs";
+import { closeSync, fstatSync, openSync, readFileSync, statSync } from "node:fs";
 import { isIP } from "node:net";
 import path from "node:path";
 
@@ -81,18 +81,25 @@ const LISTS: Record<string, List> = {
 
 const loaded = new Map<string, { mtimeMs: number; entries: Set<string> }>();
 
-/** The entries of one list, reread only when the file has changed. */
+/** The entries of one list, reread only when the file has changed. The
+ *  time and the contents come from one open file, so a list the host
+ *  replaces mid-read is cached under its own time, not the next file's. */
 function entries(file: string, list: List): Set<string> {
-  const { mtimeMs } = statSync(file);
-  const cached = loaded.get(file);
-  if (cached?.mtimeMs === mtimeMs) return cached.entries;
-  const set = new Set<string>();
-  for (const line of readFileSync(file, "utf8").split("\n")) {
-    const entry = list.normalise(line);
-    if (entry !== undefined) set.add(entry);
+  const fd = openSync(file, "r");
+  try {
+    const { mtimeMs } = fstatSync(fd);
+    const cached = loaded.get(file);
+    if (cached?.mtimeMs === mtimeMs) return cached.entries;
+    const set = new Set<string>();
+    for (const line of readFileSync(fd, "utf8").split("\n")) {
+      const entry = list.normalise(line);
+      if (entry !== undefined) set.add(entry);
+    }
+    loaded.set(file, { mtimeMs, entries: set });
+    return set;
+  } finally {
+    closeSync(fd);
   }
-  loaded.set(file, { mtimeMs, entries: set });
-  return set;
 }
 
 /**
