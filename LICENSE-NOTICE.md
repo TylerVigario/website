@@ -7,6 +7,10 @@ directory layout that can move.
 
 ## Granted under AGPL-3.0-or-later
 
+Copyright © 2026 Vigario Technology Solutions, licensed under the GNU
+Affero General Public License, version 3 or, at your option, any later
+version.
+
 The machinery. Everything that would still be useful with different
 words and different pictures in it:
 

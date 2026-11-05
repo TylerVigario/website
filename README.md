@@ -171,10 +171,14 @@ same commits.
 
 ## License
 
-The software is **AGPL-3.0-or-later** — see [LICENSE](LICENSE) for the
-verbatim text. Fork it, change it, run it; if you modify it and serve it
-over a network, §13 obliges you to offer your users your modified source
-in turn. That obligation runs to forkers, never to the author.
+Copyright © 2026 Vigario Technology Solutions.
+
+The software is **AGPL-3.0-or-later**: the GNU Affero General Public
+License, version 3 or, at your option, any later version. See
+[LICENSE](LICENSE) for the verbatim text. Fork it, change it, run it; if
+you modify it and serve it over a network, §13 obliges you to offer your
+users your modified source in turn. That obligation runs to forkers,
+never to the author.
 
 **Two things are reserved and not granted under it:** the brand and
 imagery in `src/assets/images/` (logo, our own photographs, every client screenshot),
