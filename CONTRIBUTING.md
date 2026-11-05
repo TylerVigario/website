@@ -38,7 +38,7 @@ These mirror [CLAUDE.md](CLAUDE.md)'s "Git + PR workflow" — that's the source 
 
 - **Branch off `main`** as `<type>/<slug>` (enforced by `.husky/pre-push`). No direct commits to `main`.
 - **Conventional Commits**, Angular type set, inherited from `@commitlint/config-conventional` rather than declared here. **Type is release impact, and the line is whether the artifact changed** — `feat` (minor), `fix` `revert` `perf` `refactor` `build` (patch) are recorded in the changelog and bump; `ci` `docs` `test` `chore` `style` cannot reach the artifact, so they do neither. A CI-infra fix is `ci:`, not `fix(ci):`. `commitlint` enforces the message on commit.
-- **PR titles must be conventional** — the repo squash-merges, so the title becomes the commit on `main`, and a CI check (`pr-title.yml`) validates it. Iterate on review with additive commits; the per-commit history is squashed away on merge.
+- **PR titles must be conventional** — the repo squash-merges, so the title becomes the commit on `main`, and a CI check (`commit-convention.yml`) validates it. Iterate on review with additive commits; the per-commit history is squashed away on merge.
 
 ## Code style & testing
 

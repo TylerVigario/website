@@ -49,8 +49,8 @@ jobs:
       - name: Verify Node major pins agree
         # .nvmrc and package.json#engines.node must declare the same
         # Node major. CI reads .nvmrc directly (node-version-file, in the
-        # setup composite and in pr-title.yml), so there's no separate
-        # workflow pin.
+        # setup composite and in commit-convention.yml), so there's no
+        # separate workflow pin.
         #
         # It is a script rather than inline bash so the pre-push hook runs
         # the identical comparison. Inline, the check existed only on the

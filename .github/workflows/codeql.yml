@@ -69,8 +69,8 @@ jobs:
       fail-fast: false
       matrix:
         # `actions` guards the workflows that read outsider-controlled
-        # event data. pr-title.yml is the live case: it lints the PR
-        # title, which is whatever the author typed, and must only ever
+        # event data. commit-convention.yml is the live case: it lints the
+        # PR title, which is whatever the author typed, and must only ever
         # hand it to a shell through env.
         language: ${{ github.event_name == 'pull_request' && fromJSON('["actions"]') || fromJSON('["javascript-typescript", "actions"]') }}
     steps:
