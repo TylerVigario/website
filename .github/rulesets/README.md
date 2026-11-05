@@ -33,6 +33,10 @@ green and nothing mergeable. They were taken from what GitHub actually reports
 on a pull request, not from the YAML, because `Validate PR title` only runs on
 `pull_request` and never appears on a push to `main`.
 
+`Lint main`, in the same workflow, is not required and must not be. It runs
+only on a push to `main`, so a pull request required to pass it would wait for
+a result that never comes.
+
 Each check also names `integration_id` 15368, the GitHub Actions app, read off
 the check runs on `main` rather than assumed. Without it a check is satisfied by
 anything that reports the right name: another App, or a commit status posted

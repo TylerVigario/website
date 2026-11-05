@@ -1,0 +1,106 @@
+name: Commit convention
+
+# Conventional Commits at both ends, against .commitlintrc.js, the same
+# config the local commit-msg hook reads.
+#
+#   Validate PR title   pull_request   A gate: it can block the merge.
+#   Lint main           push to main   A report: the commit already exists.
+#
+# The repo squash-merges, so the PR title is what lands on main as the
+# commit message. A bad title means a bad commit on main, and main is
+# linear-only — there's no force-push fix. husky only runs against
+# commit messages, not PR titles, so without the first job a
+# non-conventional title slips through and the release silently
+# no-bumps.
+#
+# The second job exists because the squash subject is pre-filled from
+# the title, not bound to it. Whoever merges can edit it in the merge
+# dialog, and the merge API takes one as an argument (`gh pr merge
+# --subject`), so what the gate checked and what landed need not be the
+# same string. Lint main is the only check that reads what landed.
+#
+# Lint main must never be a required check. It cannot run on a pull
+# request, so a required one would leave every pull request waiting on
+# a result that never comes. The release's own commit carries
+# [skip ci], so it starts no run and is not linted here; release.yml
+# writes its subject itself.
+
+on:
+  pull_request:
+    # `edited` re-runs on title changes so a green badge appears
+    # without needing a new commit when the author fixes a bad title.
+    types: [opened, edited, synchronize, reopened]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+env:
+  HUSKY: 0
+  CI: true
+
+jobs:
+  validate:
+    name: Validate PR title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Shallow is fine — commitlint only reads the piped string,
+          # not git history.
+          fetch-depth: 1
+          # This job runs on titles anyone opening a PR can write. Nothing
+          # after checkout needs the token, so it is not left in .git/config.
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      # `--ignore-scripts` skips the husky `prepare` step (and any
+      # other lifecycle script) — none are needed to run commitlint,
+      # and skipping shaves time off the job.
+      - run: npm ci --ignore-scripts
+      - name: Run commitlint on PR title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        # printf, not echo: a title that happens to start with `-n`/`-e`
+        # would be eaten by echo as a flag, truncating what commitlint sees.
+        run: printf '%s\n' "$TITLE" | npx --no-install commitlint
+
+  main:
+    name: Lint main
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The whole history: the range below asks what landed, and a
+          # depth of 1 cannot answer that for a push of several commits.
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci --ignore-scripts
+      - name: Lint every commit that landed
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+        run: |
+          set -euo pipefail
+          # `before` names no usable range when it is all zeros (the
+          # branch's first push), when its object is gone, or when it is
+          # no longer an ancestor of `after`. The last still resolves, and
+          # the range would then hold every commit the two tips do not
+          # share. In each case the commit that arrived is linted alone,
+          # rather than the check failing on its own input.
+          if [ "$BEFORE" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null \
+             || ! git merge-base --is-ancestor "$BEFORE" "$AFTER" 2>/dev/null; then
+            echo "no range from $BEFORE; linting $AFTER alone"
+            npx --no-install commitlint --last --verbose
+          else
+            npx --no-install commitlint --from "$BEFORE" --to "$AFTER" --verbose
+          fi
