@@ -212,6 +212,12 @@ if (!fs.existsSync(changelogSrc)) {
 }
 fs.copyFileSync(changelogSrc, path.join(staging, "CHANGELOG.md"));
 
+// The licence travels with the code. The tarball is a copy of the
+// software, published for anyone to download, and the AGPL has every
+// copy carry the licence; the notice says which parts it grants and which
+// are reserved.
+for (const f of ["LICENSE", "LICENSE-NOTICE.md"]) fs.copyFileSync(f, path.join(staging, f));
+
 // Identity, so the running site can be traced back to a commit without
 // guessing from a version number that may have been reused.
 //
