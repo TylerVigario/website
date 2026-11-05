@@ -475,9 +475,10 @@ jobs:
         # creating a draft left zero tags on the remote, and deleting it
         # left zero behind.
         #
-        # Publishing is what creates the tag, at --target. Rule 19 is
-        # explicit that annotated or lightweight makes no difference, so
-        # the lightweight tag this produces costs nothing.
+        # Publishing is what creates the tag, at --target. It is a
+        # lightweight tag, which costs nothing: what stops a tag moving is
+        # the tag ruleset, which refuses to update an existing tag of
+        # either kind.
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           TAG: ${{ needs.decide.outputs.tag }}

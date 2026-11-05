@@ -3,11 +3,10 @@
 //
 // THE TYPE SET IS NOT DECLARED HERE. @commitlint/config-conventional
 // already ships the eleven Angular types, and restating them would be a
-// second copy to keep in sync with upstream for no gain — the standard's
-// rule 2 puts it as "no repository declares an enum, since declaring one
-// restates a default." An earlier version of this file listed ten of the
-// eleven, omitting `style`; `style` is now allowed and cliff.toml skips
-// it, so it reaches neither the changelog nor a version bump.
+// second copy to keep in sync with upstream for no gain. An earlier
+// version of this file listed ten of the eleven, omitting `style`;
+// `style` is now allowed and cliff.toml skips it, so it reaches neither
+// the changelog nor a version bump.
 //
 // WHICH TYPES SHIP is cliff.toml's question, not this file's, and the
 // line it draws is whether the artifact changed: feat, fix, revert,
