@@ -64,15 +64,21 @@ manifest, booted from its own `node_modules` and posted to by
 `check:forms`). It runs the whole dependency tree, so it holds no secret
 and no signing identity. `publish`, in the `release` environment, runs
 nothing from `node_modules`: it checks the tarball is the one `build`
-checked, attests it through Sigstore, writes the version and changelog to
-`main` as a forge-signed commit, and publishes: a draft release, the
-artifact attached, then published, which is what creates the tag.
-Nothing is written until the artifact is built, run and attested, so a
-failure up to then leaves no commit, no tag and no release. A failure
-while publishing leaves the release commit on `main` without a tag;
-dispatching again completes it, and a run asking for a bump level is
-refused until it has, since that would skip the unfinished version. The
-dispatch takes a bump (`auto`, `patch`, `minor`, `major`), never a
+checked, attests it through Sigstore, writes the version and changelog
+as a forge-signed commit on a branch of its own, `release/vX.Y.Z`, and
+publishes at that commit: a draft release, the artifact attached, then
+published, which is what creates the tag. Only then is `main`
+fast-forwarded to the release commit, so `main` never claims a version
+before the release exists. Nothing is written until the artifact is
+built, run and attested, and a failure up to publishing leaves `main` as
+it was. Publishing is refused if `main` has moved since the branch was
+cut, because a published tag `main` cannot fast-forward to could not be
+repaired. That check runs a moment before the tag exists, so a merge in
+those seconds still lands between them: merging waits while a release
+runs. A failure after publishing leaves `main` one commit behind the
+release; dispatching again with `auto` finishes it by moving `main`, and
+a run asking for a bump level is refused until it has. The dispatch
+takes a bump (`auto`, `patch`, `minor`, `major`), never a
 version: a level is one step from the last release tag, so a version is
 never skipped or reused, and one whose tag already exists is refused
 before anything runs.

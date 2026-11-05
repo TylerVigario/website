@@ -141,9 +141,10 @@ the Client ID — rulesets identify actors by App ID, and a Client ID here does 
 The whole `PUT` fails with 422 rather than the one line being rejected.
 
 The App exists because this release **records itself**: it bumps `package.json`, writes
-`CHANGELOG.md` and creates the tag by publishing the release. A release that cannot write the branch cannot leave a
-receipt in it, and dropping the receipt to avoid a credential trades a durable property
-of the project for an operational one.
+`CHANGELOG.md` and creates the tag by publishing the release, then fast-forwards `main` to
+that commit. A release that cannot write the branch cannot leave a receipt in it, and
+dropping the receipt to avoid a credential trades a durable property of the project for an
+operational one.
 
 **What this costs, stated rather than implied.** `bypass_mode: always` applies to every
 rule in the ruleset, not only `pull_request` — so this App is past `deletion` and
@@ -161,5 +162,6 @@ run on any other branch cannot reach them.
 No required reviewers on the `release` environment. A workflow on `main` that names the
 environment can mint the App's token, and nothing puts a second person between a
 dispatch and the write. Releases are dispatched by hand by the one owner, so a reviewer
-would be that same person. It is the remaining gap, and it is accepted knowingly rather
-than overlooked.
+would be that same person approving their own run, which GitHub allows unless
+self-review is switched off. A reviewer is added when there is a second maintainer; until
+then it is the remaining gap, accepted knowingly rather than overlooked.

@@ -96,14 +96,16 @@ astro.config.ts                # `site`: the public URL every canonical link and
 `Release` is a `workflow_dispatch`: it derives the version from the
 commits, runs the pull-request gate against that commit, builds one
 self-contained tarball, attests it through Sigstore, writes the bump and
-changelog to `main` as a forge-signed commit, and publishes the artifact,
-which creates the tag. Nothing is written anywhere until the artifact
-exists and is attested. A failure after that, while publishing, leaves the
-release commit without a tag, and dispatching again finishes that
-version before any other. The dispatch asks how far to move (auto,
-patch, minor or major), never for a number, so no version can be skipped
-or reused. A dry run does everything short of publishing and writes
-nothing.
+changelog as a forge-signed commit on a release branch, publishes the
+artifact there, which creates the tag, and only then moves `main` to that
+commit. Nothing is written anywhere until the artifact exists and is
+attested, and `main` does not move until the release exists. A failure
+after publishing leaves `main` one commit behind the release, and
+dispatching again finishes that version before any other. Merging waits
+while a release runs: `main` has to be where the release branch was cut
+when `main` moves. The dispatch asks how far to move (auto, patch, minor
+or major), never for a number, so no version can be skipped or reused. A
+dry run does everything short of publishing and writes nothing.
 
 Merging and releasing are separate decisions, so nothing ships on merge.
 Installing a release is the host's business — the repo carries no tool
