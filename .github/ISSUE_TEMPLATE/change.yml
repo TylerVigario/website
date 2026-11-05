@@ -1,0 +1,36 @@
+name: Something should work differently
+description: Propose a change to what the site does, or how.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The written content and the images are reserved (LICENSE-NOTICE.md), so a change to them is
+        the maintainer's to make. A problem with them is still welcome here.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: Who has it, and what it costs them. Not the solution yet.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would change
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where it is
+      options:
+        - The home, about or contact page
+        - A services page
+        - A case study
+        - The POTS migration page
+        - The forms, or what happens to a submission
+        - Running it yourself, from the build to a release
+        - Something else
+    validations:
+      required: true

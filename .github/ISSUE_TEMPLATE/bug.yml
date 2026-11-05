@@ -1,0 +1,58 @@
+name: Something is wrong
+description: The site does something it should not, or does not do what it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Say what is wrong rather than how to fix it: the fix is often somewhere other than where it
+        shows. A security problem does not go here; SECURITY.md says where it does.
+
+        Issues are public, so paste nothing you typed into a form: no name, phone number or email
+        address. Say which field it was and what kind of value.
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: The page's address, or the commit or release tag if you run the code yourself.
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and browser
+      description: And the window's size, if it is about how a page looks.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: The exact error, or a screenshot, says more than a description of it.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: The fewest steps that make it happen
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: What it is about
+      options:
+        - How a page looks
+        - What a page does
+        - A form, or what it kept of what was typed
+        - A screen reader, contrast or motion
+        - Running it yourself, from the build to a release
+        - Something else
+    validations:
+      required: true

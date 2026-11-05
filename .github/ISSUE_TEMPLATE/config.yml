@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: A security vulnerability
+    url: https://github.com/TylerVigario/website/security/advisories/new
+    about: Report privately. Not as an issue.
+  - name: A project or a quote
+    url: https://vigario.tech/contact
+    about: Work for Vigario Technology Solutions goes through the site's contact form.
