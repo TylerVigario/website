@@ -49,6 +49,7 @@
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.3",
     "@eslint/css": "^2.0.1",
+    "@kjanat/actionlint": "1.17.0",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^24.19.2",
     "browserslist": "^4.29.5",
