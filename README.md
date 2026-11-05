@@ -116,9 +116,8 @@ check:install-scripts → lint → typecheck → format → test → build → c
 ```
 
 Run it before pushing and CI should hold no surprises. The `pre-push`
-hook runs the build, the bundle assertion and the no-JavaScript form
-check for you; `pre-commit` keeps to the fast checks (lint-staged,
-typecheck, test) so committing stays quick.
+hook runs all of it for you; `pre-commit` keeps to the fast checks
+(lint-staged, typecheck, test) so committing stays quick.
 
 `.github/workflows/ci.yml` is one job, `Gate`, on every PR and every
 push to main, and the gate of every release. It runs the same steps,

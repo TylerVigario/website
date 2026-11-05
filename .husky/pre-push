@@ -15,9 +15,9 @@
 #
 # Bypass for one push: git push --no-verify. Don't make a habit of it.
 #
-# Per-commit hooks stay fast (lint-staged, typecheck, test). The build
-# and the bundle assertion run once per push instead — see the bottom
-# of this file.
+# Per-commit hooks stay fast (lint-staged, typecheck, test). The push
+# runs what CI runs, all but the dev server and the release artifact —
+# see the bottom of this file.
 
 valid='^(feat|fix|refactor|perf|style|ci|build|docs|test|chore|revert|integration)/[a-z0-9]+(-[a-z0-9]+)*$'
 
@@ -65,6 +65,10 @@ done
 node --run check:pins
 node --run check:install-scripts
 node --run lint:actions
+# Types and tests run at every commit as well, but a commit can reach a
+# push without that hook: one made with --no-verify, or rewritten by a
+# rebase, which runs no commit hook. They run again here, as CI will.
+node --run typecheck
 # The whole tree, not the staged files. lint-staged only lints what a
 # commit touches, so a change to the ESLint or Prettier config, or a
 # type-aware lint that a change elsewhere breaks, passed every hook and
@@ -72,6 +76,7 @@ node --run lint:actions
 # superset of the gate" true rather than a description.
 node --run lint
 node --run format
+node --run test
 
 # About two seconds once the image cache is warm.
 node --run build
