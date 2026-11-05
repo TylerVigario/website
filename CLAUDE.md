@@ -308,7 +308,7 @@ src/
 │   ├── api/                          # submit.ts (the one submission path), error.ts (RFC 9457), schemas, spam-list.ts
 │   └── email/                        # mailer.ts (nodemailer; best-effort, logged on failure), relay.ts (SMTP_* settings)
 ├── emails/templates.ts               # HTML strings, escaped at every interpolation
-├── scripts/                          # browser-side: reveal.ts, lightbox.ts
+├── scripts/                          # browser-side: reveal.ts, lightbox.ts, quote-form.ts, pots-audit-form.ts
 ├── styles/global.css                 # @theme tokens + the reveal rules
 └── assets/                           # images processed by astro:assets
 

@@ -86,7 +86,7 @@ src/lib/
 src/emails/templates.ts        # notification bodies as HTML strings, escaped at every interpolation
 src/components/                # .astro — Nav, Hero, the forms, Lightbox, ServicePage, icons/
 src/layouts/Base.astro         # <head>, canonical URL, and the frame: nav, <main>, footer
-src/scripts/                   # browser JS beside the form script: lightbox, scroll reveal
+src/scripts/                   # browser JS: lightbox, scroll reveal, and each form's call to enhance.ts
 src/styles/global.css          # @theme tokens and the reveal rules
 astro.config.ts                # `site`: the public URL every canonical link and the sitemap are built from
 ```

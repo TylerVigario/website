@@ -55,7 +55,11 @@ export default defineConfig([
   // the projectService above, it failed to parse, and eslint-plugin-astro
   // drops a message with no line, so every script went unlinted and
   // unreported. They get the rules that need no type information;
-  // `astro check` typechecks them, as it does the frontmatter.
+  // `astro check` typechecks them, as it does the frontmatter. So the
+  // code lives in src/scripts, where it has types, and a component's
+  // script only imports it. The project service's default project can
+  // type a virtual file, but takes no `**` glob and eight files at most,
+  // and a script past either is skipped as silently as before.
   {
     files: ["**/*.astro/*.ts", "**/*.astro/*.js"],
     ...tseslint.configs.disableTypeChecked,
