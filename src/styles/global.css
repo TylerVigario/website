@@ -47,12 +47,14 @@
     }
   }
 
+  /* eslint-disable-next-line css/use-baseline -- without it, the browser's own highlight shows */
   ::selection {
     background: var(--color-accent);
     color: white;
   }
 
   :focus-visible {
+    /* eslint-disable-next-line css/use-baseline -- Safari before 16.4 draws the ring square */
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
     border-radius: 4px;
@@ -64,6 +66,7 @@
   input:not([type="checkbox"], [type="radio"]):focus-visible,
   textarea:focus-visible,
   select:focus-visible {
+    /* eslint-disable-next-line css/use-baseline -- none hides it in every browser */
     outline: none;
   }
 }
@@ -121,6 +124,7 @@
  * never half-hidden at that moment, because the reveal only arms what
  * starts below the fold. */
 @media (prefers-reduced-motion: no-preference) {
+  /* eslint-disable-next-line css/use-baseline -- other browsers navigate as before */
   @view-transition {
     navigation: auto;
   }
