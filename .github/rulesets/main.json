@@ -44,7 +44,55 @@
         "do_not_enforce_on_create": false,
         "required_status_checks": [
           {
-            "context": "Gate",
+            "context": "Node pins agree",
+            "integration_id": 15368
+          },
+          {
+            "context": "Install scripts reviewed",
+            "integration_id": 15368
+          },
+          {
+            "context": "Types",
+            "integration_id": 15368
+          },
+          {
+            "context": "ESLint",
+            "integration_id": 15368
+          },
+          {
+            "context": "Markdown",
+            "integration_id": 15368
+          },
+          {
+            "context": "Workflows",
+            "integration_id": 15368
+          },
+          {
+            "context": "Formatting",
+            "integration_id": 15368
+          },
+          {
+            "context": "Unit tests",
+            "integration_id": 15368
+          },
+          {
+            "context": "Build",
+            "integration_id": 15368
+          },
+          {
+            "context": "Page budgets",
+            "integration_id": 15368
+          },
+          {
+            "context": "Forms without JavaScript",
+            "integration_id": 15368
+          },
+          {
+            "context": "Release artifact",
+            "integration_id": 15368
+          },
+          {
+            "context": "Dev server",
             "integration_id": 15368
           },
           {

@@ -26,12 +26,16 @@ verified against the App's own credential, not read off a form. Notably absent
 is `workflows`, so an identity that bypasses branch protection still cannot
 rewrite the workflows that gate this repository.
 
-`main.json` requires two status checks: `Gate` and `Validate PR title`.
-Those strings are job *names*, not workflow filenames, and a required context
-naming no job wedges the branch on an answer that never comes — every check
-green and nothing mergeable. They were taken from what GitHub actually reports
-on a pull request, not from the YAML, because `Validate PR title` only runs on
-`pull_request` and never appears on a push to `main`.
+`main.json` requires every job in `ci.yml`, one context per check, and
+`Validate PR title`. Those strings are job *names*, not workflow filenames, and
+a required context naming no job wedges the branch on an answer that never
+comes — every check green and nothing mergeable. A job no context names fails
+the other way, and quietly: it runs, and its failure blocks nothing.
+`tests/required-checks.test.ts` compares the two lists, so a job renamed or
+added fails the tests until this file agrees. The names are checked against
+what GitHub reports on a pull request, not only against the YAML, because
+`Validate PR title` only runs on `pull_request` and never appears on a push to
+`main`.
 
 `Lint main`, in the same workflow, is not required and must not be. It runs
 only on a push to `main`, so a pull request required to pass it would wait for
