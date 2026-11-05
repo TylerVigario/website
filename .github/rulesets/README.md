@@ -124,6 +124,12 @@ verbatim, so a check validating the pull request title never sees them.
 repository settings. Merge methods are settings: one API call re-enables them, touching
 no ruleset and leaving nothing in the ruleset history.
 
+**`code_scanning`, CodeQL** — a pull request that brings in a security alert of high
+severity or above, or an alert at error level, cannot merge, and none merges until
+CodeQL has analysed it. The CodeQL check itself is not required, so without this rule
+nothing it finds stops a merge. `codeql.yml` runs on every pull request for that reason. With a paths filter, a pull
+request it skipped would have no analysis for the rule to read.
+
 ## `bypass_actors` — exactly one, and why
 
 ```json

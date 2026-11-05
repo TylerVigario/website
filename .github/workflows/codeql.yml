@@ -27,13 +27,12 @@ on:
   # missing analysis, not as nothing to see.
   push:
     branches: [main]
-  # The workflow leg only, and only when a workflow changes. Without this
-  # a workflow is live on main before its analysis exists, and workflows
-  # are the code that runs holding this repository's tokens. It takes
-  # seconds, and it is not a required check, so nothing waits on it.
+  # Every pull request, both languages. main.json's code_scanning rule
+  # holds a merge until CodeQL has analysed the pull request, and refuses
+  # one that brings in a high or critical security alert or an error. A
+  # paths filter would leave the pull requests it skipped with no
+  # analysis for the rule to read.
   pull_request:
-    paths:
-      - ".github/**"
   schedule:
     # Weekly, because CodeQL's queries change, and unchanged code is
     # re-examined against rules that did not exist when it was written.
@@ -72,7 +71,7 @@ jobs:
         # event data. commit-convention.yml is the live case: it lints the
         # PR title, which is whatever the author typed, and must only ever
         # hand it to a shell through env.
-        language: ${{ github.event_name == 'pull_request' && fromJSON('["actions"]') || fromJSON('["javascript-typescript", "actions"]') }}
+        language: [javascript-typescript, actions]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
