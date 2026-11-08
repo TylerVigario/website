@@ -217,7 +217,7 @@ jobs:
   # forms without JavaScript, the release artifact, the dev server — run
   # here against the commit being released. `npm run ci` is not that
   # gate: it skips the pins, the release artifact and the dev server,
-  # and reports actionlint SKIPPED wherever nothing installed it.
+  # and reports shellcheck SKIPPED wherever nothing installed it.
   gate:
     needs: decide
     if: needs.decide.outputs.release == 'true'

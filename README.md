@@ -123,10 +123,10 @@ hook runs all of it for you; `pre-commit` keeps to the fast checks
 every PR and every push to main, and as the gate of every release, plus
 a Node-major pin check, a run of the release artifact itself, and a
 dev-server boot. Each job is a required check of its own, so a red one
-names what failed. The `Workflows` job installs actionlint, which
-`npm run lint` runs: a Go binary, found on your PATH rather than
-installed by npm, so locally it is skipped where you do not have it and
-in CI it always runs.
+names what failed. actionlint, which `npm run lint` runs over the
+workflows, is a devDependency, so every clone has it. The shellcheck it
+uses on `run:` blocks is found on your PATH: locally that pass is skipped
+where you do not have it, and in CI it always runs.
 
 CHANGELOG is regenerated from commit messages by git-cliff — don't
 hand-edit it. `cliff.toml` and the conventional-commit convention are
