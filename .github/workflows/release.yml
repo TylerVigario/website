@@ -31,6 +31,16 @@ name: Release
 # that reason and no other. Its permissions are the blast radius: keep
 # them at contents:write on this repository, with no workflows scope.
 #
+# THE RECORD FOLLOWS THE FACT. The release commit is made on a branch of
+# its own, release/vX.Y.Z, cut from the commit being released. The
+# release is published at that commit, which is what creates the tag,
+# and only then is main fast-forwarded to it. Publishing is the step
+# that cannot be taken back, so main never claims a version before the
+# release exists: a failure up to publishing leaves main as it was. A
+# failure after it leaves the release published and main one commit
+# behind it, and dispatching again with auto finishes the release by
+# moving main.
+#
 # THE APP TOKEN NEVER TOUCHES DISK. Checkouts here persist no
 # credentials: nothing in this workflow runs git against the remote — the
 # release commit is created by the forge over GraphQL, and gh reads its
@@ -90,8 +100,10 @@ jobs:
     timeout-minutes: 5
     outputs:
       release: ${{ steps.decide.outputs.release }}
+      finish: ${{ steps.decide.outputs.finish }}
       version: ${{ steps.decide.outputs.version }}
       tag: ${{ steps.decide.outputs.tag }}
+      oid: ${{ steps.decide.outputs.oid }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -137,39 +149,47 @@ jobs:
           last=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
           current="v$(node -p "require('./package.json').version")"
 
-          # A release that wrote its commit to main and then failed while
-          # publishing leaves main carrying a version that has no tag. That
-          # version is finished first, at its own number, or the next
-          # release would skip it. Only the release commit ever changes the
-          # version in package.json, so a version with no tag means exactly
-          # this. A level is refused here rather than quietly ignored: it
-          # asks for a number past the unfinished one.
-          if [ "$current" != "$last" ] && ! git rev-parse -q --verify "refs/tags/$current" >/dev/null; then
-            if [ "$(printf '%s\n%s\n' "$last" "$current" | sort -V | tail -n 1)" != "$current" ]; then
-              echo "::error::main is at $current, behind the last release $last, and $current has no tag."
+          # A release that published and then failed to move main leaves its
+          # tag on the release commit, one ahead of main. It is finished
+          # first, by moving main to it, or the next release would be cut
+          # from a main without it. A level is refused rather than quietly
+          # ignored: it asks for a release past the unfinished one.
+          if [ -n "$last" ] && ! git merge-base --is-ancestor "$last" HEAD; then
+            if ! [[ "$last" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+              printf '::error::Not a version (expected vMAJOR.MINOR.PATCH): %q\n' "$last"
+              exit 1
+            fi
+            if [ "$(git rev-parse "$last^")" != "$(git rev-parse HEAD)" ]; then
+              echo "::error::$last is published, but main has moved on without it, so main cannot be fast-forwarded to it."
               exit 1
             fi
             if [ "$BUMP" != auto ]; then
-              echo "::error::$current's release commit is on main without its tag. Run with auto to finish $current first; a $BUMP bump now would skip it."
+              echo "::error::$last is published and main has not moved to it. Run with auto to finish $last first; a $BUMP bump now would release past it."
               exit 1
             fi
-            next="$current"
-            echo "Finishing $current: its release commit is on main, its tag is not."
+            {
+              echo "release=false"
+              echo "finish=true"
+              echo "tag=$last"
+              echo "oid=$(git rev-parse "$last^{commit}")"
+            } >> "$GITHUB_OUTPUT"
+            echo "Finishing $last: it is published, and main has not moved to it."
+            exit 0
+          fi
+
+          # A level moves a release the commits make; it cannot make one.
+          # With nothing bump-worthy since the last tag, git-cliff returns
+          # that tag for every choice, because ci, docs, test, chore and
+          # style commits never change the artifact.
+          if [ "$BUMP" = auto ]; then
+            next=$(npx --no-install git-cliff --config cliff.toml --bumped-version)
           else
-            # A level moves a release the commits make; it cannot make one.
-            # With nothing bump-worthy since the last tag, git-cliff returns
-            # that tag for every choice, because ci, docs, test, chore and
-            # style commits never change the artifact.
-            if [ "$BUMP" = auto ]; then
-              next=$(npx --no-install git-cliff --config cliff.toml --bumped-version)
-            else
-              next=$(npx --no-install git-cliff --config cliff.toml --bumped-version --bump "$BUMP")
-            fi
-            if [ -z "$next" ] || [ "$next" = "$last" ]; then
-              echo "release=false" >> "$GITHUB_OUTPUT"
-              echo "Nothing bump-worthy since $last. No release."
-              exit 0
-            fi
+            next=$(npx --no-install git-cliff --config cliff.toml --bumped-version --bump "$BUMP")
+          fi
+          if [ -z "$next" ] || [ "$next" = "$last" ]; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "Nothing bump-worthy since $last. No release."
+            exit 0
           fi
 
           if ! [[ "$next" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
@@ -384,7 +404,7 @@ jobs:
 
       - name: Mint a token for the release App
         # Only now, immediately before the first write, and only into the
-        # environment of the two steps that use it. Scoped below what the
+        # environment of the three steps that use it. Scoped below what the
         # App is granted: contents:write is all the commit and the release
         # need, so the token carries nothing else even if the App is ever
         # given more.
@@ -395,19 +415,22 @@ jobs:
           private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
           permission-contents: write
 
-      - name: Ask the forge to write the release commit
+      - name: Write the release commit on a branch of its own
         id: commit
         # THE FIRST WRITE OF THE RUN. The artifact is built, run and
         # attested by now, so everything that could fail has.
+        #
+        # On release/vX.Y.Z, cut from the commit being released, not on
+        # main. Nothing on the branch is final: main moves to it only once
+        # the release is published, below.
         #
         # NOT `git commit && git push`. A push sends an object already
         # built, so it arrives unsigned no matter which token carried it.
         # createCommitOnBranch has GitHub construct the object and sign
         # it with its own key.
         #
-        # expectedHeadOid makes it a compare-and-swap: if anything landed
-        # on main since this run began, the mutation fails rather than
-        # clobbering.
+        # expectedHeadOid makes it a compare-and-swap on that branch, which
+        # this step has just cut and nothing else writes.
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           TAG: ${{ needs.decide.outputs.tag }}
@@ -433,6 +456,13 @@ jobs:
           '
           cp "$RUNNER_TEMP/release/CHANGELOG.md" CHANGELOG.md
           head=$(git rev-parse HEAD)
+          branch="release/$TAG"
+          # A failed run can leave its branch behind. Nothing on it was
+          # published, since a published tag sends the next run to finish
+          # instead, so it is cut again from this run's commit.
+          gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$branch" >/dev/null 2>&1 || true
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/heads/$branch" -f sha="$head" >/dev/null
           # --rawfile, not --arg "$(base64 ...)". A single argv entry is
           # capped at 128 KB on Linux and package-lock.json base64s to
           # roughly 460 KB, which failed as "jq: Argument list too long"
@@ -441,13 +471,14 @@ jobs:
           jq -n \
             --arg repo "$GITHUB_REPOSITORY" \
             --arg head "$head" \
+            --arg branch "$branch" \
             --arg msg "chore(release): $TAG [skip ci]" \
             --rawfile pkg package.json \
             --rawfile lock package-lock.json \
             --rawfile log CHANGELOG.md \
             '{query:"mutation($input:CreateCommitOnBranchInput!){createCommitOnBranch(input:$input){commit{oid}}}",
               variables:{input:{
-                branch:{repositoryNameWithOwner:$repo,branchName:"main"},
+                branch:{repositoryNameWithOwner:$repo,branchName:$branch},
                 expectedHeadOid:$head,
                 message:{headline:$msg},
                 fileChanges:{additions:[
@@ -456,8 +487,12 @@ jobs:
                   {path:"CHANGELOG.md",contents:($log|@base64)}]}}}}' > "$RUNNER_TEMP/mutation.json"
           oid=$(gh api graphql --input "$RUNNER_TEMP/mutation.json" --jq '.data.createCommitOnBranch.commit.oid')
           [ -n "$oid" ] || { echo "::error::createCommitOnBranch returned no oid"; exit 1; }
-          echo "release commit: $oid"
-          echo "oid=$oid" >> "$GITHUB_OUTPUT"
+          echo "release commit: $oid, on $branch"
+          {
+            echo "oid=$oid"
+            echo "head=$head"
+            echo "branch=$branch"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Publish
         # DRAFT, ATTACH, THEN PUBLISH — in that order, and not as one call.
@@ -479,16 +514,38 @@ jobs:
         # lightweight tag, which costs nothing: what stops a tag moving is
         # the tag ruleset, which refuses to update an existing tag of
         # either kind.
+        #
+        # Immediately before publishing, main must still be the commit the
+        # release branch was cut from. If anything merged since, main could
+        # not be fast-forwarded to the release, and a published tag main
+        # cannot reach could not be repaired: tags do not move and main
+        # takes no force-push. So it is refused, nothing is published, and
+        # the next dispatch cuts its branch from the new main.
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           TAG: ${{ needs.decide.outputs.tag }}
           OID: ${{ steps.commit.outputs.oid }}
+          HEAD_OID: ${{ steps.commit.outputs.head }}
+          BRANCH: ${{ steps.commit.outputs.branch }}
           ARTIFACT: ${{ runner.temp }}/release/vigario-website-${{ needs.decide.outputs.version }}.tar.gz
         run: |
           set -euo pipefail
+          # A draft from a failed attempt names the commit that attempt
+          # made; this run made another.
+          if gh release view "$TAG" --json isDraft --jq .isDraft 2>/dev/null | grep -qx true; then
+            gh release delete "$TAG" --yes
+          fi
           gh release create "$TAG" --draft --target "$OID" --title "$TAG" \
             --notes-file "$RUNNER_TEMP/release/NOTES.md"
           gh release upload "$TAG" "$ARTIFACT"
+
+          now=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          if [ "$now" != "$HEAD_OID" ]; then
+            echo "::error::main moved to $now after $BRANCH was cut from $HEAD_OID. Nothing is published; dispatch again."
+            gh release delete "$TAG" --yes
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$BRANCH" >/dev/null || true
+            exit 1
+          fi
 
           # Only now does the tag exist and the freeze fall.
           gh release edit "$TAG" --draft=false
@@ -497,3 +554,76 @@ jobs:
             --jq 'if .isDraft then "draft" else ([.assets[].name]|join(",")) end')
           [ "$published" != "draft" ] || { echo "::error::$TAG is still a draft"; exit 1; }
           echo "published $TAG -> $OID with $published"
+
+      - name: Move main to the release
+        # The record, after the fact. force=false makes this a fast-forward
+        # or nothing: main can gain the release commit and cannot lose a
+        # commit to it. The App is main's one bypass actor, which is what
+        # lets it write main at all.
+        #
+        # Retried, because a failure here leaves the release published and
+        # main one commit behind it. If it still fails, dispatching again
+        # with auto finishes the release with this same move.
+        #
+        # Unless main moved. Publish checks main a moment before the tag
+        # exists, so only a merge in those few seconds gets here, and then
+        # no fast-forward can ever reach the tag: retrying cannot help and
+        # dispatching again is refused. Merging waits for a release to end.
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TAG: ${{ needs.decide.outputs.tag }}
+          OID: ${{ steps.commit.outputs.oid }}
+          HEAD_OID: ${{ steps.commit.outputs.head }}
+          BRANCH: ${{ steps.commit.outputs.branch }}
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5; do
+            if gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/heads/main" \
+              -f sha="$OID" -F force=false >/dev/null; then
+              echo "main -> $OID ($TAG)"
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$BRANCH" >/dev/null \
+                || echo "::warning::$BRANCH was not deleted"
+              exit 0
+            fi
+            now=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha || true)
+            if [ -n "$now" ] && [ "$now" != "$HEAD_OID" ]; then
+              echo "::error::$TAG is published at $OID, but main moved to $now while it published, so main cannot be fast-forwarded to it. $BRANCH is kept."
+              exit 1
+            fi
+            sleep $((attempt * 5))
+          done
+          echo "::error::$TAG is published, but main did not move to it. Dispatch again with auto to finish."
+          exit 1
+
+  # A release that published and then failed to move main is finished
+  # here, by the move publish ends with, and by nothing else: its
+  # artifact, its attestation and its tag already exist.
+  finish:
+    needs: decide
+    if: needs.decide.outputs.finish == 'true' && !inputs.dry-run
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: release
+    permissions:
+      contents: read
+    steps:
+      - name: Mint a token for the release App
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      - name: Move main to the release
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TAG: ${{ needs.decide.outputs.tag }}
+          OID: ${{ needs.decide.outputs.oid }}
+        run: |
+          set -euo pipefail
+          gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/heads/main" \
+            -f sha="$OID" -F force=false >/dev/null
+          echo "main -> $OID ($TAG)"
+          gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/release/$TAG" >/dev/null 2>&1 \
+            || true
