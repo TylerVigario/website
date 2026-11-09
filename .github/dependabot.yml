@@ -80,11 +80,15 @@ updates:
     schedule:
       interval: weekly
       day: sunday
-    # The same hold as npm, for the same reason: an action runs with this
-    # repository's token.
+    # The same week as npm, for the same reason: an action runs with this
+    # repository's token. A week for a major too, because Actions takes
+    # `default-days` alone. Dependabot refuses a `semver-*-days` key here,
+    # and refusing it means refusing the whole file: from 2026-10-05 it
+    # kept running on the file before, which had no cooldown at all, so
+    # every update was held for its built-in 3 days, npm's included. It
+    # checks this file only once it is on main, as a check on that commit.
     cooldown:
       default-days: 7
-      semver-major-days: 14
     open-pull-requests-limit: 5
     commit-message:
       # Workflow changes are CI infrastructure: `ci`, which never releases.
