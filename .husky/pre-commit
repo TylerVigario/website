@@ -13,6 +13,13 @@ STAGED=$(git diff --cached --name-only --diff-filter=ACM)
 # staged only in part, with the rest left out deliberately.
 PARTIAL=$(git diff --name-only)
 
+# ESLint's type-aware rules read the types Astro generates into .astro/:
+# astro:assets imports, import.meta.env. Without them, as on a fresh
+# clone or after `npm run clean`, each of those is a type that cannot be
+# resolved, and the lint fails code that is fine. `npm run lint:js` runs
+# the same sync first. It takes about a second.
+npx astro sync
+
 npx lint-staged
 
 # Re-stage what was originally staged — but only files that were staged
