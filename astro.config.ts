@@ -143,6 +143,27 @@ export default defineConfig({
           return { ssr: { noExternal: true } };
         },
       },
+      // Bundling copies every dependency's code into dist/server, and the
+      // release tarball is a public download of it. MIT and ISC, most of
+      // what is bundled, have every copy carry the copyright and
+      // permission notice, which the bundle mostly drops. Vite's
+      // build.license writes each bundled package's name, version,
+      // licence and licence text to one file; check:release reads it.
+      //
+      // For the server only. The browser scripts bundle nothing of
+      // anyone else's, so the client's file would say exactly that, from
+      // a site that serves the Geist font files to every visitor.
+      //
+      // Not the default name. That is .vite/license.md, and the build
+      // deletes .vite/ from each output directory once it has read the
+      // manifests there, so the file was written and then removed.
+      {
+        name: "vigario:third-party-licences",
+        configEnvironment(name) {
+          if (name !== "ssr") return;
+          return { build: { license: { fileName: "THIRD-PARTY-LICENSES.md" } } };
+        },
+      },
     ],
     // Emit scripts as files rather than inlining them. Inline script is
     // the one thing that forces a CSP to carry hashes — a per-page policy

@@ -83,11 +83,13 @@ version: a level is one step from the last release tag, so a version is
 never skipped or reused, and one whose tag already exists is refused
 before anything runs.
 
-The artifact is `dist/`, `node_modules/` (better-sqlite3, for the
-native addon that cannot be bundled, and the one package it depends on,
-both at the lockfile's versions), a generated `package.json`,
-`CHANGELOG.md`, `LICENSE` and `LICENSE-NOTICE.md`, `RELEASE` (version + the commit the source came from),
-and `MANIFEST.sha256` — a sha256 of every other file in the tree. It runs
+The artifact is `dist/` (with `dist/server/THIRD-PARTY-LICENSES.md`,
+the licence of every package the server bundles, written by Vite's
+`build.license`), `node_modules/` (better-sqlite3, for the native addon
+that cannot be bundled, and the one package it depends on, both at the
+lockfile's versions), a generated `package.json`, `CHANGELOG.md`,
+`LICENSE` and `LICENSE-NOTICE.md`, `RELEASE` (version + the commit the
+source came from), and `MANIFEST.sha256` — a sha256 of every other file in the tree. It runs
 on `node dist/server/entry.mjs` with `SQLITE_PATH` set, needs no
 toolchain and no network, and is about 21 MB, most of it image variants.
 
