@@ -39,7 +39,8 @@ name: Release
 # release exists: a failure up to publishing leaves main as it was. A
 # failure after it leaves the release published and main one commit
 # behind it, and dispatching again with auto finishes the release by
-# moving main.
+# moving main — to the commit publish made, which decide checks is that,
+# and never to whatever a tag happens to name.
 #
 # THE APP TOKEN NEVER TOUCHES DISK. Checkouts here persist no
 # credentials: nothing in this workflow runs git against the remote — the
@@ -136,6 +137,10 @@ jobs:
         # in code rather than a rule in a comment.
         env:
           BUMP: ${{ inputs.bump }}
+          GH_TOKEN: ${{ github.token }}
+          # The release App's account, as GitHub names the author of the
+          # commit publish asks it to construct.
+          RELEASE_BOT: website-release[bot]
         run: |
           set -euo pipefail
           case "$BUMP" in
@@ -167,15 +172,65 @@ jobs:
               echo "::error::$last is published and main has not moved to it. Run with auto to finish $last first; a $BUMP bump now would release past it."
               exit 1
             fi
+
+            # The tag is not the evidence. Finishing moves main through the
+            # App's bypass, past the pull request, the checks and code
+            # scanning, so the commit it moves main to must be the one
+            # publish made, and its release must be published. Anything
+            # that can write contents can push a tag; only the App can have
+            # GitHub construct and sign a commit as the App.
+            oid=$(git rev-parse "$last^{commit}")
+            # A draft has no tag yet, so this answers 404 for one too.
+            if ! rel=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$last" \
+              --jq '[(.draft | tostring), .author.login] | join(" ")' 2>"$RUNNER_TEMP/release.err"); then
+              echo "::error::$last has no published release, so there is nothing to finish: $(tr '\n' ' ' < "$RUNNER_TEMP/release.err")"
+              exit 1
+            fi
+            if [ "$rel" != "false $RELEASE_BOT" ]; then
+              echo "::error::$last's release is not one publish made: draft and author are \"$rel\", expected \"false $RELEASE_BOT\"."
+              exit 1
+            fi
+            if ! commit=$(gh api "repos/$GITHUB_REPOSITORY/commits/$oid" \
+              --jq '[.author.login // "", (.commit.verification.verified | tostring), .commit.verification.reason] | join(" ")' 2>"$RUNNER_TEMP/commit.err"); then
+              echo "::error::$last names $oid, which GitHub does not have: $(tr '\n' ' ' < "$RUNNER_TEMP/commit.err")"
+              exit 1
+            fi
+            if [ "$commit" != "$RELEASE_BOT true valid" ]; then
+              echo "::error::$last names $oid, which is not a release commit: author, signed and reason are \"$commit\", expected \"$RELEASE_BOT true valid\"."
+              exit 1
+            fi
+            files=$(git diff --name-only "$oid^" "$oid" | sort | paste -sd ' ')
+            if [ "$files" != "CHANGELOG.md package-lock.json package.json" ]; then
+              echo "::error::$last's commit changes $files; a release commit changes CHANGELOG.md, package-lock.json and package.json, and nothing else."
+              exit 1
+            fi
+            # Both manifests as publish leaves them: the version set to the
+            # tag's, and every other byte as the commit before it had them.
+            # Sorted and compacted, so the comparison is of content.
+            for f in package.json package-lock.json; do
+              strip='del(.version) | if .packages then del(.packages[""].version) else . end'
+              versions='[.version, (.packages[""].version // empty)] | unique | join(" ")'
+              if [ "$(git show "$oid:$f" | jq -cS "$strip")" != "$(git show "$oid^:$f" | jq -cS "$strip")" ]; then
+                echo "::error::$last's commit changes $f beyond its version."
+                exit 1
+              fi
+              if [ "$(git show "$oid:$f" | jq -r "$versions")" != "${last#v}" ]; then
+                echo "::error::$last's commit sets $f to version $(git show "$oid:$f" | jq -r "$versions"), not ${last#v}."
+                exit 1
+              fi
+            done
             {
               echo "release=false"
               echo "finish=true"
               echo "tag=$last"
-              echo "oid=$(git rev-parse "$last^{commit}")"
+              echo "oid=$oid"
             } >> "$GITHUB_OUTPUT"
             echo "Finishing $last: it is published, and main has not moved to it."
             exit 0
           fi
+          # Only the check above reads the API. git-cliff, below, is a
+          # dependency, and gets no token.
+          unset GH_TOKEN
 
           # A level moves a release the commits make; it cannot make one.
           # With nothing bump-worthy since the last tag, git-cliff returns

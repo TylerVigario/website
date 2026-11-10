@@ -77,7 +77,11 @@ repaired. That check runs a moment before the tag exists, so a merge in
 those seconds still lands between them: merging waits while a release
 runs. A failure after publishing leaves `main` one commit behind the
 release; dispatching again with `auto` finishes it by moving `main`, and
-a run asking for a bump level is refused until it has. The dispatch
+a run asking for a bump level is refused until it has. It finishes only
+the release's own commit, never whatever a tag names: the App's, signed
+by GitHub, changing nothing but the version and the changelog, with a
+published release. Only the App may create a `v` tag at all
+(`.github/rulesets/version-tags.json`). The dispatch
 takes a bump (`auto`, `patch`, `minor`, `major`), never a
 version: a level is one step from the last release tag, so a version is
 never skipped or reused, and one whose tag already exists is refused

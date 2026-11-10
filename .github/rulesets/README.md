@@ -17,7 +17,8 @@ protected. The payload is committed now so that a change to protection is a chan
 the repository, reviewable like any other.
 
 `main.json` names one bypass actor: the `website-release` App (id 4810355),
-owned by this account and installed on this repository alone.
+owned by this account and installed on this repository alone. `version-tags.json`
+names the same App and nothing else.
 
 The exemption exists for one reason: a release records itself, which means
 writing the default branch, which nothing else may do. Its blast radius is the
@@ -75,7 +76,33 @@ The tags a release creates are lightweight: publishing the release creates its t
 `git cat-file -t` on one reports `commit`. `update` does not care which kind a tag is, so
 the guarantee does not depend on annotated tags.
 
-`creation` is deliberately absent: anyone may name a version, nobody may change one.
+`creation` is not in it, and cannot be: the actor allowed to create would need a bypass,
+and a bypass here would be past `update` and `deletion` too.
+
+`version-tags.json` holds `creation` alone, on version tags, and lets only the
+release App past it. Naming a version used to be open to anyone, on the reasoning
+that a name nobody can change costs nothing to leave unguarded. It costs the branch.
+A release that publishes and then fails to move `main` is finished by the next
+dispatch, and the newest `v` tag is what tells that dispatch there is something to
+finish; finishing moves `main` through the App's bypass, past the pull request, the
+checks and code scanning. So with creation open, anything that can write the
+repository's contents could push a tag on a commit of its own and have the owner's
+next routine dispatch put that commit on `main`. And a tag nobody may delete, whose
+parent is not `main`, refuses every release after it until protection is relaxed to
+remove it. The release's `decide` job checks the commit it finishes regardless —
+the App's, signed by GitHub, changing only the version and the changelog, with a
+published release — so this ruleset is what keeps a stray version from existing at
+all, and that check is what holds if the ruleset ever drifts.
+
+Rulesets compose, and each carries its own bypass list, so the App is past `creation`
+here and nothing in `tags.json`: a tag it creates is create-once like any other.
+
+The two patterns are both needed. A ruleset matches with `FNM_PATHNAME`, so `*` stops
+at `/`, while `git tag --list 'v*'`, which `decide` reads, matches across it, and sorts
+`v9/x` above `v1.21.1`. `refs/tags/v*` alone leaves `v9/x` to anyone; `refs/tags/v*/**/*`
+alone leaves `v9.0.0`; `refs/tags/v**` matches only what `v*` does. Each was pushed at on
+a scratch repository before this file was written, with the owner refused and the bypass
+actor admitted, by `git push`, by the refs API and by publishing a release.
 
 The payload is written to **round-trip**: applying it and reading it back
 yields the same rules, so any difference between this file and applied state
@@ -107,6 +134,16 @@ demonstrably active:
 ```bash
 gh api repos/<owner>/<repo>/rules/branches/main
 ```
+
+A tag has no counterpart to that endpoint. Read a tag ruleset by its id, and check its
+`conditions` as well as its `rules`: a pattern that misses is as absent as a missing rule.
+
+```bash
+gh api repos/<owner>/<repo>/rulesets/<id>
+```
+
+A read says what is configured, not that it bites. `tests/version-tags.test.ts` holds the
+files to their shape; whether GitHub refuses is known only by pushing at it.
 
 ## Why each rule
 
@@ -152,10 +189,14 @@ rule in the ruleset, not only `pull_request` — so this App is past `deletion` 
 with the bypass and one without. Judged not worth the second apply step here; revisit if
 the repository stops being single-owner.
 
+The App is also the one bypass actor of `version-tags.json`, which holds `creation` and
+nothing else, so that exemption reaches no rule but the one it is for.
+
 The App's credentials are not repository secrets. They live in the `release`
-environment, which admits `main` alone, and only the release workflow's `publish` job
-names it, minting the token after the artifact is built, run and attested. A workflow
-run on any other branch cannot reach them.
+environment, which admits `main` alone, and only the release workflow's `publish` and
+`finish` jobs name it: `publish` mints the token after the artifact is built, run and
+attested, and `finish` only after `decide` has checked the commit it moves `main` to. A
+workflow run on any other branch cannot reach them.
 
 ## Not included
 
