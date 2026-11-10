@@ -64,24 +64,32 @@ manifest, booted from its own `node_modules` and posted to by
 `check:forms`). It runs the whole dependency tree, so it holds no secret
 and no signing identity. `publish`, in the `release` environment, runs
 nothing from `node_modules`: it checks the tarball is the one `build`
-checked, attests it through Sigstore, writes the version and changelog to
-`main` as a forge-signed commit, and publishes: a draft release, the
-artifact attached, then published, which is what creates the tag.
-Nothing is written until the artifact is built, run and attested, so a
-failure up to then leaves no commit, no tag and no release. A failure
-while publishing leaves the release commit on `main` without a tag;
-dispatching again completes it, and a run asking for a bump level is
-refused until it has, since that would skip the unfinished version. The
-dispatch takes a bump (`auto`, `patch`, `minor`, `major`), never a
+checked, attests it through Sigstore, writes the version and changelog
+as a forge-signed commit on a branch of its own, `release/vX.Y.Z`, and
+publishes at that commit: a draft release, the artifact attached, then
+published, which is what creates the tag. Only then is `main`
+fast-forwarded to the release commit, so `main` never claims a version
+before the release exists. Nothing is written until the artifact is
+built, run and attested, and a failure up to publishing leaves `main` as
+it was. Publishing is refused if `main` has moved since the branch was
+cut, because a published tag `main` cannot fast-forward to could not be
+repaired. That check runs a moment before the tag exists, so a merge in
+those seconds still lands between them: merging waits while a release
+runs. A failure after publishing leaves `main` one commit behind the
+release; dispatching again with `auto` finishes it by moving `main`, and
+a run asking for a bump level is refused until it has. The dispatch
+takes a bump (`auto`, `patch`, `minor`, `major`), never a
 version: a level is one step from the last release tag, so a version is
 never skipped or reused, and one whose tag already exists is refused
 before anything runs.
 
-The artifact is `dist/`, `node_modules/` (better-sqlite3, for the
-native addon that cannot be bundled, and the one package it depends on,
-both at the lockfile's versions), a generated `package.json`,
-`CHANGELOG.md`, `LICENSE` and `LICENSE-NOTICE.md`, `RELEASE` (version + the commit the source came from),
-and `MANIFEST.sha256` — a sha256 of every other file in the tree. It runs
+The artifact is `dist/` (with `dist/server/THIRD-PARTY-LICENSES.md`,
+the licence of every package the server bundles, written by Vite's
+`build.license`), `node_modules/` (better-sqlite3, for the native addon
+that cannot be bundled, and the one package it depends on, both at the
+lockfile's versions), a generated `package.json`, `CHANGELOG.md`,
+`LICENSE` and `LICENSE-NOTICE.md`, `RELEASE` (version + the commit the
+source came from), and `MANIFEST.sha256` — a sha256 of every other file in the tree. It runs
 on `node dist/server/entry.mjs` with `SQLITE_PATH` set, needs no
 toolchain and no network, and is about 21 MB, most of it image variants.
 
@@ -261,7 +269,7 @@ should not be told something laxer.
 - **Quote** — a "request a quote" submission from the main contact form. Schema in [`src/lib/api/quote.ts`](src/lib/api/quote.ts). Submitted through `submitQuote()` in [`src/lib/api/submit.ts`](src/lib/api/submit.ts), which both ways in call: `/api/quote` for JSON, and `/contact` itself for a no-JS form post.
 - **POTS audit** — a "free phone-bill audit" submission from the `/pots-migration` landing page. Different schema ([`src/lib/api/pots-audit.ts`](src/lib/api/pots-audit.ts)), same destination row, submitted through `submitPotsAudit()` the same two ways (`/api/pots-audit`, `/pots-migration`).
 - **`quotes` table** — single SQLite table that holds both kinds of submission. The `services` column distinguishes: the chosen services, comma-joined, for quote submissions, the literal string `"POTS Migration Audit"` for audit submissions. `notified_at` is when the row's notification reached the relay: NULL if it never did, `'unknown'` for rows older than the column. Its schema is versioned: `getDb()` runs the migrations in `src/lib/db.ts` against `PRAGMA user_version`. A migration that has shipped is never edited; append a new one.
-- **Problem Details** — the API error shape, per RFC 9457, `application/problem+json`. Validation failures via `zodError()` (422, type `VALIDATION_TYPE`, a tag URI rather than a path that would 404), a form sent faster than a person fills one in via `sentTooSoon()` (422, type `TOO_SOON_TYPE`, see `fill-time.ts`), a body that cannot be read at all via `badRequest()` (400) or `contentTooLarge()` (413, over `BODY_LIMIT_BYTES`), an unsupported method via `methodNotAllowed()` (which sets `Allow`), an unclaimed path via `notFound()` from the `[...path].ts` catch-all. Everything but those two 422s is `about:blank`, which means no more than its status. Two errors are NOT this shape and cannot be: a cross-site write is refused by Astro before middleware or routes run (`403 text/plain`), and an unhandled route fault returns the site's `500 text/html` — catching that is the blanket try/catch the guardrails forbid. `error.ts` records both, with the measurement. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()`, whose response body is annotated with the `ProblemDetails` type so a change to the shape fails the build. The client does **not** check it with zod: [`enhance.ts`](src/lib/forms/enhance.ts) reads the three fields it uses by hand, because validating in the browser would pull zod into a bundle that is otherwise about 4.6 KB in order to re-check a response this server just produced. See "Form patterns" below.
+- **Problem Details** — the API error shape, per RFC 9457, `application/problem+json`. Validation failures via `zodError()` (422, type `VALIDATION_TYPE`, a tag URI rather than a path that would 404), a form sent faster than a person fills one in via `sentTooSoon()` (422, type `TOO_SOON_TYPE`, see `fill-time.ts`), a body that cannot be read at all via `badRequest()` (400) or `contentTooLarge()` (413, over `BODY_LIMIT_BYTES`), an unsupported method via `methodNotAllowed()` (which sets `Allow`), an unclaimed path via `notFound()` from the `[...path].ts` catch-all. Everything but those two 422s is `about:blank`, which means no more than its status. Four errors are NOT this shape and cannot be: a cross-site write is refused by Astro before middleware or routes run (`403 text/plain`); a URL that is not valid percent-encoded UTF-8 is refused by the Node adapter before Astro sees it (`400` "Bad request.", no Content-Type), and a path still encoded after ten decodes by Astro before routing (an empty `400`); and an unhandled route fault returns the site's `500 text/html` — catching that is the blanket try/catch the guardrails forbid. `error.ts` records all four, with the measurement, and `check:forms` holds the 403 and both 400s to it. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()`, whose response body is annotated with the `ProblemDetails` type so a change to the shape fails the build. The client does **not** check it with zod: [`enhance.ts`](src/lib/forms/enhance.ts) reads the three fields it uses by hand, because validating in the browser would pull zod into a bundle that is otherwise about 4.6 KB in order to re-check a response this server just produced. See "Form patterns" below.
 
 ## Key paths
 
@@ -457,7 +465,7 @@ npm run check:install-scripts     # every dependency install script is approved 
 - ESLint flat config with type-aware rules (`recommendedTypeChecked`). `req.json()` returns `any` — always parse through a zod schema.
 - Path alias: `@/*` → `src/*`.
 - **Conventional Commits** — Angular type set, inherited from `@commitlint/config-conventional` rather than declared. The line the types draw is **did the artifact change**, because the version names a tarball: `feat` (minor bump), `fix` / `revert` / `perf` / `refactor` / `build` (patch bump), all six in the changelog; `ci` / `docs` / `test` / `chore` / `style` reach no artifact, so no bump and no changelog entry. **Type = release impact, not change-nature** — a bug fix inside CI infra is `ci:` (no release), not `fix(ci):`. Matches pipetree's set (the canonical sibling). `.commitlintrc.js` carries only genuine overrides — the type set, type-case and subject rules come from the extended config, so there is no second copy to drift. The bump matrix lives in `cliff.toml`'s `commit_parsers`. `footer-leading-blank` is deliberately off (the conventional-changelog parser greedy-detected mid-body `Word:` line starts as the footer boundary and false-fired on natural prose like "What landed:" / "Why:"; the comment in `.commitlintrc.js` records why).
-- Husky hooks: `pre-commit` runs `lint-staged` (plus a Windows guard that re-stages what the formatters changed, for files staged whole only, so a hunk left unstaged is never committed) → `typecheck` → `test`; `commit-msg` runs `commitlint`; `pre-push` enforces the `<type>/<slug>` branch-name convention, then `check:pins` → `check:install-scripts` → `lint:actions` → `typecheck` → `lint` → `format` (both over the whole tree) → `test` → `build` → `check:bundles` → `check:forms`. Local is a superset of the gate: everything CI checks is checked here first, except the dev-server smoke test, which needs a disposable machine, and the release-artifact check, which needs the registry and runs only where the artifact does (linux-x64).
+- Husky hooks: `pre-commit` runs `astro sync` (the generated types ESLint's type-aware rules read) → `lint-staged` (plus a Windows guard that re-stages what the formatters changed, for files staged whole only, so a hunk left unstaged is never committed) → `typecheck` → `test`; `commit-msg` runs `commitlint`; `pre-push` enforces the `<type>/<slug>` branch-name convention, then `check:pins` → `check:install-scripts` → `lint:actions` → `typecheck` → `lint` → `format` (both over the whole tree) → `test` → `build` → `check:bundles` → `check:forms`. Local is a superset of the gate: everything CI checks is checked here first, except the dev-server smoke test, which needs a disposable machine, and the release-artifact check, which needs the registry and runs only where the artifact does (linux-x64).
 - `CHANGELOG.md` is regenerated from commits by git-cliff at release time — never hand-edit. Fix the commit message, not the changelog. (Because `ci`/`docs`/`test`/`chore`/`style` are skipped, a regeneration drops those entries — the changelog reflects what changed in the artifact, not every commit. One parser list drives the changelog **and** `--bumped-version`, so a type cannot be recorded without also bumping; that coupling is why "every commit in the changelog" is not on the table. It ships inside the release tarball, so it is read on the host, not only on GitHub.)
 
 ## Git + PR workflow

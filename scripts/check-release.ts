@@ -12,6 +12,7 @@
  * So this unpacks the tarball the way the host does and checks:
  *   - every file matches MANIFEST.sha256, and no file is missing from it
  *   - RELEASE and package.json name the same version
+ *   - it carries the licence of every package the server bundles
  *   - the unpacked server, with its own node_modules, passes check:forms
  *
  * The last runs scripts/check-forms.ts from inside the unpacked tree, so
@@ -28,6 +29,16 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+// Bundled packages that publish no licence text to carry, with why. One
+// that gains a text fails the check, as does one no longer bundled, so
+// an entry here cannot outlive its reason.
+const NO_LICENCE_TEXT = new Map([
+  // astro's terminal colours. Its package.json says ISC, but neither the
+  // package nor its repository (delucis/piccolore) has a licence file or
+  // a copyright line, so there is no notice to copy.
+  ["piccolore", "its package and repository have no licence file"],
+]);
 
 const tarball = process.argv[2];
 if (!tarball || !existsSync(tarball)) {
@@ -99,6 +110,39 @@ try {
     fail(`RELEASE says ${release.version} (dirty=${release.dirty}), package.json ${version}`);
   }
 
+  // The licences of what the server bundles, which build.license writes
+  // (astro.config.ts). This is what notices that stopping, or a bundled
+  // package with no licence text to copy.
+  const licences = path.join(root, "dist/server/THIRD-PARTY-LICENSES.md");
+  if (!existsSync(licences)) {
+    fail("dist/server/THIRD-PARTY-LICENSES.md is missing");
+  } else {
+    const entries = readFileSync(licences, "utf8")
+      .split(/^## /m)
+      .slice(1)
+      .map((e) => {
+        const [heading = "", ...text] = e.split("\n");
+        return { name: heading.split(" - ")[0] ?? heading, text: text.join("\n").trim() };
+      });
+    const names = new Set(entries.map((e) => e.name));
+    for (const { name, text } of entries) {
+      if (!text && !NO_LICENCE_TEXT.has(name)) fail(`${name} is bundled with no licence text`);
+      if (text && NO_LICENCE_TEXT.has(name)) {
+        fail(`${name} now has a licence text; take it out of NO_LICENCE_TEXT`);
+      }
+    }
+    for (const name of NO_LICENCE_TEXT.keys()) {
+      if (!names.has(name)) fail(`${name} is no longer bundled; take it out of NO_LICENCE_TEXT`);
+    }
+    if (!entries.length) fail("THIRD-PARTY-LICENSES.md lists no packages");
+    else if (entries.every((e) => e.text || NO_LICENCE_TEXT.has(e.name))) {
+      const but = [...NO_LICENCE_TEXT].map(([name, why]) => `, but ${name}: ${why}`).join("");
+      console.log(
+        `  ✓ ${entries.length} bundled packages listed, each with its licence text${but}`,
+      );
+    }
+  }
+
   // check-forms resolves the server from its working directory and its
   // own imports from where it lives, so run from here it boots the
   // artifact and reads the database with the repository's driver.
@@ -116,4 +160,6 @@ if (failures.length) {
   console.error(`\n${failures.length} release check(s) failed.`);
   process.exit(1);
 }
-console.log("\nThe artifact unpacks, matches its manifest, and serves both forms.");
+console.log(
+  "\nThe artifact unpacks, matches its manifest, carries its licences, and serves both forms.",
+);

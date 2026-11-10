@@ -83,6 +83,20 @@ appear:
 They are not reserved above, this licence grants nothing in them, and
 their licence is theirs to pass on, not ours.
 
+The site is set in Geist, by Vercel, under the SIL Open Font License
+1.1. Its font files are served with every page and are not in this
+repository; they come from `@fontsource-variable/geist` when the site is
+built.
+
+A release carries other people's code. The server is one bundle with its
+npm dependencies compiled in, each under its own licence, nearly all
+MIT or ISC. The build lists every one of them, with its version, licence
+and licence text, in `dist/server/THIRD-PARTY-LICENSES.md`, which ships
+in each release tarball beside the bundle. Geist is listed there too.
+`better-sqlite3`, which cannot be bundled, ships whole in
+`node_modules/` with the one package it needs, each with its own
+licence file. This licence grants nothing in any of them.
+
 Two photographs on /services are in the public domain, dedicated under
 CC0 1.0 (<https://creativecommons.org/publicdomain/zero/1.0/>), which
 asks for no credit. They are named here so that nobody reads them as

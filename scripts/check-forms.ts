@@ -370,6 +370,25 @@ await check(
   () => post("/api/quote", "{not json", { type: "application/json" }),
   (res) => status(res, 400),
 );
+// Two answers under /api/ come from before any route, so they are not
+// Problem Details. error.ts records each and why it cannot be; these hold
+// the record to what the server does.
+const noContentType = (res: Response) =>
+  res.headers.has("content-type") ? `Content-Type is ${res.headers.get("content-type")}` : "";
+await check(
+  'a URL that is not UTF-8 is refused 400 "Bad request." before Astro sees it',
+  () => fetch(`${BASE}/api/%C0%AF`),
+  (res, text) =>
+    status(res, 400) ||
+    noContentType(res) ||
+    (text === "Bad request." ? "" : `the body is "${text}"`),
+);
+await check(
+  "a path still encoded after ten decodes is refused 400, empty, before routing",
+  () => fetch(`${BASE}/api/%${"25".repeat(10)}61`),
+  (res, text) =>
+    status(res, 400) || noContentType(res) || (text === "" ? "" : `the body is "${text}"`),
+);
 // A sender on the spam lists is stored like anyone else and flagged, and
 // the address looked up is the one the proxy forwards, so these two
 // prove the lookup end to end through the headers the host sends.
