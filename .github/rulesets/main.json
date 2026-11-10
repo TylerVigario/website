@@ -16,12 +16,6 @@
   "name": "main-protection",
   "rules": [
     {
-      "type": "deletion"
-    },
-    {
-      "type": "non_fast_forward"
-    },
-    {
       "parameters": {
         "allowed_merge_methods": ["squash"],
         "dismiss_stale_reviews_on_push": true,
@@ -33,9 +27,6 @@
         "required_reviewers": []
       },
       "type": "pull_request"
-    },
-    {
-      "type": "required_linear_history"
     },
     {
       "type": "required_status_checks",

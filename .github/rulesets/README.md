@@ -1,8 +1,9 @@
 # Rulesets
 
-`main.json` is the branch protection payload for this repository. It is committed
-because a ruleset is applied state that lives only on GitHub: it vanishes silently on
-repository recreate, rename or fork, and nothing in a clone reveals it is gone.
+`main.json` and `main-history.json` are the branch protection payloads for this
+repository. They are committed because a ruleset is applied state that lives only on
+GitHub: it vanishes silently on repository recreate, rename or fork, and nothing in a
+clone reveals it is gone.
 
 This repository learned that the expensive way. The ruleset was applied on 2026-07-26,
 three days after the last release, and nothing in the tree recorded it. The next release
@@ -18,7 +19,7 @@ the repository, reviewable like any other.
 
 `main.json` names one bypass actor: the `website-release` App (id 4810355),
 owned by this account and installed on this repository alone. `version-tags.json`
-names the same App and nothing else.
+names the same App and nothing else. `main-history.json` and `tags.json` name none.
 
 The exemption exists for one reason: a release records itself, which means
 writing the default branch, which nothing else may do. Its blast radius is the
@@ -150,10 +151,15 @@ A tag has no counterpart to that endpoint. Read a tag ruleset by its id, and che
 gh api repos/<owner>/<repo>/rulesets/<id>
 ```
 
-A read says what is configured, not that it bites. `tests/version-tags.test.ts` holds the
+A read says what is configured, not that it bites. `tests/rulesets.test.ts` holds the
 files to their shape; whether GitHub refuses is known only by pushing at it.
 
 ## Why each rule
+
+`main.json` holds the rules a release commit cannot pass: the pull request, the
+required checks and code scanning. `main-history.json` holds the ones a release never
+needs to: `deletion`, `non_fast_forward` and `required_linear_history`. Both apply to
+the default branch, and rulesets compose, so every change to it answers to both.
 
 **`pull_request`, 0 approvals** — a single owner cannot approve their own pull request,
 so requiring one deadlocks the repository outright. The pull request is the record; the
@@ -163,7 +169,8 @@ approval count adds nothing where there is one reviewer.
 parent buys nothing merging into linear history; rebase replays branch commits onto main
 verbatim, so a check validating the pull request title never sees them.
 
-**`deletion`, `non_fast_forward`** — the branch cannot be removed or rewritten.
+**`deletion`, `non_fast_forward`** — the branch cannot be removed or rewritten, by
+anyone, the release App included.
 
 **`required_linear_history`** — not the same lever as disabling merge commits in the
 repository settings. Merge methods are settings: one API call re-enables them, touching
@@ -191,11 +198,20 @@ that commit. A release that cannot write the branch cannot leave a receipt in it
 dropping the receipt to avoid a credential trades a durable property of the project for an
 operational one.
 
-**What this costs, stated rather than implied.** `bypass_mode: always` applies to every
-rule in the ruleset, not only `pull_request` — so this App is past `deletion` and
-`non_fast_forward` too. Narrowing that means splitting protection into two rulesets, one
-with the bypass and one without. Judged not worth the second apply step here; revisit if
-the repository stops being single-owner.
+**What it reaches, stated rather than implied.** `bypass_mode: always` applies to every
+rule in the ruleset, not only `pull_request`, which is why `main.json` holds only the
+three a release commit cannot pass. A release adds one commit to `main` by fast-forward
+and never removes one, so the rules it has no use for are in `main-history.json`, which
+names no bypass actor. The App can add a linear commit to `main`; it cannot delete the
+branch, rewrite it or put a merge commit on it.
+
+That was measured before the split, on a scratch repository, with the admin role in the
+App's place, and payloads made from these. With the bypass on one ruleset holding all
+six rules, the bypass actor landed a merge commit, forced the branch back twice and
+deleted it. With the split, each of those was refused, and the release's own
+`force=false` fast-forward went through. With the bypass removed, that fast-forward was
+refused for the pull request, the required check and code scanning, so the bypass is
+what admits it.
 
 The App is also the one bypass actor of `version-tags.json`, which holds `creation` and
 nothing else, so that exemption reaches no rule but the one it is for.
