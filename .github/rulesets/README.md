@@ -66,6 +66,14 @@ whoever fetches next gets the new content, while whoever already holds the name 
 refused the update and never learns there was one. Two people at the same version,
 holding different bits, neither told.
 
+Every tag takes the pattern `refs/tags/**/*`. A ruleset matches with `FNM_PATHNAME`, so
+`*` stops at `/`, and `**` alone matches no more than `*` does: under `refs/tags/*` or
+`refs/tags/**`, a tag with a slash in its name is outside the ruleset, free to be moved,
+forced and deleted by anything that can push. `**/*` matches at every depth, the top one
+included. All three patterns were pushed at on a scratch repository. On this one, while
+the file held `refs/tags/*`, GitHub's rule log shows a push of `v0/probe` checked against
+none of its rules.
+
 It carries no bypass actor, and that is deliberate. A bypass is scoped to a ruleset
 rather than to a rule, so any actor listed here would be past `update` and
 `deletion` as readily as anything else — an exemption from the only property this
@@ -97,8 +105,8 @@ all, and that check is what holds if the ruleset ever drifts.
 Rulesets compose, and each carries its own bypass list, so the App is past `creation`
 here and nothing in `tags.json`: a tag it creates is create-once like any other.
 
-The two patterns are both needed. A ruleset matches with `FNM_PATHNAME`, so `*` stops
-at `/`, while `git tag --list 'v*'`, which `decide` reads, matches across it, and sorts
+The two patterns are both needed. A ruleset's `*` stops at `/` here too, while
+`git tag --list 'v*'`, which `decide` reads, matches across it, and sorts
 `v9/x` above `v1.21.1`. `refs/tags/v*` alone leaves `v9/x` to anyone; `refs/tags/v*/**/*`
 alone leaves `v9.0.0`; `refs/tags/v**` matches only what `v*` does. Each was pushed at on
 a scratch repository before this file was written, with the owner refused and the bypass

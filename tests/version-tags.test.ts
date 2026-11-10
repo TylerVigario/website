@@ -6,8 +6,9 @@ import { readFileSync } from "node:fs";
  * exempt decides what it is exempt from. version-tags.json lets the App
  * create version tags and must hold nothing else, or the App is past that
  * too; tags.json, which makes every tag create-once, must let nobody past.
- * And the patterns must cover what `decide` reads, `git tag --list 'v*'`,
- * which matches across `/` where a ruleset's `*` does not. Each of these is
+ * And the patterns must reach what they mean to, where a ruleset's `*`
+ * stops at `/`: every tag, for tags.json, and for version-tags.json what
+ * `decide` reads, `git tag --list 'v*'`, which matches across it. Each is
  * one edit to a JSON file away, and GitHub applies whatever it is given.
  */
 
@@ -57,6 +58,11 @@ describe("version-tags.json", () => {
 describe("tags.json", () => {
   it("lets nobody past, the release App included", () => {
     expect(tags.bypass_actors).toEqual([]);
+  });
+
+  it("covers every tag, a slashed one included", () => {
+    expect(tags.conditions.ref_name.include).toEqual(["refs/tags/**/*"]);
+    expect(tags.conditions.ref_name.exclude).toEqual([]);
   });
 
   it("does not decide who creates a tag", () => {
