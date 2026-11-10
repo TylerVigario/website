@@ -3,9 +3,12 @@ import { readFileSync } from "node:fs";
 
 /**
  * A bypass reaches every rule in its ruleset, so where the release App is
- * exempt decides what it is exempt from. version-tags.json lets the App
- * create version tags and must hold nothing else, or the App is past that
- * too; tags.json, which makes every tag create-once, must let nobody past.
+ * exempt decides what it is exempt from. main.json holds what a release
+ * commit cannot pass, and main-history.json what a release never needs to:
+ * the App adds a commit to main and cannot delete, rewrite or merge into it.
+ * version-tags.json lets the App create version tags and must hold nothing
+ * else, or the App is past that too; tags.json, which makes every tag
+ * create-once, must let nobody past.
  * And the patterns must reach what they mean to, where a ruleset's `*`
  * stops at `/`: every tag, for tags.json, and for version-tags.json what
  * `decide` reads, `git tag --list 'v*'`, which matches across it. Each is
@@ -29,8 +32,32 @@ interface Ruleset {
 const read = (file: string) =>
   JSON.parse(readFileSync(`.github/rulesets/${file}`, "utf8")) as Ruleset;
 const main = read("main.json");
+const history = read("main-history.json");
 const tags = read("tags.json");
 const versions = read("version-tags.json");
+const types = (ruleset: Ruleset) => ruleset.rules.map((r) => r.type).sort();
+
+describe("main.json", () => {
+  it("holds what a release commit cannot pass, and nothing else", () => {
+    // No pull request, and no checks or analysis ever run on it.
+    expect(types(main)).toEqual(["code_scanning", "pull_request", "required_status_checks"]);
+  });
+});
+
+describe("main-history.json", () => {
+  it("keeps main from being deleted, rewritten or merged into", () => {
+    expect(types(history)).toEqual(["deletion", "non_fast_forward", "required_linear_history"]);
+  });
+
+  it("lets nobody past, the release App included", () => {
+    expect(history.bypass_actors).toEqual([]);
+  });
+
+  it("is enforced, on the branch main.json protects", () => {
+    expect(history.conditions).toEqual(main.conditions);
+    expect(history).toMatchObject({ target: "branch", enforcement: "active" });
+  });
+});
 
 describe("version-tags.json", () => {
   it("holds creation and nothing else", () => {
