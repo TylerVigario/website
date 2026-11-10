@@ -159,7 +159,7 @@ export function methodNotAllowed(allowed: readonly string[]): Response {
   );
 }
 
-/** TWO ERRORS UNDER /api/ ARE NOT THIS SHAPE, AND CANNOT BE.
+/** FOUR ERRORS UNDER /api/ ARE NOT THIS SHAPE, AND CANNOT BE.
  *
  *  A cross-site write is rejected by Astro before any middleware or
  *  route runs — `403 text/plain`, "Cross-site POST form submissions are
@@ -168,13 +168,30 @@ export function methodNotAllowed(allowed: readonly string[]): Response {
  *  `checkOrigin` and reimplementing the check, trading a working
  *  security boundary for a media type.
  *
+ *  A URL that is not valid percent-encoded UTF-8, in its path or its
+ *  query (`/api/%C0%AF`, a bare `%`), is answered `400` "Bad request.",
+ *  with no Content-Type, by the Node adapter's server, before it serves
+ *  a file or hands the request to Astro. A path still encoded after ten
+ *  decodes is answered by Astro with an empty `400`, before middleware
+ *  or routing, so that nothing checks one path while a later decode
+ *  routes another. Both are checks on the URL itself, made before any
+ *  code here runs; answering them here would mean a server of our own in
+ *  front of the adapter, decoding URLs for it.
+ *
  *  An unhandled fault in a route returns the site's `500 text/html`.
  *  Catching that to reshape it is the blanket try/catch the guardrails
  *  forbid, and it would drop the stack the adapter logs.
  *
- *  Neither costs the one consumer anything: enhance.ts parses failures
- *  with `res.json().catch(() => null)` and falls back to a root message,
- *  so an unparseable body degrades the wording rather than the handling.
+ *  None of them costs the one consumer anything: enhance.ts parses
+ *  failures with `res.json().catch(() => null)` and falls back to a root
+ *  message, so an unparseable body degrades the wording rather than the
+ *  handling. And it posts to two fixed paths with no query, so neither
+ *  400 can reach it. check:forms holds the 403 and both 400s to what is
+ *  written here, so an update that changes one fails there.
+ *
+ *  Below all four, a request Node cannot parse, such as one whose headers
+ *  pass 16 KB, is answered by Node itself (`431`, or `400`), with no body
+ *  and whatever its path.
  *
  *  404 for a path under /api/ that no route claims.
  *
