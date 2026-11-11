@@ -15,6 +15,7 @@ updates:
     # major for two. A hijacked publish is usually caught and pulled
     # within days, and a week costs nothing on a site with no feature
     # waiting on a dependency. Security updates are not held back.
+    # .npmrc holds every other install to the same week.
     cooldown:
       default-days: 7
       semver-major-days: 14
