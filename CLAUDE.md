@@ -91,7 +91,9 @@ The artifact is `dist/` (with `dist/server/THIRD-PARTY-LICENSES.md`,
 the licence of every package the server bundles, written by Vite's
 `build.license`), `node_modules/` (better-sqlite3, for the native addon
 that cannot be bundled, and the one package it depends on, both at the
-lockfile's versions), a generated `package.json`, `CHANGELOG.md`,
+lockfile's versions and checked against its hashes), a generated
+`package.json` naming them and a `package-lock.json` holding their
+entries copied from the repo's, which `npm ci` installed from, `CHANGELOG.md`,
 `LICENSE` and `LICENSE-NOTICE.md`, `RELEASE` (version + the commit the
 source came from), and `MANIFEST.sha256` — a sha256 of every other file in the tree. It runs
 on `node dist/server/entry.mjs` with `SQLITE_PATH` set, needs no
@@ -123,8 +125,10 @@ machine, which is the only kind this workflow uses.
 The tarball is meant to be a function of its commit, so a rebuild can be
 compared with the attested sha256 instead of trusting the attestation's
 account of what was built. `make-release.ts` dates everything from the
-commit (`SOURCE_DATE_EPOCH`), pins the runtime tree from the lockfile,
-fixes Astro's `key` and writes the archive deterministically with GNU
+commit (`SOURCE_DATE_EPOCH`), installs the runtime tree from the
+lockfile with `npm ci`, so each package is checked against the hash the
+lockfile records and a tarball the registry serves differently is
+refused, fixes Astro's `key` and writes the archive deterministically with GNU
 tar. A rebuild needs the same Node, Linux x64, and the same checkout
 path, because Astro writes absolute source paths into the server bundle.
 Every byte of a rebuild matches, from a cold cache as from a warm one

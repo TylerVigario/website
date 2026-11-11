@@ -107,15 +107,6 @@ run("npx", ["astro", "build"], {
 
 fs.cpSync("dist", path.join(staging, "dist"), { recursive: true });
 
-// The artifact gets its OWN minimal manifest rather than a copy of the
-// repo's. Copying the real one would list every build dependency, and
-// `npm install` in this directory would then resolve all of them —
-// reinstating the 200 MB tree this whole approach exists to avoid.
-fs.writeFileSync(
-  path.join(staging, "package.json"),
-  JSON.stringify({ name: pkg.name, version, private: true, type: "module" }, null, 2) + "\n",
-);
-
 // Install ONLY what the server bundle actually imports at runtime.
 //
 // `npm ci --omit=dev` installs about 175 MB, almost all of it Astro's
@@ -136,9 +127,20 @@ fs.writeFileSync(
 // better-sqlite3 13, node-addon-api, a header library the running server
 // never loads — so the same commit released a month apart could ship
 // different trees.
-/** The parts of a lockfile (v3) this reads. */
+//
+// And each is checked against the hash the lockfile records. Installing
+// `name@version` from the registry took whatever the registry served for
+// that version, checked only against the registry's own hash: a lockfile
+// entry with its integrity zeroed still released. So the staging
+// directory gets a lockfile of its own, each runtime package's entry
+// copied from the repo's, and `npm ci` installs from it, refusing a
+// tarball whose hash differs (EINTEGRITY), as CI's install does.
+/** The parts of a lockfile (v3) this reads; an entry is copied whole. */
 interface Lockfile {
-  packages: Record<string, { version?: string; dependencies?: Record<string, string> }>;
+  packages: Record<
+    string,
+    { version?: string; dependencies?: Record<string, string> } & Record<string, unknown>
+  >;
 }
 const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8")) as Lockfile;
 const pinned = new Map<string, string>();
@@ -158,8 +160,9 @@ function pin(name: string, from = "") {
     console.error(`error: ${name} is needed at runtime but absent from the lockfile.`);
     process.exit(1);
   }
-  // A nested copy would need a nested install, which `npm install a@1 b@2`
-  // cannot express. None exists today; refuse rather than flatten one.
+  // A nested copy lives under its dependent's own node_modules, which
+  // pinning by name does not follow. None exists today; refuse rather
+  // than flatten one.
   if (key.includes("/node_modules/")) {
     console.error(`error: ${key} is a nested runtime dependency; make-release cannot pin it.`);
     process.exit(1);
@@ -172,13 +175,45 @@ for (const name of RUNTIME_EXTERNALS) pin(name);
 const specs = [...pinned].map(([n, v]) => `${n}@${v}`).sort();
 console.log(`  runtime tree: ${specs.join(", ") || "(none)"}`);
 
+// The artifact gets its OWN manifest rather than a copy of the repo's.
+// Copying the real one would list every build dependency, and an install
+// in this directory would then resolve all of them — reinstating the
+// 200 MB tree this whole approach exists to avoid. It names the runtime
+// externals, at the versions pinned above, because `npm ci` installs
+// what the manifest and the lockfile agree on.
+const dependencies = Object.fromEntries(
+  RUNTIME_EXTERNALS.map((name) => [name, pinned.get(name) ?? ""]),
+);
+fs.writeFileSync(
+  path.join(staging, "package.json"),
+  JSON.stringify(
+    { name: pkg.name, version, private: true, type: "module", dependencies },
+    null,
+    2,
+  ) + "\n",
+);
+const packages: Lockfile["packages"] = { "": { name: pkg.name, version, dependencies } };
+for (const name of [...pinned.keys()].sort()) {
+  const entry = lock.packages[`node_modules/${name}`];
+  if (!entry) throw new Error(`${name} was pinned but has no lockfile entry`);
+  packages[`node_modules/${name}`] = entry;
+}
+fs.writeFileSync(
+  path.join(staging, "package-lock.json"),
+  JSON.stringify(
+    { name: pkg.name, version, lockfileVersion: 3, requires: true, packages },
+    null,
+    2,
+  ) + "\n",
+);
+
 // --ignore-scripts because a release build should not execute package
 // lifecycle scripts, and nothing here needs them: better-sqlite3 ships
 // its prebuilt binaries inside the published package rather than
 // fetching one in a postinstall. The assertion below fails the build if
 // that ever stops being true.
 if (specs.length) {
-  run("npm", ["install", ...specs, "--ignore-scripts", "--no-audit", "--no-fund", "--no-save"], {
+  run("npm", ["ci", "--ignore-scripts", "--no-audit", "--no-fund"], {
     cwd: staging,
     stdio: "inherit",
   });
