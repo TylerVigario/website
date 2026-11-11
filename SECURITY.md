@@ -25,10 +25,11 @@ This is a public marketing site with two unauthenticated forms, each taking a PO
 - **Sensitive data leakage** — SMTP credentials or submitted PII (names, contacts, free-text details from the `quotes` table) exposed in logs, error responses, or git history. API errors follow RFC 9457 Problem Details and must not leak internals.
 - **Request-handling bypass** — a malformed request that skips zod validation, or reaches a code path that writes unvalidated data.
 - **Dependency vulnerabilities** that are reachable through the running app.
+- **Submission volume** — the forms are unauthenticated by design, so what bounds them is a limit. The proxy limits submissions per client address, on the four paths the serving contract in `CLAUDE.md` names ("What the proxy limits"). A gap in the proxy's configuration is the operator's (see the last item below). A path through this repository is in scope: a route that takes a submission without being one of those four, or a client choosing the address it is counted under.
 
 The following are **not** security issues for the purposes of this policy:
 
-- Form spam or denial of service from high-volume submissions — the endpoints are intentionally unauthenticated and unrated; abuse mitigation is an operational concern, not a vulnerability.
+- Form spam within the limits: a submission a person could have sent. The honeypot and the fill-time check (`src/lib/api/fill-time.ts`) filter the crudest of it, and are not claimed to stop the rest.
 - UX confusion or copy/spec drift.
 - Self-XSS or attacks requiring control the attacker already has.
 - Findings in a deployment's reverse proxy / TLS config — those are the operator's, not this repository's.

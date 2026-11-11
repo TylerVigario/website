@@ -218,6 +218,20 @@ header from the connection rather than appending to one the client sent;
 otherwise a sender names whatever address it likes to the spam-list
 lookup (`src/lib/api/spam-list.ts`), which is the only thing that reads it.
 
+**What the proxy limits.** A POST to any of the four paths that take a
+submission (`/api/quote`, `/contact`, `/api/pots-audit`,
+`/pots-migration`) is counted per client address, taken from the
+connection, and the proxy refuses what is over the limit: a 429 with
+`Retry-After` (RFC 6585), or a dropped request. A person sends a form
+once, or again after fixing a field, so a limit of the order of ten in
+ten minutes never reaches one. A script, sending 412 a second from one
+machine against the built server, stops at the proxy instead of storing
+every one and sending an email for each. The app does not count
+addresses itself: the only address it has is the one this proxy
+forwards, and the proxy has the connection. Over the limit, the enhanced
+form keeps what was typed and says the send failed; the plain form shows
+the proxy's refusal, which only a script reaches.
+
 The Node process needs `SQLITE_PATH` (absolute). It reads `HOST`/`PORT`,
 `SPAM_LISTS_DIR` where the host keeps spam lists for it,
 `HEALTH_MIN_FREE_MB`, and the mail settings (`SMTP_*`, `NOTIFY_EMAIL`);
