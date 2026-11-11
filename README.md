@@ -141,9 +141,10 @@ same commits.
   reads `.nvmrc` directly, so there is no third pin to forget.
 - **better-sqlite3 native binding**. Since v13 it is N-API-based, so
   the prebuilt binary ships with the package and survives a Node major
-  bump — that stopped being a rebuild trigger. It still compiles from
-  source where no prebuilt matches the platform, which needs a
-  toolchain wherever `npm ci` runs.
+  bump — that stopped being a rebuild trigger. Since 13.0.2 it has no
+  install script either, so nothing compiles at install: where no
+  prebuilt matches the platform, it loads one built by hand under
+  `build/Release/`, or none.
 - **SQLITE_PATH must be absolute**. The app throws via getDbPath() if it
   is unset or relative, when the database is first opened (the first
   submission or health check; static pages keep serving). No cwd fallback — that bit me
