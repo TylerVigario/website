@@ -16,9 +16,23 @@
  * ships its binary ready-made and the script only repeats that work.
  * Every build and test passes with all install scripts off.
  *
+ * That script is npm's, not the package's. Since 13.0.2 better-sqlite3
+ * declares no install script and sets `gypfile: false`, and npm still
+ * infers `node-gyp rebuild` from its binding.gyp on an install from the
+ * lockfile, because a lockfile entry does not record `gypfile`
+ * (npm/cli#9837). So the approval is live, though the package's own
+ * package.json reads as if it covers nothing. Measured with `npm ci`
+ * through a script shell that ran nothing: npm 11.19 runs the script
+ * either way, and npm 12.2 runs it approved and blocks it otherwise.
+ *
  * It asks npm rather than reading the lockfile, because the lockfile's
  * hasInstallScript flag misses better-sqlite3, whose script npm infers
- * from its binding.gyp.
+ * from its binding.gyp. npm reads the installed tree from its hidden
+ * lockfile only while that is newer than every folder in node_modules.
+ * Once the tests, `astro sync` or a build have written caches there, npm
+ * reads each package.json instead and sees no script for better-sqlite3.
+ * So a stale pin fails in CI, whose tree is fresh, and can pass on a tree
+ * they have run in.
  *
  * It passes only on npm's answer: exit 0 and the list of what
  * allowScripts does not cover. npm reports its own failure as JSON too,
