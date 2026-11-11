@@ -1,7 +1,6 @@
 /**
  * Asserts every installed dependency with an install script has been
- * reviewed: approved or denied in package.json#allowScripts. And that
- * the policy reviews nothing that is not there.
+ * reviewed: approved or denied in package.json#allowScripts.
  *
  * An install script is code a dependency runs on the installing machine,
  * before anything else here gets a say. npm 11 runs unreviewed ones and
@@ -11,33 +10,38 @@
  * fails on both, so the decision is made in a commit rather than by
  * whichever npm happens to run.
  *
- * The policy itself: fsevents is denied, because it ships its binary
- * ready-made and the script only repeats that work. Nothing is approved.
- * better-sqlite3 is native but runs nothing at install: it ships its
- * binaries prebuilt, and since 13.0.2 has no install script and sets
- * `gypfile: false`, so npm does not build its binding.gyp either. Every
- * build and test passes with all install scripts off.
+ * The policy itself: better-sqlite3 is approved, pinned to the reviewed
+ * version, because its script is the compile-from-source fallback for a
+ * platform without a bundled binary. fsevents is denied, because it
+ * ships its binary ready-made and the script only repeats that work.
+ * Every build and test passes with all install scripts off.
  *
- * It asks npm rather than reading the lockfile, because npm decides from
- * the installed packages themselves, as it does when it runs them: their
- * scripts, and a binding.gyp it would build.
+ * That script is npm's, not the package's. Since 13.0.2 better-sqlite3
+ * declares no install script and sets `gypfile: false`, and npm still
+ * infers `node-gyp rebuild` from its binding.gyp on an install from the
+ * lockfile, because a lockfile entry does not record `gypfile`
+ * (npm/cli#9837). So the approval is live, though the package's own
+ * package.json reads as if it covers nothing. Measured with `npm ci`
+ * through a script shell that ran nothing: npm 11.19 runs the script
+ * either way, and npm 12.2 runs it approved and blocks it otherwise.
  *
- * And an entry for an installed package with no install script fails,
- * because it reviews nothing and reads as though it did. That is how
- * better-sqlite3 stayed approved for a script it no longer had. `npm
- * install-scripts prune --dry-run` calls those `no-scripts`. What it
- * calls `not-installed` passes, because what is installed depends on the
- * platform: fsevents is installed only on macOS, where its denial is
- * needed.
+ * It asks npm rather than reading the lockfile, because the lockfile's
+ * hasInstallScript flag misses better-sqlite3, whose script npm infers
+ * from its binding.gyp. npm reads the installed tree from its hidden
+ * lockfile only while that is newer than every folder in node_modules.
+ * Once the tests, `astro sync` or a build have written caches there, npm
+ * reads each package.json instead and sees no script for better-sqlite3.
+ * So a stale pin fails in CI, whose tree is fresh, and can pass on a tree
+ * they have run in.
  *
- * It passes only on npm's answers: exit 0 and the list it was asked for.
- * npm reports its own failure as JSON too, `{"error": ...}` with exit 1,
- * and a check reading only for the list found none in it and printed
- * "reviewed". That happened whenever npm refused to run, as it does with
- * `global` or `allow-scripts` set in the environment. Anything but the
- * list fails here. An npm without the command, before 11.18, is SKIPPED
- * locally and a failure in CI, as lint-actions.ts treats a missing
- * shellcheck.
+ * It passes only on npm's answer: exit 0 and the list of what
+ * allowScripts does not cover. npm reports its own failure as JSON too,
+ * `{"error": ...}` with exit 1, and a check reading only for the list
+ * found none in it and printed "reviewed". That happened whenever npm
+ * refused to run, as it does with `global` or `allow-scripts` set in the
+ * environment. Anything but the list fails here. An npm without the
+ * command, before 11.18, is SKIPPED locally and a failure in CI, as
+ * lint-actions.ts treats a missing shellcheck.
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -51,42 +55,31 @@ const npm = (args: string[]) =>
     shell: process.platform === "win32",
   });
 
-/** npm's answer to `npm install-scripts <command> --json`: what it found,
- *  under `allowScripts`, or, when it could not run the command, why. */
-interface Answer {
-  allowScripts?: unknown;
+/** What `npm install-scripts ls --json` reports: each package whose
+ *  install script package.json#allowScripts does not yet cover, or, when
+ *  npm could not run the command, why. */
+interface Report {
+  allowScripts?: { changes: { key: string }[] }[];
   error?: { code?: string; summary?: string };
 }
 
-/** Each package whose install script allowScripts does not yet cover. */
-type Pending = { changes: { key: string }[] }[];
-
-/** Each entry `prune` would drop, and why. */
-interface Prunable {
-  removed: { key: string; reason: string }[];
+const run = npm(["install-scripts", "ls", "--json"]);
+if (run.error) {
+  console.error(
+    `error: npm could not be run, so no install script was checked: ${run.error.message}`,
+  );
+  process.exit(1);
 }
 
-/** Asks npm and returns what it found. Anything but exit 0 and the shape
- *  asked for ends the check. */
-const ask = <T>(args: string[], expected: (found: unknown) => found is T): T => {
-  const command = `npm install-scripts ${args.join(" ")}`;
-  const run = npm(["install-scripts", ...args, "--json"]);
-  if (run.error) {
-    console.error(
-      `error: npm could not be run, so no install script was checked: ${run.error.message}`,
-    );
-    process.exit(1);
-  }
+let report: Report | undefined;
+try {
+  report = JSON.parse(run.stdout) as Report;
+} catch {
+  // Not JSON. Failed below, as an error is.
+}
 
-  let answer: Answer | undefined;
-  try {
-    answer = JSON.parse(run.stdout) as Answer;
-  } catch {
-    // Not JSON. Failed below, as an error is.
-  }
-  const found = answer?.allowScripts;
-  if (run.status === 0 && expected(found)) return found;
-
+const pending = run.status === 0 ? report?.allowScripts : undefined;
+if (!Array.isArray(pending)) {
   const version = npm(["--version"]).stdout.trim();
   const [major = 0, minor = 0] = version.split(".").map(Number);
   if (major < 11 || (major === 11 && minor < 18)) {
@@ -99,17 +92,16 @@ const ask = <T>(args: string[], expected: (found: unknown) => found is T): T => 
     );
     process.exit(0);
   }
-  const said = answer?.error
-    ? `${answer.error.code ?? "error"}: ${answer.error.summary ?? ""}`
+  const said = report?.error
+    ? `${report.error.code ?? "error"}: ${report.error.summary ?? ""}`
     : ((run.stderr || run.stdout).trim().split("\n")[0] ?? "");
   console.error(
-    `error: \`${command}\` failed (exit ${run.status ?? run.signal}), so the check could not finish:`,
+    `error: \`npm install-scripts ls\` failed (exit ${run.status ?? run.signal}), so nothing was checked:`,
   );
   console.error(`  ${said}`);
   process.exit(1);
-};
+}
 
-const pending = ask(["ls"], (found): found is Pending => Array.isArray(found));
 if (pending.length > 0) {
   console.error("error: install scripts not covered by package.json#allowScripts:");
   for (const { changes } of pending) {
@@ -119,19 +111,6 @@ if (pending.length > 0) {
   console.error("Read what each script does, then record the decision:");
   console.error("  npm install-scripts approve <pkg>   if it is needed (pins the version)");
   console.error("  npm install-scripts deny <pkg>      if it is not");
-  process.exit(1);
-}
-
-const prunable = ask(["prune", "--dry-run"], (found): found is Prunable =>
-  Array.isArray((found as Partial<Prunable> | undefined)?.removed),
-);
-const empty = prunable.removed.filter(({ reason }) => reason === "no-scripts");
-if (empty.length > 0) {
-  console.error("error: package.json#allowScripts reviews packages that have no install script:");
-  for (const { key } of empty) console.error(`  ${key}`);
-  console.error("");
-  console.error("Each entry covers nothing. Remove it from package.json; if a later version");
-  console.error("brings a script, this check names it for review.");
   process.exit(1);
 }
 
