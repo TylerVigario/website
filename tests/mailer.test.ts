@@ -212,3 +212,27 @@ describe("a notification", () => {
     for (const typed of ["Dana", "dana@example.com", "1234"]) expect(logged).not.toContain(typed);
   });
 });
+
+describe("the paused notice", () => {
+  it("says what paused and from which row, and names no one", async () => {
+    const { mod, log } = await load(LOCAL_RELAY);
+    expect(await mod.sendPausedNotice(12)).toBe(true);
+    const sent = sendMail.mock.calls[0]![0] as Record<string, string>;
+    expect(sent.to).toBe("leads@example.com");
+    expect(sent.subject).toBe("Notifications paused at 50 in 24 hours");
+    expect(sent.text).toContain("Submission #12 and the ones after it are saved but not emailed");
+    expect(sent.html).toContain("Submission #12 and the ones after it");
+    expect(sent).not.toHaveProperty("replyTo");
+    expect(JSON.stringify(log.mock.calls)).toContain("the paused notice (from submission #12)");
+  });
+
+  it("is rethrown on a relay failure, like a notification", async () => {
+    const { mod, error } = await load(LOCAL_RELAY);
+    sendMail.mockRejectedValueOnce(new Error("relay down"));
+    await expect(mod.sendPausedNotice(13)).rejects.toThrow("relay down");
+    expect(error).toHaveBeenCalledWith(
+      expect.stringContaining("the paused notice (from submission #13)"),
+      expect.any(Error),
+    );
+  });
+});

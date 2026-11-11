@@ -181,3 +181,33 @@ describe("schema migrations", () => {
     expect(() => db.getDb()).toThrow(/newer than this build understands/);
   });
 });
+
+describe("what the notification cap reads", () => {
+  it("counts notifications the relay took in the window, and nothing else", async () => {
+    // 'unknown' sorts after every date, so a count by date alone would
+    // take every row from before notified_at for one sent just now.
+    const db = await openAt("cap.db");
+    const handle = db.getDb();
+    const row = () =>
+      db.insertSubmission({ name: "N", contact: "x", services: "Linux", details: null });
+    const set = (id: number, value: string) =>
+      handle.prepare(`UPDATE quotes SET notified_at = ${value} WHERE id = ?`).run(id);
+    db.markNotified(row());
+    set(row(), "datetime('now', '-25 hours')");
+    set(row(), "'unknown'");
+    row();
+    expect(db.notifiedWithin(24)).toBe(1);
+  });
+
+  it("remembers the paused notice for its window, and forgets older ones", async () => {
+    const db = await openAt("paused.db");
+    const handle = db.getDb();
+    expect(db.pausedNoticeWithin(24)).toBe(false);
+    db.markPausedNotice(24);
+    expect(db.pausedNoticeWithin(24)).toBe(true);
+    handle.prepare("UPDATE paused_notices SET sent_at = datetime('now', '-25 hours')").run();
+    expect(db.pausedNoticeWithin(24)).toBe(false);
+    db.markPausedNotice(24);
+    expect(handle.prepare("SELECT count(*) AS n FROM paused_notices").get()).toEqual({ n: 1 });
+  });
+});

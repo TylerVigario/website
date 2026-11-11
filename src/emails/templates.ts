@@ -99,3 +99,19 @@ export function renderPotsAuditEmail(a: PotsAuditEmailArgs): string {
       listingRow(a.listing),
   );
 }
+
+export interface PausedEmailArgs {
+  /** The notice's text, the same words as its plain-text part. */
+  text: string;
+  submittedAtFormatted: string;
+}
+
+/** The notice that notifications have paused at the cap. It carries no
+ *  submission, only the site's own sentences, escaped all the same. */
+export function renderPausedEmail(a: PausedEmailArgs): string {
+  return layout(
+    "Notifications paused",
+    a.submittedAtFormatted,
+    `<tr><td style="padding:0;color:#1c1917">${paragraphs(a.text)}</td></tr>`,
+  );
+}

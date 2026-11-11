@@ -228,7 +228,9 @@ ten minutes never reaches one. A script, sending 412 a second from one
 machine against the built server, stops at the proxy instead of storing
 every one and sending an email for each. The app does not count
 addresses itself: the only address it has is the one this proxy
-forwards, and the proxy has the connection. Over the limit, the enhanced
+forwards, and the proxy has the connection. What the app limits is the
+email, which a flood from many addresses would still reach: at most 50
+notifications in any 24 hours (`src/lib/email/cap.ts`). Over the limit, the enhanced
 form keeps what was typed and says the send failed; the plain form shows
 the proxy's refusal, which only a script reaches.
 
@@ -286,7 +288,7 @@ should not be told something laxer.
 
 - **Quote** — a "request a quote" submission from the main contact form. Schema in [`src/lib/api/quote.ts`](src/lib/api/quote.ts). Submitted through `submitQuote()` in [`src/lib/api/submit.ts`](src/lib/api/submit.ts), which both ways in call: `/api/quote` for JSON, and `/contact` itself for a no-JS form post.
 - **POTS audit** — a "free phone-bill audit" submission from the `/pots-migration` landing page. Different schema ([`src/lib/api/pots-audit.ts`](src/lib/api/pots-audit.ts)), same destination row, submitted through `submitPotsAudit()` the same two ways (`/api/pots-audit`, `/pots-migration`).
-- **`quotes` table** — single SQLite table that holds both kinds of submission. The `services` column distinguishes: the chosen services, comma-joined, for quote submissions, the literal string `"POTS Migration Audit"` for audit submissions. `notified_at` is when the row's notification reached the relay: NULL if it never did, `'unknown'` for rows older than the column. Its schema is versioned: `getDb()` runs the migrations in `src/lib/db.ts` against `PRAGMA user_version`. A migration that has shipped is never edited; append a new one.
+- **`quotes` table** — single SQLite table that holds both kinds of submission. The `services` column distinguishes: the chosen services, comma-joined, for quote submissions, the literal string `"POTS Migration Audit"` for audit submissions. `notified_at` is when the row's notification reached the relay: NULL if it never did, including when the cap held it (`src/lib/email/cap.ts`), `'unknown'` for rows older than the column. Its schema is versioned: `getDb()` runs the migrations in `src/lib/db.ts` against `PRAGMA user_version`. A migration that has shipped is never edited; append a new one.
 - **Problem Details** — the API error shape, per RFC 9457, `application/problem+json`. Validation failures via `zodError()` (422, type `VALIDATION_TYPE`, a tag URI rather than a path that would 404), a form sent faster than a person fills one in via `sentTooSoon()` (422, type `TOO_SOON_TYPE`, see `fill-time.ts`), a body that cannot be read at all via `badRequest()` (400) or `contentTooLarge()` (413, over `BODY_LIMIT_BYTES`), an unsupported method via `methodNotAllowed()` (which sets `Allow`), an unclaimed path via `notFound()` from the `[...path].ts` catch-all, and `/_image` the same way, because the server makes no images (`src/lib/api/image-endpoint.ts`). Everything but those two 422s is `about:blank`, which means no more than its status. Four errors are NOT this shape and cannot be: a cross-site write is refused by Astro before middleware or routes run (`403 text/plain`); a URL that is not valid percent-encoded UTF-8 is refused by the Node adapter before Astro sees it (`400` "Bad request.", no Content-Type), and a path still encoded after ten decodes by Astro before routing (an empty `400`); and an unhandled route fault returns the site's `500 text/html` — catching that is the blanket try/catch the guardrails forbid. `error.ts` records all four, with the measurement, and `check:forms` holds the 403 and both 400s to it. Server emits `{type, title, status, detail?, errors?}` via [`src/lib/api/error.ts`](src/lib/api/error.ts)'s `zodError()`, whose response body is annotated with the `ProblemDetails` type so a change to the shape fails the build. The client does **not** check it with zod: [`enhance.ts`](src/lib/forms/enhance.ts) reads the three fields it uses by hand, because validating in the browser would pull zod into a bundle that is otherwise about 4.6 KB in order to re-check a response this server just produced. See "Form patterns" below.
 
 ## Key paths
@@ -333,7 +335,8 @@ src/
 │   │   └── limits.ts                 # field lengths, shared by the schemas and the client rules
 │   ├── api/                          # submit.ts (the one submission path), error.ts (RFC 9457), schemas, spam-list.ts,
 │   │                                 #   image-endpoint.ts (/_image: a 404, since the server makes no images)
-│   └── email/                        # mailer.ts (nodemailer; best-effort, logged on failure), relay.ts (SMTP_* settings)
+│   └── email/                        # mailer.ts (nodemailer; best-effort, logged on failure), relay.ts (SMTP_* settings),
+│                                     #   cap.ts (at most 50 notifications in 24 hours)
 ├── emails/templates.ts               # HTML strings, escaped at every interpolation
 ├── scripts/                          # browser-side: reveal.ts, lightbox.ts, quote-form.ts, pots-audit-form.ts
 ├── styles/global.css                 # @theme tokens + the reveal rules
@@ -448,7 +451,10 @@ send keeps its own, inside `submit.ts`, because the row is already saved
 by then and SMTP being down must not turn a captured lead into a 500.
 A send the relay accepted stamps the row's `notified_at`; one that
 failed, or never happened because mail is off, leaves it NULL, and
-`/api/health` counts those.
+`/api/health` counts those. At most 50 go out in any 24 hours
+(`src/lib/email/cap.ts`), counted from `notified_at`: past that a row is
+saved and held, not emailed, and one notice a day says notifications
+have paused. Nothing is refused, so the cap costs no lead.
 
 Logs name a submission by its row id, never by what was typed. With
 mail off, development prints the would-be email so the forms can be

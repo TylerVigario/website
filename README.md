@@ -83,6 +83,7 @@ src/lib/
   photos.ts                    # other people's photos, each carrying the credit its licence asks for
   image-sizes.ts               # every image's `sizes`, derived from its container
   email/mailer.ts              # nodemailer; best-effort form notification, logged on failure
+  email/cap.ts                 # at most 50 notifications in any 24 hours; past that, saved and held
 src/emails/templates.ts        # notification bodies as HTML strings, escaped at every interpolation
 src/components/                # .astro — Nav, Hero, the forms, Lightbox, ServicePage, icons/
 src/layouts/Base.astro         # <head>, canonical URL, and the frame: nav, <main>, footer

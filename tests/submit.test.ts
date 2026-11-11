@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { BODY_LIMIT_BYTES, MAX, tooLong } from "@/lib/forms/limits";
 import { MIN_FILL_MS, SERVED_FIELD } from "@/lib/api/fill-time";
+import { NOTIFY_CAP, NOTIFY_WINDOW_HOURS } from "@/lib/email/cap";
 import type { insertSubmission as InsertSubmission } from "@/lib/db";
 
 /**
@@ -12,15 +13,37 @@ import type { insertSubmission as InsertSubmission } from "@/lib/db";
  * by recorders, so each test sees exactly what would have been stored
  * and sent.
  */
-const { insertSubmission, markNotified, sendQuoteNotification, sendPotsAuditNotification } =
-  vi.hoisted(() => ({
-    insertSubmission: vi.fn<typeof InsertSubmission>(),
-    markNotified: vi.fn(),
-    sendQuoteNotification: vi.fn(),
-    sendPotsAuditNotification: vi.fn(),
-  }));
-vi.mock("@/lib/db", () => ({ insertSubmission, markNotified }));
-vi.mock("@/lib/email/mailer", () => ({ sendQuoteNotification, sendPotsAuditNotification }));
+const {
+  insertSubmission,
+  markNotified,
+  notifiedWithin,
+  pausedNoticeWithin,
+  markPausedNotice,
+  sendQuoteNotification,
+  sendPotsAuditNotification,
+  sendPausedNotice,
+} = vi.hoisted(() => ({
+  insertSubmission: vi.fn<typeof InsertSubmission>(),
+  markNotified: vi.fn(),
+  notifiedWithin: vi.fn<(hours: number) => number>(),
+  pausedNoticeWithin: vi.fn<(hours: number) => boolean>(),
+  markPausedNotice: vi.fn<(hours: number) => void>(),
+  sendQuoteNotification: vi.fn(),
+  sendPotsAuditNotification: vi.fn(),
+  sendPausedNotice: vi.fn(),
+}));
+vi.mock("@/lib/db", () => ({
+  insertSubmission,
+  markNotified,
+  notifiedWithin,
+  pausedNoticeWithin,
+  markPausedNotice,
+}));
+vi.mock("@/lib/email/mailer", () => ({
+  sendQuoteNotification,
+  sendPotsAuditNotification,
+  sendPausedNotice,
+}));
 
 const { readSubmission, submitQuote, submitPotsAudit, Unreadable } =
   await import("@/lib/api/submit");
@@ -44,6 +67,15 @@ beforeEach(() => {
   insertSubmission.mockReturnValue(42);
   sendQuoteNotification.mockResolvedValue(true);
   sendPotsAuditNotification.mockResolvedValue(true);
+  // The window starts empty, and the paused notice is remembered once it
+  // is recorded, as the table does.
+  notifiedWithin.mockReturnValue(0);
+  let noticed = false;
+  pausedNoticeWithin.mockImplementation(() => noticed);
+  markPausedNotice.mockImplementation(() => {
+    noticed = true;
+  });
+  sendPausedNotice.mockResolvedValue(true);
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -303,5 +335,82 @@ describe("reading a request", () => {
       kind: "unreadable",
       status: 413,
     });
+  });
+});
+
+describe("the notification cap", () => {
+  it("emails a submission while the window is under the cap", async () => {
+    notifiedWithin.mockReturnValue(NOTIFY_CAP - 1);
+    expect(await submitQuote(QUOTE)).toEqual({ kind: "saved" });
+    expect(notifiedWithin).toHaveBeenCalledWith(NOTIFY_WINDOW_HOURS);
+    expect(sendQuoteNotification).toHaveBeenCalledTimes(1);
+    expect(markNotified).toHaveBeenCalledWith(42);
+    expect(sendPausedNotice).not.toHaveBeenCalled();
+  });
+
+  it("saves a submission past it, emails nothing of it, and says so once", async () => {
+    notifiedWithin.mockReturnValue(NOTIFY_CAP);
+    expect(await submitQuote(QUOTE)).toEqual({ kind: "saved" });
+    expect(await submitPotsAudit(AUDIT)).toEqual({ kind: "saved" });
+    expect(insertSubmission).toHaveBeenCalledTimes(2);
+    expect(sendQuoteNotification).not.toHaveBeenCalled();
+    expect(sendPotsAuditNotification).not.toHaveBeenCalled();
+    expect(markNotified).not.toHaveBeenCalled();
+    expect(sendPausedNotice).toHaveBeenCalledTimes(1);
+    expect(sendPausedNotice).toHaveBeenCalledWith(42);
+    expect(markPausedNotice).toHaveBeenCalledWith(NOTIFY_WINDOW_HOURS);
+  });
+
+  it("sends no notice when one already went in the window", async () => {
+    notifiedWithin.mockReturnValue(NOTIFY_CAP);
+    pausedNoticeWithin.mockReturnValue(true);
+    expect(await submitQuote(QUOTE)).toEqual({ kind: "saved" });
+    expect(sendPausedNotice).not.toHaveBeenCalled();
+  });
+
+  it("records the notice only once the relay has it, so the next held row tries again", async () => {
+    notifiedWithin.mockReturnValue(NOTIFY_CAP);
+    sendPausedNotice.mockResolvedValueOnce(false);
+    await submitQuote(QUOTE);
+    expect(markPausedNotice).not.toHaveBeenCalled();
+    await submitQuote(QUOTE);
+    expect(sendPausedNotice).toHaveBeenCalledTimes(2);
+    expect(markPausedNotice).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the submission saved when the notice fails", async () => {
+    notifiedWithin.mockReturnValue(NOTIFY_CAP);
+    sendPausedNotice.mockRejectedValueOnce(new Error("relay down"));
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await submitQuote(QUOTE)).toEqual({ kind: "saved" });
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("#42"), expect.any(Error));
+  });
+
+  it("lets a burst take only the places left, though none is recorded yet", async () => {
+    // The relay records a notification only when it takes it, so a burst
+    // finds the same count throughout. Three places are left; ten arrive
+    // before any send is answered.
+    notifiedWithin.mockReturnValue(NOTIFY_CAP - 3);
+    const answers: ((ok: boolean) => void)[] = [];
+    sendQuoteNotification.mockImplementation(
+      () => new Promise<boolean>((resolve) => answers.push(resolve)),
+    );
+    const burst = Array.from({ length: 10 }, () => submitQuote(QUOTE));
+    await vi.waitFor(() => expect(sendPausedNotice).toHaveBeenCalled());
+    expect(sendQuoteNotification).toHaveBeenCalledTimes(3);
+    expect(sendPausedNotice).toHaveBeenCalledTimes(1);
+    for (const answer of answers) answer(true);
+    for (const outcome of await Promise.all(burst)) expect(outcome).toEqual({ kind: "saved" });
+    expect(insertSubmission).toHaveBeenCalledTimes(10);
+    expect(markNotified).toHaveBeenCalledTimes(3);
+  });
+
+  it("logs a held row by its id, and nothing that was sent", async () => {
+    notifiedWithin.mockReturnValue(NOTIFY_CAP);
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    await submitQuote({ ...QUOTE, details: "my alarm code is 1234" });
+    const logged = JSON.stringify(log.mock.calls);
+    expect(logged).toContain("[notify-cap] submission #42 saved, not emailed");
+    for (const typed of ["Dana", "dana@example.com", "1234"]) expect(logged).not.toContain(typed);
   });
 });

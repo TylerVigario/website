@@ -9,10 +9,17 @@ import type { APIContext } from "astro";
  * why the status itself is asserted.
  */
 const { insertSubmission } = vi.hoisted(() => ({ insertSubmission: vi.fn(() => 1) }));
-vi.mock("@/lib/db", () => ({ insertSubmission, markNotified: vi.fn() }));
+vi.mock("@/lib/db", () => ({
+  insertSubmission,
+  markNotified: vi.fn(),
+  notifiedWithin: vi.fn(() => 0),
+  pausedNoticeWithin: vi.fn(() => false),
+  markPausedNotice: vi.fn(),
+}));
 vi.mock("@/lib/email/mailer", () => ({
   sendQuoteNotification: vi.fn(() => Promise.resolve(true)),
   sendPotsAuditNotification: vi.fn(() => Promise.resolve(true)),
+  sendPausedNotice: vi.fn(() => Promise.resolve(true)),
 }));
 
 const { VALIDATION_TYPE } = await import("@/lib/api/error");
