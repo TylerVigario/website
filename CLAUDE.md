@@ -123,15 +123,26 @@ machine, which is the only kind this workflow uses.
 The tarball is meant to be a function of its commit, so a rebuild can be
 compared with the attested sha256 instead of trusting the attestation's
 account of what was built. `make-release.ts` dates everything from the
-commit (`SOURCE_DATE_EPOCH`), pins the runtime tree from the lockfile and
-writes the archive deterministically with GNU tar. A rebuild needs the
-same Node, Linux x64, and the same checkout path, because Astro writes
-absolute source paths into the server bundle. One field in
-`dist/server/entry.mjs` still differs between builds: Astro's `key`. It
-stays random per build on purpose. It encrypts the props of server
-islands, so a key fixed in public would make any future island's props
-readable and forgeable; a matching hash is not worth that. Every other
-byte of a rebuild matches (measured on astro 7.3.8).
+commit (`SOURCE_DATE_EPOCH`), pins the runtime tree from the lockfile,
+fixes Astro's `key` and writes the archive deterministically with GNU
+tar. A rebuild needs the same Node, Linux x64, and the same checkout
+path, because Astro writes absolute source paths into the server bundle.
+Every byte of a rebuild matches, from a cold cache as from a warm one
+(measured on astro 7.4.5).
+
+**Astro's `key` is public, so nothing may rely on it.** Astro encrypts
+the props of server islands with a key it bakes into
+`dist/server/entry.mjs`, and reads `ASTRO_KEY` only at build: the running
+server takes the key from its own bundle and has no way to be given a
+private one. The release publishes that bundle, so the key in it is
+public, whatever it is; v1.21.1's decodes and encrypts with Astro's own
+functions. It used to be random per build "to keep it secret", which
+kept nothing secret and was the last field that differed between
+rebuilds. `make-release.ts` now sets it to 32 zero bytes, plainly not a
+secret. The rule that follows: an island's props are readable and
+forgeable by anyone, so the site has no server islands, and anything
+that loads after its page goes through an endpoint that validates its
+input, as the forms do.
 
 What is true about the app regardless of what ships it: `astro build`
 emits `dist/client/` (the static tree, which a web server serves

@@ -24,12 +24,14 @@
  * same platform, Node and checkout path, should produce the same bytes,
  * so that anyone can rebuild a release and compare its sha256 with the
  * attested one rather than taking the attestation's word for what was
- * built. Three things here used to vary with the moment of the build and
+ * built. Four things here used to vary with the moment of the build and
  * no longer do: the clock (SOURCE_DATE_EPOCH, the commit's time, feeds
  * security.txt's Expires and every timestamp in the archive), the runtime
  * dependencies' own dependencies (pinned from the lockfile, not resolved
- * from the registry on the day), and the archive itself (entries sorted,
- * owners and modes normalised, gzip without its timestamp). The path is
+ * from the registry on the day), Astro's encryption key (fixed, and why
+ * that costs nothing is where the build runs), and the archive itself
+ * (entries sorted, owners and modes normalised, gzip without its
+ * timestamp). The path is
  * the caveat: Astro writes absolute source paths into the server bundle,
  * so a rebuild has to happen at the same path the release used.
  *
@@ -83,12 +85,24 @@ console.log(`building ${name} from ${commit.slice(0, 8)}${dirty ? " (DIRTY)" : "
 fs.rmSync(staging, { recursive: true, force: true });
 fs.mkdirSync(staging, { recursive: true });
 
+// Astro bakes an encryption key into the server bundle, for the props of
+// server islands, and rolls a new one every build unless ASTRO_KEY names
+// one. It reads ASTRO_KEY only here, at build, so the running server has
+// no way to be given a private key, and this tarball is published: the
+// key in it is public whatever it is. A random one kept nothing secret
+// and was the last thing that differed between two builds of a commit.
+// So it is fixed, at 32 zero bytes, plainly not a secret, and set over
+// any ASTRO_KEY in the environment so every rebuild uses the same one.
+// Nothing here may rely on an island's props being private or unaltered
+// (CLAUDE.md); the site has no server islands.
+const ASTRO_KEY = Buffer.alloc(32).toString("base64");
+
 // The build must exist and must be current. Rebuilding here rather than
 // trusting whatever dist/ happens to hold keeps the artifact honest.
 console.log("  astro build");
 run("npx", ["astro", "build"], {
   stdio: "inherit",
-  env: { ...process.env, SOURCE_DATE_EPOCH: epoch },
+  env: { ...process.env, SOURCE_DATE_EPOCH: epoch, ASTRO_KEY },
 });
 
 fs.cpSync("dist", path.join(staging, "dist"), { recursive: true });
