@@ -1,7 +1,8 @@
 import { lookup } from "node:dns/promises";
 import nodemailer from "nodemailer";
-import { renderPotsAuditEmail, renderQuoteEmail } from "@/emails/templates";
+import { renderPausedEmail, renderPotsAuditEmail, renderQuoteEmail } from "@/emails/templates";
 import { describeListing, LISTED_TAG, type Listing } from "@/lib/api/spam-list";
+import { NOTIFY_CAP, NOTIFY_WINDOW_HOURS } from "@/lib/email/cap";
 import {
   describeRelay,
   readRelay,
@@ -95,6 +96,9 @@ interface SendOptions {
   /** The submission's row id: in the subject, and the only thing logged
    *  about it when mail is off in production. */
   id: number;
+  /** What the log lines call the message; a submission's notification
+   *  unless said otherwise. */
+  about?: string;
   to: string;
   subject: string;
   text: string;
@@ -126,13 +130,16 @@ function replyAddress(contact: string): string | undefined {
  * someone's name, number and message in the journal is one kept outside
  * every retention rule.
  */
-// Not exported: the two notification helpers below are the only way
-// to send, and an exported low-level sender invites a caller that
-// bypasses them.
+// Not exported: the helpers below, the two notifications and the paused
+// notice, are the only way to send, and an exported low-level sender
+// invites a caller that bypasses them.
 async function sendEmail(options: SendOptions): Promise<boolean> {
+  const about = options.about ?? `submission #${options.id}`;
   if (!transporter) {
     if (import.meta.env.PROD) {
-      console.log(`[Mailer] Mail is ${mailState}: submission #${options.id} saved, not announced.`);
+      console.log(
+        `[Mailer] Mail is ${mailState}: ${options.about ?? `submission #${options.id} saved`}, not announced.`,
+      );
       return false;
     }
     console.log(`[Mailer] Mail is ${mailState} — would send:`);
@@ -157,14 +164,14 @@ async function sendEmail(options: SendOptions): Promise<boolean> {
       text: options.text,
       html: options.html,
     });
-    console.log(`[Mailer] Sent submission #${options.id} to ${options.to}: ${info.messageId}`);
+    console.log(`[Mailer] Sent ${about} to ${options.to}: ${info.messageId}`);
     return true;
   } catch (err) {
     // The recipient is the operator's own address. The row id says which
     // lead went unannounced, and is all the line needs: the row itself is
     // saved, with the name and number in it, and the journal is no place
     // for a second copy.
-    console.error(`[Mailer] Send of submission #${options.id} to ${options.to} failed:`, err);
+    console.error(`[Mailer] Send of ${about} to ${options.to} failed:`, err);
     throw err;
   }
 }
@@ -278,5 +285,31 @@ export async function sendPotsAuditNotification(
     replyTo: replyAddress(args.contact),
     text,
     html,
+  });
+}
+
+/**
+ * Tell the operator that notifications have paused at the cap (cap.ts),
+ * from submission `id` on. Sent at most once a window by submit.ts.
+ * Resolves true once the relay has it, false with mail off. Throws on
+ * SMTP failure, like the notifications. It names no one: the submissions
+ * it is about are in the database, which is where they are read.
+ */
+export async function sendPausedNotice(id: number): Promise<boolean> {
+  const submittedAtFormatted = formatSubmittedAt();
+  const text = [
+    `The site has emailed ${NOTIFY_CAP} submission notifications in the last ${NOTIFY_WINDOW_HOURS} hours, the most it sends in that time.`,
+    `Submission #${id} and the ones after it are saved but not emailed, until fewer than ${NOTIFY_CAP} have gone out in the past ${NOTIFY_WINDOW_HOURS} hours. They are in the database, and /api/health counts them as unannounced.`,
+    `That many in a day is more likely a flood of automated submissions than people.`,
+    `This notice is sent at most once every ${NOTIFY_WINDOW_HOURS} hours.`,
+  ].join("\n\n");
+
+  return sendEmail({
+    id,
+    about: `the paused notice (from submission #${id})`,
+    to: NOTIFY_EMAIL,
+    subject: `Notifications paused at ${NOTIFY_CAP} in ${NOTIFY_WINDOW_HOURS} hours`,
+    text: [text, "", `Paused: ${submittedAtFormatted}`].join("\n"),
+    html: renderPausedEmail({ text, submittedAtFormatted }),
   });
 }

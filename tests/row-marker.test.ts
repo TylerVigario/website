@@ -6,10 +6,16 @@ import type { insertSubmission as InsertSubmission } from "@/lib/db";
 const { insertSubmission } = vi.hoisted(() => ({
   insertSubmission: vi.fn<typeof InsertSubmission>(),
 }));
-vi.mock("@/lib/db", () => ({ insertSubmission }));
+vi.mock("@/lib/db", () => ({
+  insertSubmission,
+  notifiedWithin: vi.fn(() => 0),
+  pausedNoticeWithin: vi.fn(() => false),
+  markPausedNotice: vi.fn(),
+}));
 vi.mock("@/lib/email/mailer", () => ({
   sendQuoteNotification: vi.fn(),
   sendPotsAuditNotification: vi.fn(),
+  sendPausedNotice: vi.fn(),
 }));
 const { submitPotsAudit, submitQuote } = await import("@/lib/api/submit");
 

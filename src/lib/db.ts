@@ -74,6 +74,10 @@ const MIGRATIONS: readonly ((db: Database.Database) => void)[] = [
     db.exec("ALTER TABLE quotes ADD COLUMN notified_at TEXT");
     db.exec("UPDATE quotes SET notified_at = 'unknown'");
   },
+  // 2 -> 3: when the operator was last told that notifications had paused
+  // at the cap (src/lib/email/cap.ts). Kept here rather than in memory so
+  // a restart during a flood does not send the notice again.
+  (db) => db.exec("CREATE TABLE paused_notices (sent_at TEXT NOT NULL)"),
 ];
 
 /** The version a database is brought to. Exported so a test can assert
@@ -180,9 +184,42 @@ export function markNotified(id: number): void {
   getDb().prepare("UPDATE quotes SET notified_at = datetime('now') WHERE id = ?").run(id);
 }
 
+/** Notifications the relay took in the last `hours`. Rows marked
+ *  'unknown' predate the record and are not counted; that string also
+ *  sorts after every date, so it has to be left out by name. */
+export function notifiedWithin(hours: number): number {
+  const row = getDb()
+    .prepare(
+      "SELECT count(*) AS n FROM quotes WHERE notified_at IS NOT NULL AND notified_at != 'unknown' AND notified_at >= datetime('now', ?)",
+    )
+    .get(`-${hours} hours`) as { n: number };
+  return row.n;
+}
+
+/** Whether the paused notice went to the relay in the last `hours`. */
+export function pausedNoticeWithin(hours: number): boolean {
+  return Boolean(
+    getDb()
+      .prepare("SELECT 1 FROM paused_notices WHERE sent_at >= datetime('now', ?)")
+      .get(`-${hours} hours`),
+  );
+}
+
+/** Records that the paused notice was handed to the relay, and forgets
+ *  ones older than `hours`, which nothing reads again. */
+export function markPausedNotice(hours: number): void {
+  const db = getDb();
+  db.transaction(() => {
+    db.prepare("DELETE FROM paused_notices WHERE sent_at < datetime('now', ?)").run(
+      `-${hours} hours`,
+    );
+    db.prepare("INSERT INTO paused_notices (sent_at) VALUES (datetime('now'))").run();
+  })();
+}
+
 /** Submissions older than `minutes` whose notification never went out:
- *  the relay refused it, or mail is off. Recent ones are left out, since a
- *  send may still be in flight. */
+ *  the relay refused it, mail is off, or the cap held it. Recent ones are
+ *  left out, since a send may still be in flight. */
 export function unannouncedCount(minutes = 10): number {
   const row = getDb()
     .prepare(

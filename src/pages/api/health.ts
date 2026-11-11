@@ -27,7 +27,8 @@ export const prerender = false;
  * host refreshes are still being refreshed. The first two answer "would I
  * hear about a submission", which matters, and the third whether its
  * notification would say the sender is a known spammer; but a failure in
- * any of them is the relay's or the host's configuration rather than this
+ * any of them is the relay's or the host's configuration, or a flood the
+ * notification cap held back (src/lib/email/cap.ts), rather than this
  * release. The updater rolls a
  * release back on anything but a 200, and rolling back cannot fix SMTP
  * settings, so an advisory failure reports "degraded" and keeps the 200.

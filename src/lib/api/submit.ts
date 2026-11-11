@@ -1,12 +1,23 @@
 import type { SafeParseFailure } from "@/lib/api/error";
-import { insertSubmission, markNotified } from "@/lib/db";
+import {
+  insertSubmission,
+  markNotified,
+  markPausedNotice,
+  notifiedWithin,
+  pausedNoticeWithin,
+} from "@/lib/db";
+import { NOTIFY_CAP, NOTIFY_WINDOW_HOURS } from "@/lib/email/cap";
 import { BODY_LIMIT_BYTES } from "@/lib/forms/limits";
 import { QuoteRequest } from "@/lib/api/quote";
 import { POTS_AUDIT_MARKER, PotsAuditRequest } from "@/lib/api/pots-audit";
 import { isTrapped } from "@/lib/api/honeypot";
 import { tooSoon } from "@/lib/api/fill-time";
 import { listed, type Listing } from "@/lib/api/spam-list";
-import { sendPotsAuditNotification, sendQuoteNotification } from "@/lib/email/mailer";
+import {
+  sendPausedNotice,
+  sendPotsAuditNotification,
+  sendQuoteNotification,
+} from "@/lib/email/mailer";
 
 /**
  * One submission path, shared by both ways in.
@@ -115,15 +126,50 @@ function invalid(body: unknown, failure: SafeParseFailure): Outcome {
   return { kind: "invalid", values: echo(body), errors, failure };
 }
 
+/** Notifications handed to the mailer and not yet answered. The relay
+ *  records each one only when it takes it, so without these a burst of
+ *  submissions would all find the count under the cap and all be sent. */
+let sending = 0;
+/** Whether the paused notice is on its way, so a burst past the cap sends
+ *  it once rather than once per submission. */
+let pausing = false;
+
 /** Send the notification for row `id`, and record it once the relay has
  *  it. Logged and swallowed: the row is saved by the time mail is
  *  attempted, and a down relay must not turn a stored lead into a
- *  failure. A row left unrecorded is what /api/health counts. */
+ *  failure. A row left unrecorded is what /api/health counts.
+ *
+ *  Past the cap (cap.ts) the row is held instead: saved, not emailed. The
+ *  count and the claim on a place under it are made with nothing awaited
+ *  between them, so concurrent submissions cannot all take the last one. */
 async function notify(id: number, send: () => Promise<boolean>) {
+  if (notifiedWithin(NOTIFY_WINDOW_HOURS) + sending >= NOTIFY_CAP) return hold(id);
+  sending++;
   try {
     if (await send()) markNotified(id);
   } catch (err) {
     console.error(`Submission #${id} is saved; notifying failed:`, err);
+  } finally {
+    sending--;
+  }
+}
+
+/** A row past the cap. The log line says which row, and nothing that was
+ *  sent. The first held row in a window sends the paused notice; it is
+ *  recorded only once the relay has it, so a failed one is tried again
+ *  by the next held row. */
+async function hold(id: number) {
+  console.log(
+    `[notify-cap] submission #${id} saved, not emailed: ${NOTIFY_CAP} notifications in the last ${NOTIFY_WINDOW_HOURS} hours`,
+  );
+  if (pausing || pausedNoticeWithin(NOTIFY_WINDOW_HOURS)) return;
+  pausing = true;
+  try {
+    if (await sendPausedNotice(id)) markPausedNotice(NOTIFY_WINDOW_HOURS);
+  } catch (err) {
+    console.error(`Submission #${id} is saved; the paused notice failed:`, err);
+  } finally {
+    pausing = false;
   }
 }
 
