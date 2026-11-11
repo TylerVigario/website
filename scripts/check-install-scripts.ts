@@ -19,38 +19,75 @@
  * It asks npm rather than reading the lockfile, because the lockfile's
  * hasInstallScript flag misses better-sqlite3, whose script npm infers
  * from its binding.gyp.
+ *
+ * It passes only on npm's answer: exit 0 and the list of what
+ * allowScripts does not cover. npm reports its own failure as JSON too,
+ * `{"error": ...}` with exit 1, and a check reading only for the list
+ * found none in it and printed "reviewed". That happened whenever npm
+ * refused to run, as it does with `global` or `allow-scripts` set in the
+ * environment. Anything but the list fails here. An npm without the
+ * command, before 11.18, is SKIPPED locally and a failure in CI, as
+ * lint-actions.ts treats a missing shellcheck.
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 
-const run = spawnSync("npm", ["install-scripts", "ls", "--json"], {
-  encoding: "utf8",
-  // npm is npm.cmd on Windows, which only a shell can start.
-  shell: process.platform === "win32",
-});
+const inCI = process.env.CI === "true";
+
+const npm = (args: string[]) =>
+  spawnSync("npm", args, {
+    encoding: "utf8",
+    // npm is npm.cmd on Windows, which only a shell can start.
+    shell: process.platform === "win32",
+  });
 
 /** What `npm install-scripts ls --json` reports: each package whose
- *  install script package.json#allowScripts does not yet cover. */
+ *  install script package.json#allowScripts does not yet cover, or, when
+ *  npm could not run the command, why. */
 interface Report {
   allowScripts?: { changes: { key: string }[] }[];
+  error?: { code?: string; summary?: string };
 }
 
-let report: Report;
+const run = npm(["install-scripts", "ls", "--json"]);
+if (run.error) {
+  console.error(
+    `error: npm could not be run, so no install script was checked: ${run.error.message}`,
+  );
+  process.exit(1);
+}
+
+let report: Report | undefined;
 try {
   report = JSON.parse(run.stdout) as Report;
 } catch {
-  // An npm without the command (before 11.18) prints a usage error, not
-  // JSON. Skip rather than fail: the gate runs the npm that ships with
-  // the pinned Node, and that one has it.
-  const version = spawnSync("npm", ["--version"], {
-    encoding: "utf8",
-    shell: process.platform === "win32",
-  }).stdout.trim();
-  console.log(`  install scripts: SKIPPED (npm ${version} has no \`install-scripts\`; CI checks)`);
-  process.exit(0);
+  // Not JSON. Failed below, as an error is.
 }
 
-const pending = report.allowScripts ?? [];
+const pending = run.status === 0 ? report?.allowScripts : undefined;
+if (!Array.isArray(pending)) {
+  const version = npm(["--version"]).stdout.trim();
+  const [major = 0, minor = 0] = version.split(".").map(Number);
+  if (major < 11 || (major === 11 && minor < 18)) {
+    if (inCI) {
+      console.error(`error: npm ${version} has no \`install-scripts\`, so nothing was checked.`);
+      process.exit(1);
+    }
+    console.warn(
+      `  SKIPPED  npm ${version} has no \`install-scripts\` — install scripts were NOT checked.`,
+    );
+    process.exit(0);
+  }
+  const said = report?.error
+    ? `${report.error.code ?? "error"}: ${report.error.summary ?? ""}`
+    : ((run.stderr || run.stdout).trim().split("\n")[0] ?? "");
+  console.error(
+    `error: \`npm install-scripts ls\` failed (exit ${run.status ?? run.signal}), so nothing was checked:`,
+  );
+  console.error(`  ${said}`);
+  process.exit(1);
+}
+
 if (pending.length > 0) {
   console.error("error: install scripts not covered by package.json#allowScripts:");
   for (const { changes } of pending) {
