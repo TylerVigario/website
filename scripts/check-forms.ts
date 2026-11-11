@@ -425,20 +425,28 @@ const flags = output.match(/\[spam-list\] .*/g) ?? [];
 console.log(`  ${flags.length === 2 ? "✓" : "✗"} nothing else was flagged`);
 if (flags.length !== 2) failures.push(`the spam lists flagged ${JSON.stringify(flags)}`);
 
-// The release ships no sharp, so the server's image service is passthrough
-// (astro.config.ts): /_image answers with the file it was asked for,
-// unchanged. With sharp as that service it answered 500 in the release,
-// and a resized image wherever sharp is installed, so this fails in both.
+// The server makes no images, so /_image, where Astro would make one on
+// request, answers 404 (src/lib/api/image-endpoint.ts). Asked for a real
+// image, so the 404 is the endpoint's and not a bad href's. Astro's own
+// endpoint answered 200 with the file. And since a 404 there would break
+// an image, neither page rendered per request may link to it.
 const IMAGE = readdirSync("dist/client/_astro").find((f) => /\.(jpe?g|png)$/.test(f)) ?? "";
 await check(
-  "/_image passes an image through unchanged, so the server needs no sharp",
+  "/_image answers 404 as Problem Details: the server makes no images",
   () => fetch(`${BASE}/_image?href=/_astro/${IMAGE}&w=200&f=webp`),
-  (res, text) =>
-    status(res, 200) ||
-    (text === new TextDecoder().decode(readFileSync(`dist/client/_astro/${IMAGE}`))
+  (res) =>
+    status(res, 404) ||
+    ((res.headers.get("content-type") ?? "").includes("application/problem+json")
       ? ""
-      : `${IMAGE} came back changed`),
+      : `Content-Type is ${res.headers.get("content-type")}`),
 );
+for (const page of ["/contact", "/pots-migration"]) {
+  await check(
+    `${page} links to no image the server would have to make`,
+    () => fetch(`${BASE}${page}`),
+    (res, text) => status(res, 200) || (text.includes("/_image") ? "it links to /_image" : ""),
+  );
+}
 await check(
   "the health check passes, and finds the spam lists",
   () => fetch(`${BASE}/api/health`),

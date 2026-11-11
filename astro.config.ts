@@ -94,14 +94,14 @@ export default defineConfig({
   // Sharp makes every image variant at build time, for the prerendered
   // pages, and nothing at runtime. The two pages rendered per request use
   // no image the build did not make, so the running server has none to
-  // process. Its /_image endpoint still exists, since Astro injects it for
-  // any server output, and with sharp as the runtime service that endpoint
-  // answered 500 (MissingSharp): the release ships sharp's JavaScript
-  // bundled into the server and none of its native binary. Passthrough
-  // answers with the source file, which is public under /_astro already,
-  // and leaves sharp out of the server bundle.
+  // process. Passthrough as the runtime service leaves sharp out of the
+  // server bundle; with sharp there, the release shipped sharp's
+  // JavaScript and none of its native binary. And /_image, the endpoint
+  // Astro injects into any server output to make images on request,
+  // answers 404 (src/lib/api/image-endpoint.ts), since no page uses it.
   image: {
     service: { build: sharpImageService(), runtime: passthroughImageService() },
+    endpoint: { route: "/_image", entrypoint: "./src/lib/api/image-endpoint.ts" },
   },
   // No UI framework integration, deliberately, and no carousel library
   // either. Nothing on this site needs one: the animations are
