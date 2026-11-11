@@ -35,10 +35,9 @@ const linkClass = (href: string) =>
           there defers optimisation to /_image at REQUEST time — which
           needs sharp, which the artifact cannot carry because a native
           module will not bundle. It returned 500 and the logo was broken
-          on the two pages the site exists to convert. The runtime image
-          service is now passthrough (astro.config.ts), so it would load,
-          but unoptimised and from the Node process rather than as a
-          static file.
+          on the two pages the site exists to convert. /_image now answers
+          404 (src/lib/api/image-endpoint.ts), so it would not load at
+          all, and check:forms fails either page that links to it.
 
           Shipping sharp would add ~19.5 MB to a 9.4 MB artifact to serve
           six requests, and buys nothing: this is a flat-colour logo, so
