@@ -176,10 +176,16 @@ anyone, the release App included.
 repository settings. Merge methods are settings: one API call re-enables them, touching
 no ruleset and leaving nothing in the ruleset history.
 
-**`code_scanning`, CodeQL** — a pull request that brings in a security alert of high
+**`code_scanning`, CodeQL** — a pull request that brings in a security alert of medium
 severity or above, or an alert at error level, cannot merge, and none merges until
-CodeQL has analysed it. The CodeQL check itself is not required, so without this rule
-nothing it finds stops a merge. `codeql.yml` runs on every pull request for that reason. With a paths filter, a pull
+CodeQL has analysed it. Medium, because that is what CodeQL gives a script injection in
+a workflow run by a pull request or a push, the triggers this repository uses. On a
+scratch repository, with this rule at high, a pull request carrying four injections and
+a workflow with no `permissions:` passed code scanning; only an alert at error level,
+untrusted text written to `$GITHUB_ENV`, was held. At medium all five were held. A
+medium alert in the TypeScript is held too, and one that is wrong is dismissed with its
+reason rather than merged past. The CodeQL check itself is not required, and passes with
+medium alerts open, so without this rule nothing it finds stops a merge. `codeql.yml` runs on every pull request for that reason. With a paths filter, a pull
 request it skipped would have no analysis for the rule to read.
 
 ## `bypass_actors` — exactly one, and why
