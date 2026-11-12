@@ -26,7 +26,7 @@ interface Ruleset {
   enforcement: string;
   bypass_actors: Actor[];
   conditions: { ref_name: { include: string[]; exclude: string[] } };
-  rules: { type: string }[];
+  rules: { type: string; parameters?: unknown }[];
 }
 
 const read = (file: string) =>
@@ -41,6 +41,20 @@ describe("main.json", () => {
   it("holds what a release commit cannot pass, and nothing else", () => {
     // No pull request, and no checks or analysis ever run on it.
     expect(types(main)).toEqual(["code_scanning", "pull_request", "required_status_checks"]);
+  });
+
+  it("holds a merge on a CodeQL security alert of medium or above", () => {
+    // CodeQL rates a script injection in a workflow medium when a pull request or a
+    // push runs it. At high_or_higher, four of them passed this rule.
+    expect(main.rules.find((r) => r.type === "code_scanning")?.parameters).toEqual({
+      code_scanning_tools: [
+        {
+          tool: "CodeQL",
+          security_alerts_threshold: "medium_or_higher",
+          alerts_threshold: "errors",
+        },
+      ],
+    });
   });
 });
 
