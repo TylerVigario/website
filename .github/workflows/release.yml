@@ -449,6 +449,7 @@ jobs:
         # a subject it writes the same SLSA build provenance, signed by the
         # same workflow identity, so `gh attestation verify` sees no
         # difference.
+        id: attest
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           # One artifact, one attestation. MANIFEST.sha256 lives inside
@@ -456,6 +457,27 @@ jobs:
           # published beside it would add no proof and one more thing
           # that could disagree.
           subject-path: ${{ runner.temp }}/release/vigario-website-${{ needs.decide.outputs.version }}.tar.gz
+
+      - name: Keep the attestation beside the artifact
+        # The bundle the attest step wrote goes into the release next to the
+        # tarball, named as Sigstore names one: <file>.sigstore.json. The
+        # copy GitHub keeps can be deleted, and every check that fetches it
+        # then fails. This one is frozen with the release and verifies with
+        # no network at all: `gh attestation verify --bundle`.
+        #
+        # It has to be this tarball's, which is checked here, before the
+        # first write: the statement inside names exactly one subject, and
+        # its digest is the one the build job took.
+        env:
+          BUNDLE: ${{ steps.attest.outputs.bundle-path }}
+          WANT: ${{ needs.build.outputs.sha256 }}
+          ARTIFACT: ${{ runner.temp }}/release/vigario-website-${{ needs.decide.outputs.version }}.tar.gz
+        run: |
+          set -euo pipefail
+          got=$(jq -r '.dsseEnvelope.payload' "$BUNDLE" | base64 -d | jq -r '.subject[].digest.sha256')
+          [ "$got" = "$WANT" ] || { echo "::error::the bundle names \"$got\", the tarball is $WANT"; exit 1; }
+          cp "$BUNDLE" "$ARTIFACT.sigstore.json"
+          echo "bundle for sha256 $got"
 
       - name: Mint a token for the release App
         # Only now, immediately before the first write, and only into the
@@ -592,7 +614,21 @@ jobs:
           fi
           gh release create "$TAG" --draft --target "$OID" --title "$TAG" \
             --notes-file "$RUNNER_TEMP/release/NOTES.md"
-          gh release upload "$TAG" "$ARTIFACT"
+          gh release upload "$TAG" "$ARTIFACT" "$ARTIFACT.sigstore.json"
+
+          # The draft holds those two files and nothing else, byte for byte.
+          # Once it is published nothing can be added, replaced or removed,
+          # so a release missing its attestation would stay that way.
+          want=$(for f in "$ARTIFACT" "$ARTIFACT.sigstore.json"; do
+            echo "$(basename "$f") sha256:$(sha256sum "$f" | cut -d' ' -f1)"
+          done | sort)
+          got=$(gh release view "$TAG" --json assets --jq '.assets[] | "\(.name) \(.digest)"' | sort)
+          if [ "$got" != "$want" ]; then
+            echo "::error::the draft holds [$got], expected [$want]. Nothing is published; dispatch again."
+            gh release delete "$TAG" --yes
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/heads/$BRANCH" >/dev/null || true
+            exit 1
+          fi
 
           now=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
           if [ "$now" != "$HEAD_OID" ]; then

@@ -66,8 +66,9 @@ and no signing identity. `publish`, in the `release` environment, runs
 nothing from `node_modules`: it checks the tarball is the one `build`
 checked, attests it through Sigstore, writes the version and changelog
 as a forge-signed commit on a branch of its own, `release/vX.Y.Z`, and
-publishes at that commit: a draft release, the artifact attached, then
-published, which is what creates the tag. Only then is `main`
+publishes at that commit: a draft release, the artifact and its
+attestation bundle attached, then published, which is what creates the
+tag. Only then is `main`
 fast-forwarded to the release commit, so `main` never claims a version
 before the release exists. Nothing is written until the artifact is
 built, run and attested, and a failure up to publishing leaves `main` as
@@ -106,8 +107,11 @@ repository it verifies proves nothing about the artifact it checks. What
 this repo owes an installer is the contract above plus the attestation,
 and `MANIFEST.sha256` inside the tarball, which answers "is the installed
 tree still what was built" at any time afterwards, as a whole-archive
-checksum cannot. Everything the attestation can vouch for is only vouched
-for if the verifier asks:
+checksum cannot. The release carries the attestation beside the tarball,
+as `vigario-website-X.Y.Z.tar.gz.sigstore.json`: frozen with it, and
+verifiable with no network through `--bundle`, where the copy GitHub
+keeps can be deleted. Everything the attestation can vouch for is only
+vouched for if the verifier asks:
 
 ```bash
 gh attestation verify vigario-website-X.Y.Z.tar.gz \

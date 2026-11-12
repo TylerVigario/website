@@ -98,7 +98,8 @@ astro.config.ts                # `site`: the public URL every canonical link and
 commits, runs the pull-request gate against that commit, builds one
 self-contained tarball, attests it through Sigstore, writes the bump and
 changelog as a forge-signed commit on a release branch, publishes the
-artifact there, which creates the tag, and only then moves `main` to that
+artifact and its attestation bundle there, which creates the tag, and
+only then moves `main` to that
 commit. Nothing is written anywhere until the artifact exists and is
 attested, and `main` does not move until the release exists. A failure
 after publishing leaves `main` one commit behind the release, and
