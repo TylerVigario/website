@@ -111,20 +111,50 @@ checksum cannot. The release carries the attestation beside the tarball,
 as `vigario-website-X.Y.Z.tar.gz.sigstore.json`: frozen with it, and
 verifiable with no network through `--bundle`, where the copy GitHub
 keeps can be deleted. Everything the attestation can vouch for is only
-vouched for if the verifier asks:
+vouched for if the verifier asks.
+
+Two checks, each answering its own question, with `gh` 2.102.0 or later.
+The comment under each command is the line a pass ends with:
 
 ```bash
+# Is this file what vX.Y.Z published? GitHub's own attestation, made
+# when the immutable release was published.
+gh release verify-asset vX.Y.Z vigario-website-X.Y.Z.tar.gz -R TylerVigario/website
+# ✓ Verification succeeded! vigario-website-X.Y.Z.tar.gz is present in release vX.Y.Z
+
+# Was it built by the release workflow, from main, on GitHub's machines?
+# The build provenance, read from the bundle the release carries.
 gh attestation verify vigario-website-X.Y.Z.tar.gz \
+  --bundle vigario-website-X.Y.Z.tar.gz.sigstore.json \
   --repo TylerVigario/website \
   --signer-workflow TylerVigario/website/.github/workflows/release.yml \
   --source-ref refs/heads/main \
-  --deny-self-hosted-runners
+  --deny-self-hosted-runners \
+  --format json --jq '.[].verificationResult.signature.certificate.buildSignerURI'
+# https://github.com/TylerVigario/website/.github/workflows/release.yml@refs/heads/main
 ```
 
+A pass is exit 0 and that line. Run from a script, `gh attestation
+verify` prints nothing when it passes, so the `--jq` has it name the
+signer, and a check reads for that line rather than for silence.
+
 `--repo` alone accepts an attestation from any workflow in the
-repository. `--signer-workflow` narrows it to this one, `--source-ref` to
-a run from `main`, and `--deny-self-hosted-runners` to a GitHub-hosted
-machine, which is the only kind this workflow uses.
+repository, built from any branch: on a scratch repository it passed one
+made by another workflow, and one built on a side branch by the
+workflow it was meant to pin. `--signer-workflow` narrows it to this
+workflow, `--source-ref` to a run from `main`, and
+`--deny-self-hosted-runners` to a GitHub-hosted machine, which is the
+only kind this workflow uses. Before 2.102.0, `gh` matched
+`--signer-workflow` against only the start of the signer's identity and
+compared `--source-ref` without regard to case (GHSA-wjmr-j3rp-mh2g,
+GHSA-4mq3-hpgx-9cx8): 2.101.0 passed a signer pinned to the start of a
+branch name, a workflow named by the start of its file name, and the
+branch in the wrong case, all of which 2.103.3 refuses.
+
+With `--custom-trusted-root` (from `gh attestation trusted-root`), the
+second check needs no network at all. A release from before the bundle
+was attached carries none: without `--bundle`, the same command fetches
+the attestation from GitHub's API instead.
 
 The tarball is meant to be a function of its commit, so a rebuild can be
 compared with the attested sha256 instead of trusting the attestation's
