@@ -1,5 +1,6 @@
 import * as z from "zod/mini";
 import { MAX, tooLong } from "@/lib/forms/limits";
+import { oneLine } from "@/lib/api/one-line";
 
 // The POTS audit form's shape, enforced wherever an audit is submitted
 // (src/lib/api/submit.ts, for both the JSON API and the no-JS page).
@@ -14,6 +15,7 @@ export const PotsAuditRequest = z.object({
   business: z
     .string()
     .check(
+      oneLine,
       z.trim(),
       z.minLength(1, "Please enter the business name."),
       z.maxLength(MAX.business, tooLong(MAX.business)),
@@ -21,6 +23,7 @@ export const PotsAuditRequest = z.object({
   name: z
     .string()
     .check(
+      oneLine,
       z.trim(),
       z.minLength(1, "Please enter your name."),
       z.maxLength(MAX.name, tooLong(MAX.name)),
@@ -28,6 +31,7 @@ export const PotsAuditRequest = z.object({
   contact: z
     .string()
     .check(
+      oneLine,
       z.trim(),
       z.minLength(1, "Please enter a phone number or email."),
       z.maxLength(MAX.contact, tooLong(MAX.contact)),
