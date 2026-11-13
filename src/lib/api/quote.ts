@@ -1,5 +1,6 @@
 import * as z from "zod/mini";
 import { MAX, tooLong } from "@/lib/forms/limits";
+import { oneLine } from "@/lib/api/one-line";
 import { services as catalog } from "@/lib/services";
 
 // The quote form's shape, enforced wherever a quote is submitted
@@ -12,6 +13,7 @@ export const QuoteRequest = z.object({
   name: z
     .string()
     .check(
+      oneLine,
       z.trim(),
       z.minLength(1, "Please enter your name."),
       z.maxLength(MAX.name, tooLong(MAX.name)),
@@ -19,6 +21,7 @@ export const QuoteRequest = z.object({
   contact: z
     .string()
     .check(
+      oneLine,
       z.trim(),
       z.minLength(1, "Please enter a phone number or email."),
       z.maxLength(MAX.contact, tooLong(MAX.contact)),
