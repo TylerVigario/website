@@ -2,7 +2,14 @@ import type { APIRoute } from "astro";
 import { methodNotAllowed } from "@/lib/api/error";
 import { statfsSync } from "node:fs";
 import path from "node:path";
-import { getDb, getDbPath, SUBMISSION_COLUMNS, insertSubmission, unannouncedCount } from "@/lib/db";
+import {
+  formKey,
+  getDb,
+  getDbPath,
+  SUBMISSION_COLUMNS,
+  insertSubmission,
+  unannouncedCount,
+} from "@/lib/db";
 import { mailState } from "@/lib/email/mailer";
 import { listsProblem } from "@/lib/api/spam-list";
 
@@ -102,6 +109,14 @@ export const GET: APIRoute = () => {
       if (missing.length) throw new Error(`quotes is missing column(s): ${missing.join(", ")}`);
     });
 
+    record("form-key", () => {
+      // Every form is stamped with this key and every submission checked
+      // against it (src/lib/api/fill-time.ts). Without it each page still
+      // renders, unstamped, and every submission is refused as expired:
+      // the forms would look fine and take nothing.
+      if (formKey().length !== 32) throw new Error("the form key is not 32 bytes");
+    });
+
     record("writable", () => {
       // A real insert through the real table, rolled back. Exercises the
       // WAL, the file permissions and the schema's constraints — the whole
@@ -117,6 +132,7 @@ export const GET: APIRoute = () => {
           contact: "__healthcheck__",
           services: "__healthcheck__",
           details: null,
+          stamp: "__healthcheck__",
         });
         throw new Rollback();
       });

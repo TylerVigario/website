@@ -20,7 +20,7 @@
  *   importing it, so zod stays out of the browser, and matches `errors[]`
  *   back to the form's fields.
  */
-import { TOO_SOON_MESSAGE } from "@/lib/api/fill-time";
+import { API_MESSAGE, type Refusal } from "@/lib/api/fill-time";
 
 /** One field-level validation issue, as it appears in `errors[]`. */
 interface FieldError {
@@ -64,6 +64,15 @@ export const VALIDATION_TYPE = "tag:vigario.tech,2026:validation";
  *  will succeed. Stable, like VALIDATION_TYPE. */
 export const TOO_SOON_TYPE = "tag:vigario.tech,2026:too-soon";
 
+/** The problem type of a form whose stamp is missing, does not verify, or
+ *  has expired (fill-time.ts): the page has to be loaded again before it
+ *  can be sent. Stable, like VALIDATION_TYPE. */
+export const STALE_FORM_TYPE = "tag:vigario.tech,2026:stale-form";
+
+/** The problem type of a form whose stamp a saved submission already
+ *  spent: what it sent has arrived. Stable, like VALIDATION_TYPE. */
+export const ALREADY_SENT_TYPE = "tag:vigario.tech,2026:already-sent";
+
 /** A Problem Details response. */
 function problem(body: ProblemDetails, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
@@ -101,18 +110,27 @@ export function zodError(result: SafeParseFailure): Response {
   return problem(body);
 }
 
-/** 422 for a form sent within MIN_FILL_MS of being served (fill-time.ts).
- *  422 because the page that takes the no-JS submit answers it so, and
- *  the two ways in should agree. No `errors`: no field is at fault, so the
- *  form shows `detail` at the top and every field keeps what was typed. */
-export function sentTooSoon(): Response {
-  return problem({
-    type: TOO_SOON_TYPE,
-    title: "Sent Too Soon",
-    status: 422,
-    detail: TOO_SOON_MESSAGE,
-  });
+/** Refused by its form's stamp (fill-time.ts). 422 for one sent within
+ *  MIN_FILL_MS of being served or with a stale stamp, 409 for a stamp a
+ *  saved submission already spent, which conflicts with what is stored;
+ *  the page that takes the no-JS submit answers each the same, so the two
+ *  ways in agree. No `errors`: no field is at fault, so the form shows
+ *  `detail` at the top and every field keeps what was typed. */
+export function stampRefused(reason: Refusal): Response {
+  const kinds = {
+    "too-soon": { type: TOO_SOON_TYPE, title: "Sent Too Soon" },
+    stale: { type: STALE_FORM_TYPE, title: "Form Expired" },
+    spent: { type: ALREADY_SENT_TYPE, title: "Already Sent" },
+  } as const;
+  return problem({ ...kinds[reason], status: REFUSED_STATUS[reason], detail: API_MESSAGE[reason] });
 }
+
+/** The status a stamp's refusal is answered with, on both ways in. */
+export const REFUSED_STATUS: Record<Refusal, 409 | 422> = {
+  "too-soon": 422,
+  stale: 422,
+  spent: 409,
+};
 
 /** 400 for a body that could not be read: malformed JSON, or a form body
  *  that does not parse. Before this, such a body reached the schema as

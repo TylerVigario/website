@@ -3,6 +3,7 @@ import Database from "better-sqlite3";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 
 /**
  * Migrations have to work on a database that already exists, not just
@@ -33,6 +34,12 @@ async function openAt(file: string) {
   process.env.SQLITE_PATH = path.join(dir, file);
   return mod;
 }
+
+/** A row id, from an insert that is expected to be written. */
+const written = (id: number | null): number => {
+  if (id === null) throw new Error("the row was not written: its stamp was already spent");
+  return id;
+};
 
 const version = (file: string): number => {
   const db = new Database(path.join(dir, file), { readonly: true });
@@ -109,7 +116,15 @@ describe("schema migrations", () => {
       ).notified_at;
     expect(notified(1)).toBe("unknown");
 
-    const id = db.insertSubmission({ name: "New", contact: "x", services: "Linux", details: null });
+    const id = written(
+      db.insertSubmission({
+        name: "New",
+        contact: "x",
+        services: "Linux",
+        details: null,
+        stamp: "n",
+      }),
+    );
     expect(notified(id)).toBeNull();
     // Too recent to count: its send may still be in flight.
     expect(db.unannouncedCount()).toBe(0);
@@ -121,6 +136,20 @@ describe("schema migrations", () => {
     db.markNotified(id);
     expect(notified(id)).toMatch(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
     expect(db.unannouncedCount()).toBe(0);
+  });
+
+  it("makes one form key, and keeps it", async () => {
+    const db = await openAt("key.db");
+    const key = db.formKey();
+    expect(key).toHaveLength(32);
+    expect(db.getDb().prepare("SELECT count(*) AS n FROM form_key").get()).toEqual({ n: 1 });
+    // A second row is refused by the table itself.
+    expect(() =>
+      db.getDb().prepare("INSERT INTO form_key (id, key) VALUES (2, zeroblob(32))").run(),
+    ).toThrow(/CHECK constraint failed/);
+    // The same file opened again keeps its key; another file has its own.
+    expect((await openAt("key.db")).formKey().equals(key)).toBe(true);
+    expect((await openAt("other-key.db")).formKey().equals(key)).toBe(false);
   });
 
   it("does not re-run on an already-migrated database", async () => {
@@ -189,7 +218,15 @@ describe("what the notification cap reads", () => {
     const db = await openAt("cap.db");
     const handle = db.getDb();
     const row = () =>
-      db.insertSubmission({ name: "N", contact: "x", services: "Linux", details: null });
+      written(
+        db.insertSubmission({
+          name: "N",
+          contact: "x",
+          services: "Linux",
+          details: null,
+          stamp: randomUUID(),
+        }),
+      );
     const set = (id: number, value: string) =>
       handle.prepare(`UPDATE quotes SET notified_at = ${value} WHERE id = ?`).run(id);
     db.markNotified(row());

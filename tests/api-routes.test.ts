@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { APIContext } from "astro";
-import { SERVED_FIELD } from "@/lib/api/fill-time";
+import { API_MESSAGE, issueStamp, SERVED_FIELD } from "@/lib/api/fill-time";
 
 /**
  * The API routes are the enhanced path: JSON in, JSON or Problem Details
@@ -9,8 +9,12 @@ import { SERVED_FIELD } from "@/lib/api/fill-time";
  * A 303 there would turn it into a GET and drop what was typed, which is
  * why the status itself is asserted.
  */
-const { insertSubmission } = vi.hoisted(() => ({ insertSubmission: vi.fn(() => 1) }));
+const { KEY, insertSubmission } = vi.hoisted(() => ({
+  KEY: Buffer.alloc(32, 7),
+  insertSubmission: vi.fn<() => number | null>(() => 1),
+}));
 vi.mock("@/lib/db", () => ({
+  formKey: () => KEY,
   insertSubmission,
   markNotified: vi.fn(),
   notifiedWithin: vi.fn(() => 0),
@@ -23,7 +27,8 @@ vi.mock("@/lib/email/mailer", () => ({
   sendPausedNotice: vi.fn(() => Promise.resolve(true)),
 }));
 
-const { VALIDATION_TYPE } = await import("@/lib/api/error");
+const { ALREADY_SENT_TYPE, STALE_FORM_TYPE, TOO_SOON_TYPE, VALIDATION_TYPE } =
+  await import("@/lib/api/error");
 
 const quote = await import("@/pages/api/quote");
 const audit = await import("@/pages/api/pots-audit");
@@ -70,13 +75,44 @@ describe("the JSON path", () => {
         name: "Dana",
         contact: "x",
         services: ["Custom Software"],
-        [SERVED_FIELD]: String(Date.now() - 60_000),
+        [SERVED_FIELD]: issueStamp("quote", KEY, Date.now() - 60_000),
       }),
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true });
     expect(insertSubmission).toHaveBeenCalledOnce();
   });
+
+  it.each([
+    ["too soon", 0, 422, TOO_SOON_TYPE, "Sent Too Soon", "too-soon"],
+    ["with a forged stamp", -1, 422, STALE_FORM_TYPE, "Form Expired", "stale"],
+    ["with a spent stamp", 60_000, 409, ALREADY_SENT_TYPE, "Already Sent", "spent"],
+  ] as const)(
+    "answers a quote sent %s with its own problem type, and nothing stored",
+    async (_, ago, status, type, title, reason) => {
+      // A spent stamp is the unique index refusing the row.
+      if (reason === "spent") insertSubmission.mockReturnValueOnce(null);
+      const served = ago < 0 ? "1800000000000.x.y" : issueStamp("quote", KEY, Date.now() - ago);
+      const res = await call(
+        quote,
+        jsonPost({
+          name: "Dana",
+          contact: "x",
+          services: ["Custom Software"],
+          [SERVED_FIELD]: served,
+        }),
+      );
+      expect(res.status).toBe(status);
+      expect(res.headers.get("content-type")).toContain("application/problem+json");
+      expect(await res.json()).toEqual({
+        type,
+        title,
+        status,
+        detail: API_MESSAGE[reason],
+      });
+      if (reason !== "spent") expect(insertSubmission).not.toHaveBeenCalled();
+    },
+  );
 
   it("answers an invalid one 422, with the validation problem type", async () => {
     // Read and understood, and the content is what failed: 422, the same

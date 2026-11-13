@@ -65,6 +65,7 @@ describe("the write and the table", () => {
       contact: "ada@example.com",
       services: "Networking",
       details: null,
+      stamp: "round-trip",
     });
     const row = db.getDb().prepare("SELECT * FROM quotes WHERE id = ?").get(id) as Record<
       string,
@@ -73,8 +74,43 @@ describe("the write and the table", () => {
     expect(row.name).toBe("Ada");
     expect(row.services).toBe("Networking");
     expect(row.details).toBeNull();
+    expect(row.stamp).toBe("round-trip");
     // Defaulted rather than written, so it proves the default fires.
     expect(row.created_at).toBeTruthy();
+  });
+
+  it("spends a stamp once: a second row with it is not written", () => {
+    const count = () =>
+      (db.getDb().prepare("SELECT count(*) AS n FROM quotes").get() as { n: number }).n;
+    const row = { name: "Bo", contact: "x", services: "Linux", details: null, stamp: "once" };
+    expect(db.insertSubmission(row)).toEqual(expect.any(Number));
+    const before = count();
+    expect(db.insertSubmission({ ...row, name: "Bo again" })).toBeNull();
+    expect(count()).toBe(before);
+  });
+
+  it("lets rows from before stamps were spent share their empty stamp", () => {
+    const legacy = db
+      .getDb()
+      .prepare("INSERT INTO quotes (name, contact, services) VALUES ('Old', 'x', 'Linux')");
+    expect(() => {
+      legacy.run();
+      legacy.run();
+    }).not.toThrow();
+  });
+
+  it("lets any other failure through, rather than calling it spent", () => {
+    // NOT NULL on name: a write that fails for any reason but the stamp
+    // must surface, not read as a duplicate.
+    expect(() =>
+      db.insertSubmission({
+        name: null as unknown as string,
+        contact: "x",
+        services: "Linux",
+        details: null,
+        stamp: "not-null",
+      }),
+    ).toThrow(/NOT NULL constraint failed: quotes.name/);
   });
 });
 

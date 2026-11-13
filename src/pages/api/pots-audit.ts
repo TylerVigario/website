@@ -3,7 +3,7 @@ import {
   badRequest,
   contentTooLarge,
   methodNotAllowed,
-  sentTooSoon,
+  stampRefused,
   zodError,
 } from "@/lib/api/error";
 import { readSubmission, submitPotsAudit } from "@/lib/api/submit";
@@ -29,7 +29,7 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
     return outcome.status === 413 ? contentTooLarge() : badRequest();
   }
   if (outcome.kind === "invalid") return zodError(outcome.failure);
-  if (outcome.kind === "too-soon") return sentTooSoon();
+  if (outcome.kind === "refused") return stampRefused(outcome.reason);
   // "dropped" answers exactly as "saved" does: see submit.ts.
   return new Response(JSON.stringify({ success: true }), {
     status: 200,
