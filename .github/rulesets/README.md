@@ -53,8 +53,8 @@ counts.
 with `main` before it merges — the checks that passed are the checks for the
 code that lands.
 
-To change either: relax the rule, merge the change, tighten it again, then read
-the applied state back.
+To change the required checks: relax the rule, merge the change, tighten it again,
+then read the applied state back.
 
 `tags.json` protects every tag. `deletion` and `non_fast_forward` look like the
 whole of it and are not: advancing a tag to a descendant commit is a fast-forward,
