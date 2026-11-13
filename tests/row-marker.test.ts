@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { BILL_RANGES, POTS_AUDIT_MARKER } from "../src/lib/api/pots-audit";
+import { SERVED_FIELD } from "../src/lib/api/fill-time";
 
 import type { insertSubmission as InsertSubmission } from "@/lib/db";
 
@@ -19,6 +20,9 @@ vi.mock("@/lib/email/mailer", () => ({
 }));
 const { submitPotsAudit, submitQuote } = await import("@/lib/api/submit");
 
+/** Served a minute ago, so the fill-time floor has passed. */
+const STAMPED = { [SERVED_FIELD]: String(Date.now() - 60_000) };
+
 /**
  * Both forms write to one `quotes` table, and `services` is the only
  * column telling the two kinds of row apart: a real services array for a
@@ -37,7 +41,13 @@ describe("the audit row marker", () => {
   // constant and then inserted something else passed the old version.
   it("is the value an audit submission actually stores", async () => {
     insertSubmission.mockClear();
-    await submitPotsAudit({ business: "Acme", name: "Dana", contact: "x", bill: BILL_RANGES[0] });
+    await submitPotsAudit({
+      business: "Acme",
+      name: "Dana",
+      contact: "x",
+      bill: BILL_RANGES[0],
+      ...STAMPED,
+    });
     expect(insertSubmission).toHaveBeenCalledOnce();
     expect(insertSubmission.mock.calls[0]?.[0].services).toBe(POTS_AUDIT_MARKER);
   });
@@ -48,6 +58,7 @@ describe("the audit row marker", () => {
       name: "Dana",
       contact: "x",
       services: ["Custom Software", "Managed IT & Support"],
+      ...STAMPED,
     });
     expect(insertSubmission.mock.calls[0]?.[0].services).toBe(
       "Custom Software, Managed IT & Support",

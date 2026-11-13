@@ -197,17 +197,20 @@ const settled = () => String(Date.now() - MIN_FILL_MS - 1000);
 /** Part of the refusal's message without an apostrophe, which the page escapes. */
 const REFUSED = "the way spam does";
 
-const QUOTE = {
+/** What a person fills in, before the stamp the page adds. */
+const QUOTE_FIELDS = {
   name: "check-forms quote",
   contact: "dana@example.com",
   services: "Networking & WiFi",
   details: "sent without JavaScript",
 };
+const QUOTE = { ...QUOTE_FIELDS, [SERVED_FIELD]: settled() };
 const AUDIT = {
   business: "check-forms audit",
   name: "Dana",
   contact: "559 555 0100",
   bill: "$100–$300",
+  [SERVED_FIELD]: settled(),
 };
 
 console.log(`Forms, without JavaScript, against ${ENTRY} as ${SITE}:`);
@@ -277,6 +280,18 @@ await check(
   `a quote sent more than ${MIN_FILL_MS / 1000} s after its form was served is saved`,
   () => post("/contact", { ...QUOTE, name: "check-forms settled", [SERVED_FIELD]: settled() }),
   (res) => redirectTo(res, 303, "/contact?sent=1"),
+);
+await check(
+  "a quote with no stamp is refused 422 the same way, and its form comes back stamped",
+  () =>
+    post("/contact", { ...QUOTE_FIELDS, name: "check-forms unstamped", details: "kept, not lost" }),
+  (res, text) =>
+    status(res, 422) ||
+    contains(text, "kept, not lost", REFUSED) ||
+    // Stamped now, so sending again goes through once the floor has passed.
+    (Math.abs(Date.now() - Number(stampIn(text))) < 60_000
+      ? ""
+      : `the form's stamp is "${stampIn(text)}"`),
 );
 await check(
   "a post from another site is refused",
@@ -351,6 +366,20 @@ await check(
       ? ""
       : `Content-Type is ${res.headers.get("content-type")}`) ||
     contains(text, REFUSED),
+);
+await check(
+  "the API refuses a JSON quote with no stamp the same way",
+  () =>
+    post(
+      "/api/quote",
+      JSON.stringify({
+        ...QUOTE_FIELDS,
+        name: "check-forms api unstamped",
+        services: [QUOTE_FIELDS.services],
+      }),
+      { type: "application/json" },
+    ),
+  (res, text) => status(res, 422) || contains(text, REFUSED),
 );
 await check(
   "the API answers a services list as long as the body limit allows with one small 422",

@@ -20,7 +20,9 @@
  * Unsigned. It stops a script that posts back what the page gave it,
  * which is all that has arrived; one written for this site could backdate
  * it. A submission with no stamp, or one that does not read as one, is
- * let through: a page served before the stamp existed has none.
+ * refused the same way. Every form this server renders carries a stamp,
+ * so only a script leaves it out; the form that comes back after a
+ * refusal is stamped, so a person is never refused twice.
  *
  * The stamp is the server's clock at render, so it only means anything on
  * a page rendered per request. Prerendered, every form would carry the
@@ -57,14 +59,15 @@ export function servedStamp(values: Record<string, string | string[]>, now = Dat
 
 /**
  * How many milliseconds after its form was served a submission was sent,
- * when that is too soon to be a person; null otherwise. A stamp from the
- * future counts as too soon: a script that wrote one gets no further than
- * one that sent the form straight back.
+ * when that is too soon to be a person, or "unstamped" when it carries no
+ * stamp this server wrote; null otherwise. A stamp from the future counts
+ * as too soon: a script that wrote one gets no further than one that sent
+ * the form straight back.
  */
-export function tooSoon(body: unknown, now = Date.now()): number | null {
-  if (!body || typeof body !== "object") return null;
+export function tooSoon(body: unknown, now = Date.now()): number | "unstamped" | null {
+  if (!body || typeof body !== "object") return "unstamped";
   const served = read((body as Record<string, unknown>)[SERVED_FIELD]);
-  if (served === null) return null;
+  if (served === null) return "unstamped";
   const elapsed = now - served;
   return elapsed < MIN_FILL_MS ? elapsed : null;
 }

@@ -25,14 +25,15 @@ describe("the fill-time floor", () => {
     expect(tooSoon(sent(-5000), now)).not.toBeNull();
   });
 
-  it("lets through a submission with no stamp, or one that does not read as one", () => {
-    // A page served before the stamp existed has none.
-    expect(tooSoon({ name: "Ada" }, now)).toBeNull();
+  it("refuses a submission with no stamp, or one that does not read as one", () => {
+    // Every form this server renders carries one, so only a script leaves
+    // it out.
+    expect(tooSoon({ name: "Ada" }, now)).toBe("unstamped");
     for (const bad of ["", "soon", "1.5e12", " 1800000000000", ["1800000000000"]]) {
-      expect(tooSoon({ [SERVED_FIELD]: bad }, now)).toBeNull();
+      expect(tooSoon({ [SERVED_FIELD]: bad }, now)).toBe("unstamped");
     }
-    expect(tooSoon(null, now)).toBeNull();
-    expect(tooSoon("not an object", now)).toBeNull();
+    expect(tooSoon(null, now)).toBe("unstamped");
+    expect(tooSoon("not an object", now)).toBe("unstamped");
   });
 });
 

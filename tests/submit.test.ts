@@ -48,11 +48,14 @@ vi.mock("@/lib/email/mailer", () => ({
 const { readSubmission, submitQuote, submitPotsAudit, Unreadable } =
   await import("@/lib/api/submit");
 
+/** Served a minute ago: long enough for a person to have filled it in. */
+const STAMPED = { [SERVED_FIELD]: String(Date.now() - 60_000) };
 const QUOTE = {
   name: " Dana ",
   contact: "dana@example.com",
   services: ["Networking & WiFi"],
   details: "",
+  ...STAMPED,
 };
 const AUDIT = {
   business: "Acme",
@@ -60,6 +63,7 @@ const AUDIT = {
   contact: "559 555 0100",
   bill: "$100–$300",
   details: "two lines",
+  ...STAMPED,
 };
 
 beforeEach(() => {
@@ -190,10 +194,27 @@ describe("a form sent within seconds of being served", () => {
     expect(sendPotsAuditNotification).not.toHaveBeenCalled();
   });
 
-  it("is saved once the floor has passed, and so is one with no stamp at all", async () => {
+  it("is saved once the floor has passed", async () => {
     expect(await submitQuote({ ...QUOTE, ...settled() })).toEqual({ kind: "saved" });
-    expect(await submitPotsAudit(AUDIT)).toEqual({ kind: "saved" });
+    expect(await submitPotsAudit({ ...AUDIT, ...settled() })).toEqual({ kind: "saved" });
     expect(insertSubmission).toHaveBeenCalledTimes(2);
+  });
+
+  it("is refused with no stamp at all, and hands back everything sent", async () => {
+    const unstamped = (body: Record<string, unknown>) =>
+      Object.fromEntries(Object.entries(body).filter(([key]) => key !== SERVED_FIELD));
+    const body = unstamped(QUOTE);
+    expect(await submitQuote(body)).toEqual({ kind: "too-soon", values: body });
+    expect(await submitPotsAudit(unstamped(AUDIT))).toMatchObject({ kind: "too-soon" });
+    expect(insertSubmission).not.toHaveBeenCalled();
+    expect(sendQuoteNotification).not.toHaveBeenCalled();
+    expect(sendPotsAuditNotification).not.toHaveBeenCalled();
+  });
+
+  it("logs a submission with no stamp as such, and nothing that was in it", async () => {
+    await submitPotsAudit({ ...AUDIT, [SERVED_FIELD]: "" });
+    const [[line]] = vi.mocked(console.log).mock.calls as [[string]];
+    expect(line).toBe("[fill-time] refused a POTS audit submission sent with no stamp");
   });
 
   it("hears about a missing field first, and keeps its stamp for the re-render", async () => {

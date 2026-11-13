@@ -192,10 +192,11 @@ function trapped(form: string, body: unknown): boolean {
 function early(form: string, body: unknown): boolean {
   const elapsed = tooSoon(body);
   if (elapsed === null) return false;
-  const seconds = (Math.max(0, elapsed) / 1000).toFixed(1);
-  console.log(
-    `[fill-time] refused a ${form} submission sent ${seconds} s after its form was served`,
-  );
+  const when =
+    elapsed === "unstamped"
+      ? "with no stamp"
+      : `${(Math.max(0, elapsed) / 1000).toFixed(1)} s after its form was served`;
+  console.log(`[fill-time] refused a ${form} submission sent ${when}`);
   return true;
 }
 

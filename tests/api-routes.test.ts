@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { APIContext } from "astro";
+import { SERVED_FIELD } from "@/lib/api/fill-time";
 
 /**
  * The API routes are the enhanced path: JSON in, JSON or Problem Details
@@ -65,7 +66,12 @@ describe("the JSON path", () => {
   it("stores a valid quote and answers success", async () => {
     const res = await call(
       quote,
-      jsonPost({ name: "Dana", contact: "x", services: ["Custom Software"] }),
+      jsonPost({
+        name: "Dana",
+        contact: "x",
+        services: ["Custom Software"],
+        [SERVED_FIELD]: String(Date.now() - 60_000),
+      }),
     );
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ success: true });
