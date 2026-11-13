@@ -189,25 +189,50 @@ const contains = (text: string, ...needles: string[]) =>
 /** The stamp a page served its form with, read the way a script that
  *  posts the form straight back reads it. */
 const stampIn = (text: string) =>
-  new RegExp(`<input[^>]*name="${SERVED_FIELD}"[^>]*value="(\\d+)"`).exec(text)?.[1] ?? "";
+  new RegExp(`<input[^>]*name="${SERVED_FIELD}"[^>]*value="([^"]*)"`).exec(text)?.[1] ?? "";
+/** When a stamp says its form was served: the first of its three parts. */
+const servedAt = (stamp: string) => Number(stamp.split(".")[0]);
 const servedNow = async (pathname: string) =>
   stampIn(await (await fetch(`${BASE}${pathname}`)).text());
-/** A stamp from long enough ago that a person could have filled the form. */
-const settled = () => String(Date.now() - MIN_FILL_MS - 1000);
-/** Part of the refusal's message without an apostrophe, which the page escapes. */
+/** Parts of each refusal's message without an apostrophe, which the page escapes. */
 const REFUSED = "the way spam does";
+const EXPIRED = "This form had expired";
+const ALREADY_SENT = "This form was already sent, and it arrived";
 
-const QUOTE = {
+// Stamps can no longer be made up here: each is signed by the server and
+// spent by the submission saved with it. So take real ones from the
+// pages now, wait out the floor once, and give each submission meant to
+// be saved one of its own.
+type Page = "/contact" | "/pots-migration";
+const ripened: Record<Page, string[]> = { "/contact": [], "/pots-migration": [] };
+for (const [page, n] of [
+  ["/contact", 5],
+  ["/pots-migration", 3],
+] as const) {
+  for (let i = 0; i < n; i++) ripened[page].push(await servedNow(page));
+}
+await new Promise((r) => setTimeout(r, MIN_FILL_MS + 250));
+/** A stamp served more than MIN_FILL_MS ago, used by nothing else. */
+const ripe = (page: Page) => {
+  const stamp = ripened[page].shift();
+  if (!stamp) throw new Error(`check-forms took more ripe stamps from ${page} than it fetched`);
+  return stamp;
+};
+
+/** What a person fills in, before the stamp the page adds. */
+const QUOTE_FIELDS = {
   name: "check-forms quote",
   contact: "dana@example.com",
   services: "Networking & WiFi",
   details: "sent without JavaScript",
 };
+const QUOTE = { ...QUOTE_FIELDS, [SERVED_FIELD]: ripe("/contact") };
 const AUDIT = {
   business: "check-forms audit",
   name: "Dana",
   contact: "559 555 0100",
   bill: "$100–$300",
+  [SERVED_FIELD]: ripe("/pots-migration"),
 };
 
 console.log(`Forms, without JavaScript, against ${ENTRY} as ${SITE}:`);
@@ -252,7 +277,7 @@ await check(
   () => fetch(`${BASE}/contact`),
   (res, text) =>
     status(res, 200) ||
-    (Math.abs(Date.now() - Number(stampIn(text))) < 60_000
+    (Math.abs(Date.now() - servedAt(stampIn(text))) < 60_000
       ? ""
       : `the form's stamp is "${stampIn(text)}"`),
 );
@@ -275,8 +300,45 @@ await check(
 );
 await check(
   `a quote sent more than ${MIN_FILL_MS / 1000} s after its form was served is saved`,
-  () => post("/contact", { ...QUOTE, name: "check-forms settled", [SERVED_FIELD]: settled() }),
+  () =>
+    post("/contact", { ...QUOTE, name: "check-forms settled", [SERVED_FIELD]: ripe("/contact") }),
   (res) => redirectTo(res, 303, "/contact?sent=1"),
+);
+/** Refused as stale, with what was typed kept and a new stamp, served now:
+ *  sending again goes through once the floor has passed. */
+const staleRefusal = (sent: string) => (res: Response, text: string) =>
+  status(res, 422) ||
+  contains(text, "kept, not lost", EXPIRED) ||
+  (stampIn(text) !== sent && Math.abs(Date.now() - servedAt(stampIn(text))) < 60_000
+    ? ""
+    : `the form's stamp is "${stampIn(text)}"`);
+await check(
+  "a quote with no stamp is refused 422 as expired, and its form comes back stamped",
+  () =>
+    post("/contact", { ...QUOTE_FIELDS, name: "check-forms unstamped", details: "kept, not lost" }),
+  staleRefusal(""),
+);
+// Backdated by a minute, the one change a script would make to skip the floor.
+const fresh = await servedNow("/contact");
+const backdated = [servedAt(fresh) - 60_000, ...fresh.split(".").slice(1)].join(".");
+await check(
+  "a quote whose stamp was backdated is refused 422 as expired, and comes back stamped anew",
+  () =>
+    post("/contact", {
+      ...QUOTE_FIELDS,
+      name: "check-forms backdated",
+      details: "kept, not lost",
+      [SERVED_FIELD]: backdated,
+    }),
+  staleRefusal(backdated),
+);
+await check(
+  "a quote sent again with the stamp a saved one spent is refused 409, and not stored",
+  () => post("/contact", { ...QUOTE, name: "check-forms spent", details: "kept, not lost" }),
+  (res, text) =>
+    status(res, 409) ||
+    contains(text, "kept, not lost", ALREADY_SENT) ||
+    (stampIn(text) !== QUOTE[SERVED_FIELD] ? "" : "the form came back with the spent stamp"),
 );
 await check(
   "a post from another site is refused",
@@ -318,7 +380,12 @@ await check(
   () =>
     post(
       "/api/quote",
-      JSON.stringify({ ...QUOTE, name: "check-forms api", services: [QUOTE.services] }),
+      JSON.stringify({
+        ...QUOTE,
+        name: "check-forms api",
+        services: [QUOTE.services],
+        [SERVED_FIELD]: ripe("/contact"),
+      }),
       { type: "application/json" },
     ),
   (res, text) => status(res, 200) || contains(text, '"success":true'),
@@ -334,14 +401,14 @@ await check(
 );
 await check(
   "the API refuses a JSON quote sent too soon as Problem Details, with the same message",
-  () =>
+  async () =>
     post(
       "/api/quote",
       JSON.stringify({
         ...QUOTE,
         name: "check-forms api too soon",
         services: [QUOTE.services],
-        [SERVED_FIELD]: String(Date.now()),
+        [SERVED_FIELD]: await servedNow("/contact"),
       }),
       { type: "application/json" },
     ),
@@ -351,6 +418,22 @@ await check(
       ? ""
       : `Content-Type is ${res.headers.get("content-type")}`) ||
     contains(text, REFUSED),
+);
+await check(
+  "the API refuses a JSON quote with no stamp as expired, as Problem Details",
+  () =>
+    post(
+      "/api/quote",
+      JSON.stringify({
+        ...QUOTE_FIELDS,
+        name: "check-forms api unstamped",
+        services: [QUOTE_FIELDS.services],
+      }),
+      { type: "application/json" },
+    ),
+  (res, text) =>
+    status(res, 422) ||
+    contains(text, "tag:vigario.tech,2026:stale-form", EXPIRED, "Reload the page"),
 );
 await check(
   "the API answers a services list as long as the body limit allows with one small 422",
@@ -402,6 +485,7 @@ await check(
       ...QUOTE,
       name: "check-forms listed email",
       contact: LISTED_EMAIL,
+      [SERVED_FIELD]: ripe("/contact"),
     });
     flagged = await printed(FLAGGED_EMAIL);
     return res;
@@ -413,7 +497,7 @@ await check(
   async () => {
     const res = await post(
       "/pots-migration",
-      { ...AUDIT, name: "check-forms listed ip" },
+      { ...AUDIT, name: "check-forms listed ip", [SERVED_FIELD]: ripe("/pots-migration") },
       { headers: { "x-forwarded-for": LISTED_IP } },
     );
     flagged = await printed(FLAGGED_IP);
@@ -460,7 +544,8 @@ await check(
 );
 
 // What the database holds is the point of all of the above: the six
-// valid submissions, flagged or not, and nothing from the rest.
+// valid submissions, flagged or not, and nothing from the rest, the one
+// sent again with a spent stamp included.
 const db = new Database(env.SQLITE_PATH, { readonly: true });
 const stored = db
   .prepare("SELECT name FROM quotes ORDER BY id")

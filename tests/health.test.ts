@@ -49,6 +49,7 @@ describe("the health check", () => {
       "open",
       "readable",
       "schema",
+      "form-key",
       "writable",
       "space",
     ]);
@@ -110,6 +111,28 @@ describe("the health check", () => {
     clean.exec("DELETE FROM quotes");
     clean.close();
     expect((await get()).checks.find((c) => c.name === "notified")?.ok).toBe(true);
+  });
+
+  it("reports 503 when the form key is gone, which would refuse every form", async () => {
+    // A fresh handle, since a key is read once per handle and kept.
+    const reopen = () => {
+      const cache = globalThis as { __sqlite__?: { close(): void } };
+      cache.__sqlite__?.close();
+      delete cache.__sqlite__;
+    };
+    const raw = new Database(file);
+    const saved = raw.prepare("SELECT id, key FROM form_key").get();
+    raw.exec("DELETE FROM form_key");
+    reopen();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { status, checks } = await get();
+    log.mockRestore();
+    expect(status).toBe(503);
+    expect(checks.find((c) => c.name === "form-key")).toEqual({ name: "form-key", ok: false });
+    raw.prepare("INSERT INTO form_key (id, key) VALUES (@id, @key)").run(saved);
+    raw.close();
+    reopen();
+    expect((await get()).status).toBe(200);
   });
 
   it("reports 503 when free space falls under the minimum", async () => {
