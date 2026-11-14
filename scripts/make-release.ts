@@ -250,7 +250,12 @@ for (const f of fs.readdirSync(prebuildDir)) {
 // all the same, and its notice and version are read from the source
 // better-sqlite3 carries. Sorted, so a rebuild writes the same bytes.
 const licencesFile = path.join(staging, "dist/server/THIRD-PARTY-LICENSES.md");
-if (!fs.existsSync(licencesFile)) {
+// Read, not checked for and then appended to: the read is the check, and
+// the file is written whole from what it returned.
+let bundledLicences: string;
+try {
+  bundledLicences = fs.readFileSync(licencesFile, "utf8");
+} catch {
   console.error(
     `error: ${licencesFile} is missing — the build did not write the bundle's licences.`,
   );
@@ -301,9 +306,10 @@ besideEntries.push(
     `Compiled into better-sqlite3's binary, node_modules/better-sqlite3/prebuilds/linux-x64.node.\n\n` +
     `${sqliteNotice}\n`,
 );
-fs.appendFileSync(
+fs.writeFileSync(
   licencesFile,
-  "\n# Beside the bundle\n\n" +
+  bundledLicences +
+    "\n# Beside the bundle\n\n" +
     "The release also carries these in node_modules, which the server loads at runtime:\n\n" +
     besideEntries.join("\n"),
 );
