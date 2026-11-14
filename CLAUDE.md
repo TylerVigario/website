@@ -89,8 +89,10 @@ never skipped or reused, and one whose tag already exists is refused
 before anything runs.
 
 The artifact is `dist/` (with `dist/server/THIRD-PARTY-LICENSES.md`,
-the licence of every package the server bundles, written by Vite's
-`build.license`), `node_modules/` (better-sqlite3, for the native addon
+the licence of every third-party package in the tarball: what the server
+bundles, written by Vite's `build.license`, then what `make-release.ts`
+adds beside it, the packages in `node_modules/` and the SQLite compiled
+into better-sqlite3's binary), `node_modules/` (better-sqlite3, for the native addon
 that cannot be bundled, and the one package it depends on, both at the
 lockfile's versions and checked against its hashes), a generated
 `package.json` naming them and a `package-lock.json` holding their

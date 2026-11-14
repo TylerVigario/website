@@ -95,7 +95,9 @@ and licence text, in `dist/server/THIRD-PARTY-LICENSES.md`, which ships
 in each release tarball beside the bundle. Geist is listed there too.
 `better-sqlite3`, which cannot be bundled, ships whole in
 `node_modules/` with the one package it needs, each with its own
-licence file. This licence grants nothing in any of them.
+licence file, and the release lists both in the same file, with the
+SQLite compiled into better-sqlite3's binary, which is in the public
+domain. This licence grants nothing in any of them.
 
 Two photographs on /services are in the public domain, dedicated under
 CC0 1.0 (<https://creativecommons.org/publicdomain/zero/1.0/>), which
