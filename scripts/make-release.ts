@@ -241,6 +241,73 @@ for (const f of fs.readdirSync(prebuildDir)) {
   if (f !== "linux-x64.node") fs.rmSync(path.join(prebuildDir, f), { recursive: true });
 }
 
+// THIRD-PARTY-LICENSES.md is Vite's (astro.config.ts), and lists what the
+// server bundles. The tarball also carries node_modules, which the server
+// loads beside the bundle, so those packages are added to the same file in
+// the same form, and it lists every third-party package the artifact
+// ships. With them SQLite, which better-sqlite3 compiles into its binary:
+// public domain, so there is no licence to copy, but it is in the artifact
+// all the same, and its notice and version are read from the source
+// better-sqlite3 carries. Sorted, so a rebuild writes the same bytes.
+const licencesFile = path.join(staging, "dist/server/THIRD-PARTY-LICENSES.md");
+if (!fs.existsSync(licencesFile)) {
+  console.error(
+    `error: ${licencesFile} is missing — the build did not write the bundle's licences.`,
+  );
+  process.exit(1);
+}
+const modulesDir = path.join(staging, "node_modules");
+const besideTheBundle = fs
+  .readdirSync(modulesDir)
+  .filter((d) => !d.startsWith("."))
+  .flatMap((d) =>
+    d.startsWith("@") ? fs.readdirSync(path.join(modulesDir, d)).map((s) => `${d}/${s}`) : [d],
+  )
+  .sort();
+const besideEntries = besideTheBundle.map((name) => {
+  const dir = path.join(modulesDir, name);
+  const pkg = JSON.parse(fs.readFileSync(path.join(dir, "package.json"), "utf8")) as {
+    name: string;
+    version: string;
+    license?: string;
+  };
+  const file = fs.readdirSync(dir).find((f) => /^licen[cs]e(\.(md|txt))?$/i.test(f));
+  if (!file) {
+    console.error(`error: ${name} ships in node_modules with no licence file to carry.`);
+    process.exit(1);
+  }
+  const text = fs.readFileSync(path.join(dir, file), "utf8").trim();
+  return `## ${pkg.name} - ${pkg.version} (${pkg.license ?? "no licence named"})\n\n${text}\n`;
+});
+const sqliteHeader = fs.readFileSync(
+  path.join(modulesDir, "better-sqlite3/deps/sqlite3/sqlite3.h"),
+  "utf8",
+);
+const sqliteVersion = /^#define SQLITE_VERSION\s+"([^"]+)"/m.exec(sqliteHeader)?.[1];
+// The blessing at the top of sqlite3.h, from the disclaimer to the rule
+// under it, with the comment markers taken off.
+const sqliteNotice = /^\*\* (The author disclaims copyright[\s\S]*?)^\*{10,}/m
+  .exec(sqliteHeader)?.[1]
+  ?.split("\n")
+  .map((line) => line.replace(/^\*\* ?/, ""))
+  .join("\n")
+  .trim();
+if (!sqliteVersion || !sqliteNotice) {
+  console.error("error: better-sqlite3's sqlite3.h no longer reads as expected (version, notice).");
+  process.exit(1);
+}
+besideEntries.push(
+  `## SQLite - ${sqliteVersion} (public domain)\n\n` +
+    `Compiled into better-sqlite3's binary, node_modules/better-sqlite3/prebuilds/linux-x64.node.\n\n` +
+    `${sqliteNotice}\n`,
+);
+fs.appendFileSync(
+  licencesFile,
+  "\n# Beside the bundle\n\n" +
+    "The release also carries these in node_modules, which the server loads at runtime:\n\n" +
+    besideEntries.join("\n"),
+);
+
 // The changelog ships inside the artifact. RELEASE pins WHICH commit
 // this is; the changelog says what that commit changed — and says it
 // without a network path back to the release notes, which is the same

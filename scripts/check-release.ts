@@ -12,7 +12,8 @@
  * So this unpacks the tarball the way the host does and checks:
  *   - every file matches MANIFEST.sha256, and no file is missing from it
  *   - RELEASE and package.json name the same version
- *   - it carries the licence of every package the server bundles
+ *   - it lists the licence of every third-party package it carries: what
+ *     the server bundles, what is beside it in node_modules, and SQLite
  *   - the unpacked server, with its own node_modules, passes check:forms
  *
  * The last runs scripts/check-forms.ts from inside the unpacked tree, so
@@ -111,8 +112,9 @@ try {
   }
 
   // The licences of what the server bundles, which build.license writes
-  // (astro.config.ts). This is what notices that stopping, or a bundled
-  // package with no licence text to copy.
+  // (astro.config.ts), and of what make-release.ts adds beside it from
+  // node_modules. This is what notices either stopping, or a package with
+  // no licence text to copy.
   const licences = path.join(root, "dist/server/THIRD-PARTY-LICENSES.md");
   if (!existsSync(licences)) {
     fail("dist/server/THIRD-PARTY-LICENSES.md is missing");
@@ -121,8 +123,12 @@ try {
       .split(/^## /m)
       .slice(1)
       .map((e) => {
-        const [heading = "", ...text] = e.split("\n");
-        return { name: heading.split(" - ")[0] ?? heading, text: text.join("\n").trim() };
+        const [heading = "", ...rest] = e.split("\n");
+        // An entry ends at the next heading of either level: the section
+        // for node_modules opens with one, and is no entry's text.
+        const end = rest.findIndex((line) => line.startsWith("# "));
+        const text = (end === -1 ? rest : rest.slice(0, end)).join("\n").trim();
+        return { name: heading.split(" - ")[0] ?? heading, text };
       });
     const names = new Set(entries.map((e) => e.name));
     for (const { name, text } of entries) {
@@ -134,12 +140,22 @@ try {
     for (const name of NO_LICENCE_TEXT.keys()) {
       if (!names.has(name)) fail(`${name} is no longer bundled; take it out of NO_LICENCE_TEXT`);
     }
+    // Everything the tarball carries beside the bundle is listed too: each
+    // package in node_modules, by the name its package.json gives, and the
+    // SQLite better-sqlite3 compiles in.
+    const modules = path.join(root, "node_modules");
+    const beside = readdirSync(modules)
+      .filter((d) => !d.startsWith("."))
+      .flatMap((d) =>
+        d.startsWith("@") ? readdirSync(path.join(modules, d)).map((s) => `${d}/${s}`) : [d],
+      );
+    const unlisted = [...beside, "SQLite"].filter((name) => !names.has(name));
+    if (unlisted.length) fail(`THIRD-PARTY-LICENSES.md does not list ${unlisted.join(", ")}`);
+    else console.log(`  ✓ the ${beside.length} packages in node_modules and SQLite are listed too`);
     if (!entries.length) fail("THIRD-PARTY-LICENSES.md lists no packages");
     else if (entries.every((e) => e.text || NO_LICENCE_TEXT.has(e.name))) {
       const but = [...NO_LICENCE_TEXT].map(([name, why]) => `, but ${name}: ${why}`).join("");
-      console.log(
-        `  ✓ ${entries.length} bundled packages listed, each with its licence text${but}`,
-      );
+      console.log(`  ✓ ${entries.length} packages listed, each with its licence text${but}`);
     }
   }
 
