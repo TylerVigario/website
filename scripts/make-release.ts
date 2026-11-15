@@ -31,14 +31,16 @@
  * from the registry on the day), Astro's encryption key (fixed, and why
  * that costs nothing is where the build runs), and the archive itself
  * (entries sorted, owners and modes normalised, gzip without its
- * timestamp). The path is
- * the caveat: Astro writes absolute source paths into the server bundle,
- * so a rebuild has to happen at the same path the release used.
+ * timestamp). The path is the caveat: Astro writes absolute source paths
+ * into the server bundle, so a rebuild has to happen at the same path the
+ * release used.
  *
  * Usage:
  *   node scripts/make-release.ts                 # version from package.json
  *   node scripts/make-release.ts --version 1.2.3
  *   node scripts/make-release.ts --out /tmp/dir
+ *   node scripts/make-release.ts --changelog <file>  # the changelog to ship, when not the tree's
+ *   node scripts/make-release.ts --allow-dirty       # prove the machinery on an uncommitted tree
  */
 import { execFileSync, type ExecFileSyncOptions } from "node:child_process";
 import fs from "node:fs";
@@ -143,7 +145,9 @@ interface Lockfile {
   >;
 }
 const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8")) as Lockfile;
-const pinned = new Map<string, string>();
+type LockEntry = Lockfile["packages"][string];
+/** Each package the runtime tree needs, with its lockfile entry. */
+const pinned = new Map<string, LockEntry & { version: string }>();
 function pin(name: string, from = "") {
   // npm's own lookup: the nearest node_modules/<name> walking up from the
   // dependent's location.
@@ -168,21 +172,21 @@ function pin(name: string, from = "") {
     process.exit(1);
   }
   if (pinned.has(name)) return;
-  pinned.set(name, entry.version);
+  pinned.set(name, { ...entry, version: entry.version });
   for (const dep of Object.keys(entry.dependencies ?? {})) pin(dep, key);
 }
 for (const name of RUNTIME_EXTERNALS) pin(name);
-const specs = [...pinned].map(([n, v]) => `${n}@${v}`).sort();
+const specs = [...pinned].map(([n, e]) => `${n}@${e.version}`).sort();
 console.log(`  runtime tree: ${specs.join(", ") || "(none)"}`);
 
 // The artifact gets its OWN manifest rather than a copy of the repo's.
 // Copying the real one would list every build dependency, and an install
 // in this directory would then resolve all of them — reinstating the
-// 200 MB tree this whole approach exists to avoid. It names the runtime
+// 175 MB tree this whole approach exists to avoid. It names the runtime
 // externals, at the versions pinned above, because `npm ci` installs
 // what the manifest and the lockfile agree on.
 const dependencies = Object.fromEntries(
-  RUNTIME_EXTERNALS.map((name) => [name, pinned.get(name) ?? ""]),
+  RUNTIME_EXTERNALS.map((name) => [name, pinned.get(name)?.version ?? ""]),
 );
 fs.writeFileSync(
   path.join(staging, "package.json"),
@@ -193,9 +197,7 @@ fs.writeFileSync(
   ) + "\n",
 );
 const packages: Lockfile["packages"] = { "": { name: pkg.name, version, dependencies } };
-for (const name of [...pinned.keys()].sort()) {
-  const entry = lock.packages[`node_modules/${name}`];
-  if (!entry) throw new Error(`${name} was pinned but has no lockfile entry`);
+for (const [name, entry] of [...pinned].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
   packages[`node_modules/${name}`] = entry;
 }
 fs.writeFileSync(
@@ -320,7 +322,7 @@ const besideTheBundle = fs
   .sort();
 const besideEntries = besideTheBundle.map((name) => {
   const dir = path.join(modulesDir, name);
-  const pkg = JSON.parse(fs.readFileSync(path.join(dir, "package.json"), "utf8")) as {
+  const manifest = JSON.parse(fs.readFileSync(path.join(dir, "package.json"), "utf8")) as {
     name: string;
     version: string;
     license?: string;
@@ -331,7 +333,7 @@ const besideEntries = besideTheBundle.map((name) => {
     process.exit(1);
   }
   const text = fs.readFileSync(path.join(dir, file), "utf8").trim();
-  return `## ${pkg.name} - ${pkg.version} (${pkg.license ?? "no licence named"})\n\n${text}\n`;
+  return `## ${manifest.name} - ${manifest.version} (${manifest.license ?? "no licence named"})\n\n${text}\n`;
 });
 besideEntries.push(
   `## SQLite - ${sqliteVersion} (public domain)\n\n` +

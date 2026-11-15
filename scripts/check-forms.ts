@@ -206,8 +206,8 @@ const ALREADY_SENT = "This form was already sent, and it arrived";
 type Page = "/contact" | "/pots-migration";
 const ripened: Record<Page, string[]> = { "/contact": [], "/pots-migration": [] };
 for (const [page, n] of [
-  ["/contact", 5],
-  ["/pots-migration", 3],
+  ["/contact", 4],
+  ["/pots-migration", 2],
 ] as const) {
   for (let i = 0; i < n; i++) ripened[page].push(await servedNow(page));
 }

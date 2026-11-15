@@ -14,21 +14,28 @@
  * inline <script>, including speculation rules and import maps, is
  * subject to the policy.
  */
-const SCRIPT = /<script\b([^>]*)>/gi;
+const SCRIPT_ELEMENT = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
 const DATA_BLOCK = /\stype\s*=\s*["']?application\/(ld\+)?json["']?/i;
 const STYLE_ELEMENT = /<style\b/i;
 /** A style attribute on any element. Within a tag only, so prose that
  *  mentions style= between tags is not mistaken for one. */
 const STYLE_ATTRIBUTE = /<[a-zA-Z][^>]*\sstyle\s*=/;
 
+/** The code of each inline <script> the policy applies to: not a file
+ *  (src=), and not a data block. check-bundles.ts counts its weight with
+ *  this, so the two agree on what a data block is. */
+export function inlineScripts(html: string): string[] {
+  return [...html.matchAll(SCRIPT_ELEMENT)]
+    .filter(([, attrs = ""]) => !/\ssrc\s*=/i.test(attrs) && !DATA_BLOCK.test(attrs))
+    .map(([, , code = ""]) => code);
+}
+
 /** Each kind of inline code the policy would block, described. Empty when
  *  the page is clean. */
 export function inlineCodeIn(html: string): string[] {
   const found: string[] = [];
-  const inlineScripts = [...html.matchAll(SCRIPT)].filter(
-    ([, attrs = ""]) => !/\ssrc\s*=/i.test(attrs) && !DATA_BLOCK.test(attrs),
-  ).length;
-  if (inlineScripts) found.push(`${inlineScripts} inline <script> element(s)`);
+  const scripts = inlineScripts(html).length;
+  if (scripts) found.push(`${scripts} inline <script> element(s)`);
   if (STYLE_ELEMENT.test(html)) found.push("a <style> element");
   if (STYLE_ATTRIBUTE.test(html)) found.push("a style= attribute");
   return found;
