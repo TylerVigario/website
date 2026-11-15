@@ -11,6 +11,16 @@ import {
   type Relay,
 } from "@/lib/email/relay";
 
+/**
+ * How the notification relay is reached, read from SMTP_* (relay.ts):
+ * the defaults when the operator says nothing, every explicit setting
+ * honoured for any host, a value that cannot be acted on reported rather
+ * than guessed around, and exactly those choices in the options handed
+ * to nodemailer. The one warning, for an unauthenticated peer outside
+ * the local network, and that certificate verification is switched off
+ * nowhere but there, by the operator.
+ */
+
 const relay = (over: Partial<Relay> = {}): Relay => ({
   host: "relay.example",
   port: 587,

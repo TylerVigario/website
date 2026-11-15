@@ -15,6 +15,11 @@ import { PotsAuditRequest } from "@/lib/api/pots-audit";
  * at request time, on a real submission, on the one path this site exists
  * to serve, with the row lost and only a stack trace in the journal.
  *
+ * And the table spends a form's stamp once (src/lib/api/fill-time.ts): a
+ * second row with a stamp already written is not written, rows from
+ * before stamps share an empty one, and any other failed write is still
+ * an error.
+ *
  * These assertions run against a real SQLite file created by the real
  * getDb(), not a fixture, so the schema under test is the one that ships.
  */
