@@ -93,14 +93,16 @@ the licence of every third-party package in the tarball: what the server
 bundles, written by Vite's `build.license`, then what `make-release.ts`
 adds beside it, the packages in `node_modules/` and the SQLite compiled
 into better-sqlite3's binary), `node_modules/` (better-sqlite3, for the native addon
-that cannot be bundled, and the one package it depends on, both at the
-lockfile's versions and checked against its hashes), a generated
+that cannot be bundled, at the lockfile's version and checked against its
+hash: its prebuilt linux-x64 binary and the code that loads it, with what
+only compiling it needs removed, its C and C++ source and node-addon-api,
+its one dependency), a generated
 `package.json` naming them and a `package-lock.json` holding their
 entries copied from the repo's, which `npm ci` installed from, `CHANGELOG.md`,
 `LICENSE` and `LICENSE-NOTICE.md`, `RELEASE` (version + the commit the
 source came from), and `MANIFEST.sha256` — a sha256 of every other file in the tree. It runs
 on `node dist/server/entry.mjs` with `SQLITE_PATH` set, needs no
-toolchain and no network, and is about 21 MB, most of it image variants.
+toolchain and no network, and is about 18 MB, most of it image variants.
 
 **Installing it is the host's job, and the tools for that live on the
 host.** Fetching, verifying and swapping a release are operations on a
