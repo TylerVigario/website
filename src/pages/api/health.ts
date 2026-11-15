@@ -36,9 +36,9 @@ export const prerender = false;
  * notification would say the sender is a known spammer; but a failure in
  * any of them is the relay's or the host's configuration, or a flood the
  * notification cap held back (src/lib/email/cap.ts), rather than this
- * release. The updater rolls a
- * release back on anything but a 200, and rolling back cannot fix SMTP
- * settings, so an advisory failure reports "degraded" and keeps the 200.
+ * release. A host that rolls a release back on anything but a 200 could
+ * not fix SMTP settings that way, so an advisory failure reports
+ * "degraded" and keeps the 200.
  *
  * The response names each check and whether it passed, and nothing more.
  * This endpoint is public, and a failure's message can carry a path, a

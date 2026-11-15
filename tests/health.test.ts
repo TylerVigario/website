@@ -71,8 +71,8 @@ describe("the health check", () => {
   });
 
   it("reports mail being off as degraded, and keeps the 200", async () => {
-    // The updater rolls a release back on anything but a 200, and a
-    // rollback cannot fix SMTP settings.
+    // A host that rolls a release back on anything but a 200 could not
+    // fix SMTP settings that way.
     const { status, state, checks } = await get();
     expect(status).toBe(200);
     expect(state).toBe("degraded");

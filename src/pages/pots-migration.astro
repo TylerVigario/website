@@ -55,10 +55,10 @@ Astro.response.headers.set("Cache-Control", "no-store");
 // the query string: that put names and messages into browser history and
 // access logs, failed outright once the text outgrew a request line, and
 // let anyone put words in the form's alert box through a crafted link.
-// Now a failure re-renders this page, 422, with every value still in the
-// form, and nothing typed is ever in a URL. Success redirects, so a
-// reload cannot submit twice. The work is submitPotsAudit(), the same function
-// the JSON API calls.
+// Now a failure re-renders this page with its own status, and with every
+// value still in the form wherever any was read; nothing typed is ever in
+// a URL. Success redirects, so a reload cannot submit twice. The work
+// is submitPotsAudit(), the same function the JSON API calls.
 let values: Values = {};
 let errors: Record<string, string> = {};
 if (Astro.request.method === "POST") {

@@ -3,8 +3,9 @@
  *
  * The first spam this site received, three of its first four
  * submissions, was bots selling backpacks and posture correctors. They
- * fill every input they find, which is the whole tell: a field hidden from people and left
- * empty by them is filled by anything crawling the DOM.
+ * fill every input they find, which is the whole tell: a field hidden
+ * from people and left empty by them is filled by anything crawling the
+ * DOM.
  *
  * It is not a CAPTCHA and does not pretend to be. It stops the
  * undirected form-spam that actually arrives here, costs no request, no

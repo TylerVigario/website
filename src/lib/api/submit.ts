@@ -182,9 +182,9 @@ async function hold(id: number) {
  *  change and a distinct success teaches it that it got through. The log
  *  line says which form and nothing about what was in it, so the trap's
  *  catch rate can be read from the journal without keeping the spam. */
-function trapped(form: string, body: unknown): boolean {
+function trapped(label: string, body: unknown): boolean {
   if (!isTrapped(body)) return false;
-  console.log(`[honeypot] dropped a ${form} submission`);
+  console.log(`[honeypot] dropped a ${label} submission`);
   return true;
 }
 
