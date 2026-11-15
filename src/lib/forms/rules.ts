@@ -21,8 +21,8 @@
  * validating the number strictly is honest.
  *
  * These rules are loose because the fields genuinely are. `contact` asks
- * for "phone or email, whichever you'd rather I use" and means it, so
- * there is no format to enforce. That is the field being honest, not
+ * for a phone or an email, "whichever you'd rather we use", and means it,
+ * so there is no format to enforce. That is the field being honest, not
  * the validator being lax. A field that accepts one shape should say so
  * and check it; a field that accepts anything should not pretend
  * otherwise.
@@ -31,16 +31,17 @@
  * failed, never discovered by rejection.
  */
 
-import { MAX, tooLong } from "@/lib/forms/limits";
+import { MAX, toOneLine, tooLong } from "@/lib/forms/limits";
 
 export type FieldValue = string | string[];
 export type Rule = (value: FieldValue) => string | null;
 export type Rules = Record<string, Rule>;
 
-// Lengths are measured after trimming, as the schema's z.trim() does.
+// A single-line field, measured as the schema measures it: its control
+// characters made a space (one-line.ts), then trimmed (z.trim()).
 const filled = (message: string, max: number): Rule => {
   return (value) => {
-    const v = typeof value === "string" ? value.trim() : "";
+    const v = typeof value === "string" ? toOneLine(value).trim() : "";
     if (v.length === 0) return message;
     return v.length > max ? tooLong(max) : null;
   };

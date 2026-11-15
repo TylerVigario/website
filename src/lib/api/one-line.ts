@@ -1,4 +1,5 @@
 import * as z from "zod/mini";
+import { toOneLine } from "@/lib/forms/limits";
 
 /**
  * A single-line field's control characters, each run made one space.
@@ -22,6 +23,4 @@ import * as z from "zod/mini";
  * joiners are part of how some names are written. `details` does not use
  * this; its line breaks are meant.
  */
-export const oneLine = z.overwrite((value: string) =>
-  value.replace(/[\p{Cc}\p{Zl}\p{Zp}]+/gu, " "),
-);
+export const oneLine = z.overwrite(toOneLine);

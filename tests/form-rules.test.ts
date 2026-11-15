@@ -49,6 +49,13 @@ const SAMPLES: FieldValue[] = [
   ...[100, 150, 254, 20_000].flatMap((n) => ["x".repeat(n), "x".repeat(n + 1)]),
   // Measured after trimming, on both sides.
   "  " + "x".repeat(100) + "  ",
+  // A tab is what a paste can put in a single-line input, which drops
+  // line breaks itself. The server makes each run of them one space
+  // before it measures (one-line.ts); the browser has to do the same, or
+  // a long name with tabs in it is refused here and kept there.
+  "\t\t",
+  "x".repeat(50) + "\t".repeat(60) + "x".repeat(49),
+  "x".repeat(50) + "\t".repeat(60) + "x".repeat(50),
 ];
 /** Choice fields can only send what they offer — the checkbox group its
  *  catalog titles, the select its ranges or its empty placeholder — so
