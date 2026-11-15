@@ -16,6 +16,8 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": [".astro/types.d.ts", "**/*.ts", "**/*.astro"],
+  // `**` passes over directories whose names start with a dot, so
+  // src/pages/.well-known is named, or astro check never sees it.
+  "include": [".astro/types.d.ts", "**/*.ts", "**/*.astro", "src/pages/.well-known/**/*.ts"],
   "exclude": ["node_modules", "dist"]
 }

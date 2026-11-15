@@ -21,7 +21,6 @@
 *.db-wal
 
 # Tool caches
-*.tsbuildinfo
 .eslintcache
 
 # OS noise

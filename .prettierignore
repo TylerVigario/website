@@ -1,11 +1,5 @@
-# Dependencies
-node_modules/
-
-# Build output
-dist/
-
-# Astro's generated types
-.astro/
+# Prettier also reads .gitignore, so what git ignores (dependencies, build
+# output, the database) is ignored here without a second list.
 
 # Generated
 package-lock.json
@@ -25,8 +19,3 @@ package-lock.json
 # These files are still checked — eslint-plugin-astro lints them and
 # `astro check` typechecks their frontmatter and templates.
 *.astro
-
-# Data
-data/
-*.db
-*.db-journal
