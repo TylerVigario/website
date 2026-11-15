@@ -13,7 +13,7 @@ const BASELINE_YEAR = Number(/\bbaseline (\d{4})\b/.exec(pkg.browserslist.join("
 if (!BASELINE_YEAR) throw new Error("eslint.config.js: the browserslist names no Baseline year");
 
 export default defineConfig([
-  globalIgnores(["dist/**", "dist-release/**", "node_modules/**", ".astro/**"]),
+  globalIgnores(["dist/**", "dist-release/**", ".astro/**"]),
 
   // Type-aware rules across the TS surface. `projectService` picks up
   // tsconfig, which now includes .astro files. Scoped to code: applied to
@@ -39,14 +39,12 @@ export default defineConfig([
       parserOptions: { projectService: false, project: true },
     },
     rules: {
-      // The frontmatter is typechecked by `astro check`; the type-aware
-      // ESLint rules cannot see through the .astro parser and report
-      // every expression as `any`. Duplicated coverage, worse signal.
+      // The frontmatter is typechecked by `astro check`. Through the
+      // .astro parser, these two report what astro check types fine as
+      // error-typed (53 returns and 4 assignments when last measured);
+      // the other no-unsafe-* rules report nothing there and stay on.
       "@typescript-eslint/no-unsafe-assignment": "off",
-      "@typescript-eslint/no-unsafe-member-access": "off",
-      "@typescript-eslint/no-unsafe-call": "off",
       "@typescript-eslint/no-unsafe-return": "off",
-      "@typescript-eslint/no-unsafe-argument": "off",
     },
   },
 

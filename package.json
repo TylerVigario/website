@@ -20,8 +20,8 @@
     "format:fix": "prettier --write .",
     "lint": "npm run lint:js && npm run lint:md && npm run lint:actions",
     "lint:actions": "node scripts/lint-actions.ts",
-    "lint:js": "astro sync && eslint",
-    "lint:js:fix": "astro sync && eslint --fix",
+    "lint:js": "astro sync && eslint --max-warnings=0",
+    "lint:js:fix": "astro sync && eslint --fix --max-warnings=0",
     "lint:md": "markdownlint-cli2",
     "lint:md:fix": "markdownlint-cli2 --fix",
     "prepare": "husky",
@@ -79,7 +79,7 @@
       "prettier --write"
     ],
     "*.md": [
-      "markdownlint-cli2 --fix"
+      "markdownlint-cli2 --no-globs --fix"
     ],
     "*.{json,jsonc}": [
       "prettier --write"
