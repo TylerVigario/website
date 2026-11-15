@@ -5,9 +5,10 @@ import POTSLanding from "@/components/POTSLanding.astro";
 import LandingHeader from "@/components/LandingHeader.astro";
 import { readSubmission, submitPotsAudit, unreadableMessage, type Values } from "@/lib/api/submit";
 import { PAGE_MESSAGE } from "@/lib/api/fill-time";
+import { siteRoot } from "@/lib/site";
 
 // Built from Astro.site so the canonical domain lives in one place.
-const site = Astro.site!.href.replace(/\/$/, "");
+const site = siteRoot(Astro.site);
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Service",

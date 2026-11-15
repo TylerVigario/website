@@ -1,6 +1,7 @@
 ---
 import Base from "@/layouts/Base.astro";
-import { areaServed, SEARCH_PLACE } from "@/lib/business";
+import { areaServed, SEARCH_PLACE, PHONE, businessRef } from "@/lib/business";
+import { siteRoot } from "@/lib/site";
 
 /**
  * The frame of a service page: a header, the capability lists, the
@@ -57,7 +58,7 @@ const {
   ctaText,
 } = Astro.props;
 
-const site = Astro.site!.href.replace(/\/$/, "");
+const site = siteRoot(Astro.site);
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Service",
@@ -65,7 +66,7 @@ const jsonLd = {
   name: title,
   description,
   url: `${site}${path}`,
-  provider: { "@type": "ProfessionalService", "@id": `${site}/#business` },
+  provider: businessRef(site),
   serviceType: serviceTypes,
   areaServed,
 };
@@ -214,7 +215,7 @@ const jsonLd = {
                 </svg>
               </a>
               <a
-                href="tel:+15599001400"
+                href={PHONE.href}
                 class="inline-flex items-center justify-center gap-3 rounded-xl border border-border px-6 py-3.5 text-base font-medium text-foreground transition-colors hover:border-accent/30 hover:bg-surface-light"
               >
                 <svg
@@ -230,7 +231,7 @@ const jsonLd = {
                     clip-rule="evenodd"
                   />
                 </svg>
-                (559) 900-1400
+                {PHONE.display}
               </a>
             </div>
           </div>

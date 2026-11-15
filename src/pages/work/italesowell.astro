@@ -5,9 +5,10 @@ import { CASE_STUDY_LEAD_SIZES, PHONE_SCREENSHOT_GRID, SCREENSHOT_GRID } from "@
 import imgHero0 from "@/assets/images/work/italesowell/hero.webp";
 import Base from "@/layouts/Base.astro";
 import ItalesowellScreenshots from "@/components/ItalesowellScreenshots.astro";
+import { siteRoot } from "@/lib/site";
 
 // Built from Astro.site so the canonical domain lives in one place.
-const site = Astro.site!.href.replace(/\/$/, "");
+const site = siteRoot(Astro.site);
 // The page is the case study (the Article). The site it describes,
 // italesowell.com, is what it is about; it used to be the only thing marked
 // up, so nothing described this page.

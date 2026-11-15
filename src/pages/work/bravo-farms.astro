@@ -7,13 +7,14 @@ import { caseStudies } from "@/lib/work";
 import CreditedPhoto from "@/components/CreditedPhoto.astro";
 import { bravoFarmsKettlemanCity, bravoFarmsTraver } from "@/lib/photos";
 import { PHOTO_PAIR } from "@/lib/image-sizes";
+import { siteRoot } from "@/lib/site";
 
 // The same logo and outcome as this study's card on /work.
 const outcome = caseStudies.find((cs) => cs.slug === "bravo-farms")?.outcome;
 if (!outcome) throw new Error("No outcome for bravo-farms in src/lib/work.ts");
 
 // Built from Astro.site so the canonical domain lives in one place.
-const site = Astro.site!.href.replace(/\/$/, "");
+const site = siteRoot(Astro.site);
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Article",
