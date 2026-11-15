@@ -14,6 +14,20 @@ import type { APIContext } from "astro";
 // a shell that exports them cannot change what these tests see.
 const mail = vi.hoisted(() => ({ mailState: "off" }));
 vi.mock("@/lib/email/mailer", () => mail);
+// Free space, from the real disk unless a test says otherwise: the
+// default minimum is under what any machine running this has free, so
+// only a disk reported nearly full shows whether a setting took effect.
+const disk = vi.hoisted(() => ({ freeBytes: null as number | null }));
+vi.mock("node:fs", async (importOriginal) => {
+  const real = await importOriginal<typeof import("node:fs")>();
+  const statfsSync = ((p: string) => {
+    const stats = real.statfsSync(p);
+    return disk.freeBytes === null
+      ? stats
+      : { ...stats, bavail: Math.floor(disk.freeBytes / stats.bsize) };
+  }) as typeof real.statfsSync;
+  return { ...real, default: { ...real, statfsSync }, statfsSync };
+});
 
 let dir: string;
 let file: string;
@@ -158,9 +172,16 @@ describe("the health check", () => {
   });
 
   it("can be switched off with 0", async () => {
+    // 1 MB free, under the 64 MB default: refused until the check is off.
+    disk.freeBytes = 1024 * 1024;
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    delete process.env.HEALTH_MIN_FREE_MB;
+    expect((await get()).status).toBe(503);
     process.env.HEALTH_MIN_FREE_MB = "0";
     expect((await get()).status).toBe(200);
+    log.mockRestore();
     delete process.env.HEALTH_MIN_FREE_MB;
+    disk.freeBytes = null;
   });
 
   it("stores no submission while probing", async () => {

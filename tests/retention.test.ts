@@ -27,7 +27,7 @@ async function freshDb(file: string) {
 }
 
 describe("submissions are kept for RETENTION_MONTHS and no longer", () => {
-  it("promises 24 months, the number the privacy page states", () => {
+  it("pins the 24 months the privacy page renders, so a change to it is made on purpose", () => {
     expect(RETENTION_MONTHS).toBe(24);
   });
 
