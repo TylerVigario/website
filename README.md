@@ -51,46 +51,16 @@ control, and the dev/prod fail-fast surface should match).
 compiled server directly (`node ./dist/server/entry.mjs`) — the same
 entrypoint production runs. Both need a prior `npm run build`.
 
-Pre-commit runs lint-staged then `astro check` and the tests. Commitlint enforces the Angular type set on the message
-— `feat`, `fix`, `refactor`, `perf`, `revert`, `style`, `ci`, `build`,
-`docs`, `test`, `chore`, lowercase subject. The type is the release
-decision: `feat` bumps minor; `fix`, `revert`, `perf`, `refactor` and
-`build` bump patch, because each changes the shipped artifact; `ci`,
-`docs`, `test`, `chore` and `style` never bump. A revert is titled
-`revert: …`, not GitHub's `Revert "…"`, which the title check refuses.
+Pre-commit runs lint-staged, then `astro check` and the tests.
+Commitlint holds each message to Conventional Commits, and the type is
+the release decision: CLAUDE.md's "Git + PR workflow" says which types
+bump and why.
 
 ## Where stuff lives
 
-```text
-src/pages/                     # ROUTES — one file, one URL. No router config.
-  index about contact privacy services services/* work work/* pots-migration
-  404 500                      # prerendered like any other page
-  robots.txt.ts                # generated, so its sitemap URL comes from `site`
-  manifest.webmanifest.ts      # generated, so icon paths cannot drift from reality
-  speculation-rules.json.ts    # which links to prerender on hover, loaded by header
-  .well-known/security.txt.ts  # RFC 9116, generated so its required fields cannot rot
-  api/quote                    # POST: zod-validated, writes to sqlite, optionally emails me
-  api/pots-audit               # POST: same flow, scoped to the POTS landing page
-  api/health                   # GET/HEAD: open, read, schema, write probe, free space → 200 or 503
-  api/[...path]                # any other /api/ path: a Problem Details 404
-src/lib/
-  db.ts                        # better-sqlite3 singleton on globalThis
-  api/                         # zod schemas (QuoteRequest, PotsAuditRequest), the one submission path, Problem Details (RFC 9457)
-  forms/enhance.ts             # progressive enhancement. Never erases what you typed.
-  forms/rules.ts               # client-side rules, proven equivalent to the schemas by a test
-  services.ts work.ts          # content catalogs: the services (the quote form's options), case studies
-  business.ts                  # the business as structured data names it, and where it works
-  photos.ts                    # other people's photos, each carrying the credit its licence asks for
-  image-sizes.ts               # every image's `sizes`, derived from its container
-  email/mailer.ts              # nodemailer; best-effort form notification, logged on failure
-  email/cap.ts                 # at most 50 notifications in any 24 hours; past that, saved and held
-src/emails/templates.ts        # notification bodies as HTML strings, escaped at every interpolation
-src/components/                # .astro — Nav, Hero, the forms, Lightbox, ServicePage, icons/
-src/layouts/Base.astro         # <head>, canonical URL, and the frame: nav, <main>, footer
-src/scripts/                   # browser JS: lightbox, scroll reveal, and each form's call to enhance.ts
-src/styles/global.css          # @theme tokens and the reveal rules
-astro.config.ts                # `site`: the public URL every canonical link and the sitemap are built from
-```
+One file per URL under `src/pages/`, with no router config. The rest of
+the tree is mapped in CLAUDE.md's "Key paths", so there is one map to
+keep true.
 
 ## Build & gate
 
@@ -113,13 +83,8 @@ Merging and releasing are separate decisions, so nothing ships on merge.
 Installing a release is the host's business — the repo carries no tool
 that runs on a server.
 
-`npm run ci` is the gate, and it is the same gate CI runs:
-
-```text
-check:install-scripts → lint → typecheck → format → test → build → check:bundles → check:forms
-```
-
-Run it before pushing and CI should hold no surprises. The `pre-push`
+`npm run ci` runs the gate's checks in one go; `package.json` lists
+them. Run it before pushing and CI should hold no surprises. The `pre-push`
 hook runs all of it for you; `pre-commit` keeps to the fast checks
 (lint-staged, typecheck, test) so committing stays quick.
 
@@ -148,14 +113,15 @@ same commits.
   toolchain wherever `npm ci` runs.
 - **SQLITE_PATH must be absolute**. The app throws via getDbPath() if it
   is unset or relative, when the database is first opened (the first
-  submission or health check; static pages keep serving). No cwd fallback — that bit me
+  page with a form, submission or health check; static pages keep serving). No cwd fallback — that bit me
   when an old deploy wrote `data/quotes.db` inside a release dir that
   got nuked on the next swap.
 - **Health check is `/api/health`**, not `/`. The homepage rendering
   200 only means the static tree is being served — those are files and
-  would keep serving with the process dead. Health runs five checks
-  (open, read, schema, write probe, free space) and returns 503 naming
-  the one that failed. The write probe is the point: a full disk, a
+  would keep serving with the process dead. Health runs the checks that
+  answer whether a submission would be stored, which
+  `src/pages/api/health.ts` names, and returns 503 naming the one that
+  failed. The write probe is the point: a full disk, a
   read-only remount or a permissions change leaves SELECT working while
   every submission fails. Three more are advisory — whether mail is on,
   whether every lead was announced, and whether the spam lists are fresh
