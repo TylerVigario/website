@@ -1,1 +1,1 @@
-npx --no -- commitlint --edit $1 --verbose
+npx --no -- commitlint --edit "$1" --verbose
