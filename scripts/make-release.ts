@@ -241,14 +241,64 @@ for (const f of fs.readdirSync(prebuildDir)) {
   if (f !== "linux-x64.node") fs.rmSync(path.join(prebuildDir, f), { recursive: true });
 }
 
+// What only compiling better-sqlite3 needs comes out too, as the seven
+// other binaries do: SQLite's C source (deps/), better-sqlite3's own C++
+// (src/, binding.gyp), and node-addon-api, its one dependency, which is
+// C++ headers that binding.gyp includes and nothing at runtime requires.
+// The host runs the prebuilt binary and never compiles, so these were
+// 2.7 MB of every download that nothing reads. package-lock.json still
+// records what npm ci installed; the tree is that install less these.
+// SQLite's version and notice are read from its source first, for the
+// licence list below. A better-sqlite3 whose runtime code names
+// node-addon-api fails here, and a missing path fails the removal, so a
+// release that changes either is looked at; one that needs anything else
+// removed fails check:release, which boots the unpacked server and posts
+// its forms.
+const modulesDir = path.join(staging, "node_modules");
+const sqliteHeader = fs.readFileSync(
+  path.join(modulesDir, "better-sqlite3/deps/sqlite3/sqlite3.h"),
+  "utf8",
+);
+const sqliteVersion = /^#define SQLITE_VERSION\s+"([^"]+)"/m.exec(sqliteHeader)?.[1];
+// The blessing at the top of sqlite3.h, from the disclaimer to the rule
+// under it, with the comment markers taken off.
+const sqliteNotice = /^\*\* (The author disclaims copyright[\s\S]*?)^\*{10,}/m
+  .exec(sqliteHeader)?.[1]
+  ?.split("\n")
+  .map((line) => line.replace(/^\*\* ?/, ""))
+  .join("\n")
+  .trim();
+if (!sqliteVersion || !sqliteNotice) {
+  console.error("error: better-sqlite3's sqlite3.h no longer reads as expected (version, notice).");
+  process.exit(1);
+}
+const runtimeLib = path.join(modulesDir, "better-sqlite3/lib");
+const namesAddonApi = fs
+  .readdirSync(runtimeLib, { recursive: true, encoding: "utf8" })
+  .filter((f) => f.endsWith(".js"))
+  .filter((f) => fs.readFileSync(path.join(runtimeLib, f), "utf8").includes("node-addon-api"));
+if (namesAddonApi.length) {
+  console.error(
+    `error: better-sqlite3's runtime code names node-addon-api (${namesAddonApi.join(", ")}), which the release removes.`,
+  );
+  process.exit(1);
+}
+for (const compileOnly of [
+  "better-sqlite3/deps",
+  "better-sqlite3/src",
+  "better-sqlite3/binding.gyp",
+  "node-addon-api",
+]) {
+  fs.rmSync(path.join(modulesDir, compileOnly), { recursive: true });
+}
+
 // THIRD-PARTY-LICENSES.md is Vite's (astro.config.ts), and lists what the
 // server bundles. The tarball also carries node_modules, which the server
 // loads beside the bundle, so those packages are added to the same file in
 // the same form, and it lists every third-party package the artifact
 // ships. With them SQLite, which better-sqlite3 compiles into its binary:
 // public domain, so there is no licence to copy, but it is in the artifact
-// all the same, and its notice and version are read from the source
-// better-sqlite3 carries. Sorted, so a rebuild writes the same bytes.
+// all the same. Sorted, so a rebuild writes the same bytes.
 const licencesFile = path.join(staging, "dist/server/THIRD-PARTY-LICENSES.md");
 // Read, not checked for and then appended to: the read is the check, and
 // the file is written whole from what it returned.
@@ -261,7 +311,6 @@ try {
   );
   process.exit(1);
 }
-const modulesDir = path.join(staging, "node_modules");
 const besideTheBundle = fs
   .readdirSync(modulesDir)
   .filter((d) => !d.startsWith("."))
@@ -284,23 +333,6 @@ const besideEntries = besideTheBundle.map((name) => {
   const text = fs.readFileSync(path.join(dir, file), "utf8").trim();
   return `## ${pkg.name} - ${pkg.version} (${pkg.license ?? "no licence named"})\n\n${text}\n`;
 });
-const sqliteHeader = fs.readFileSync(
-  path.join(modulesDir, "better-sqlite3/deps/sqlite3/sqlite3.h"),
-  "utf8",
-);
-const sqliteVersion = /^#define SQLITE_VERSION\s+"([^"]+)"/m.exec(sqliteHeader)?.[1];
-// The blessing at the top of sqlite3.h, from the disclaimer to the rule
-// under it, with the comment markers taken off.
-const sqliteNotice = /^\*\* (The author disclaims copyright[\s\S]*?)^\*{10,}/m
-  .exec(sqliteHeader)?.[1]
-  ?.split("\n")
-  .map((line) => line.replace(/^\*\* ?/, ""))
-  .join("\n")
-  .trim();
-if (!sqliteVersion || !sqliteNotice) {
-  console.error("error: better-sqlite3's sqlite3.h no longer reads as expected (version, notice).");
-  process.exit(1);
-}
 besideEntries.push(
   `## SQLite - ${sqliteVersion} (public domain)\n\n` +
     `Compiled into better-sqlite3's binary, node_modules/better-sqlite3/prebuilds/linux-x64.node.\n\n` +

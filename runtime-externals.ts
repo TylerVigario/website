@@ -9,7 +9,8 @@
  *
  * Keep it minimal. Everything not listed here gets bundled by
  * `ssr.noExternal`, which is what keeps the artifact's node_modules to
- * better-sqlite3 and the one package it depends on, instead of the
+ * better-sqlite3 alone (node-addon-api, its one dependency, is needed only
+ * to compile it, and the release removes it), instead of the
  * ~175 MB a plain `npm ci --omit=dev` produces — that install is almost
  * entirely Astro's build toolchain (rolldown, vite, shiki, sharp), none
  * of which the running server touches.

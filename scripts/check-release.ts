@@ -14,6 +14,7 @@
  *   - RELEASE and package.json name the same version
  *   - it lists the licence of every third-party package it carries: what
  *     the server bundles, what is beside it in node_modules, and SQLite
+ *   - it carries nothing only compiling needs: no C or C++ source, no gyp
  *   - the unpacked server, with its own node_modules, passes check:forms
  *
  * The last runs scripts/check-forms.ts from inside the unpacked tree, so
@@ -151,7 +152,21 @@ try {
       );
     const unlisted = [...beside, "SQLite"].filter((name) => !names.has(name));
     if (unlisted.length) fail(`THIRD-PARTY-LICENSES.md does not list ${unlisted.join(", ")}`);
-    else console.log(`  ✓ the ${beside.length} packages in node_modules and SQLite are listed too`);
+    else {
+      const what = beside.length === 1 ? "package" : `${beside.length} packages`;
+      console.log(`  ✓ the ${what} in node_modules and SQLite are listed too`);
+    }
+    // Only what runs. make-release.ts removes what only compiling
+    // better-sqlite3 needs; any C or C++ source or gyp file left in
+    // node_modules is something the host would download and never read.
+    const toCompile = readdirSync(modules, { recursive: true, encoding: "utf8" }).filter((f) =>
+      /\.(c|cc|cpp|h|hh|hpp|gyp|gypi)$/.test(f),
+    );
+    if (toCompile.length) {
+      fail(
+        `node_modules carries ${toCompile.length} files only compiling needs, such as ${toCompile.slice(0, 3).join(", ")}`,
+      );
+    } else console.log("  ✓ node_modules carries nothing only compiling needs");
     if (!entries.length) fail("THIRD-PARTY-LICENSES.md lists no packages");
     else if (entries.every((e) => e.text || NO_LICENCE_TEXT.has(e.name))) {
       const but = [...NO_LICENCE_TEXT].map(([name, why]) => `, but ${name}: ${why}`).join("");
