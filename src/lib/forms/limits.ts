@@ -28,3 +28,10 @@ export const BODY_LIMIT_BYTES = 256 * 1024;
 /** The one message for every limit, so client and server say it alike. */
 export const tooLong = (max: number) =>
   `Please keep this to ${max.toLocaleString("en-US")} characters or fewer.`;
+
+/** A single-line field as it is stored: each run of control characters
+ *  made one space (src/lib/api/one-line.ts). Here, beside the lengths,
+ *  so the browser's rules measure what the server will keep, and a long
+ *  name with a pasted tab in it is not refused in one and kept in the
+ *  other. */
+export const toOneLine = (value: string) => value.replace(/[\p{Cc}\p{Zl}\p{Zp}]+/gu, " ");
