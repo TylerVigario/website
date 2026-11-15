@@ -14,7 +14,9 @@
  * inline <script>, including speculation rules and import maps, is
  * subject to the policy.
  */
-const SCRIPT_ELEMENT = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+// Ends at an end tag as HTML ends one: `</script`, then whitespace or
+// attributes, then `>`, so `</script >` is not passed over.
+const SCRIPT_ELEMENT = /<script\b([^>]*)>([\s\S]*?)<\/script\b[^>]*>/gi;
 const DATA_BLOCK = /\stype\s*=\s*["']?application\/(ld\+)?json["']?/i;
 const STYLE_ELEMENT = /<style\b/i;
 /** A style attribute on any element. Within a tag only, so prose that
