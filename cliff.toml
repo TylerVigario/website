@@ -1,5 +1,5 @@
 [changelog]
-header = "# Changelog\n"
+header = "# Changelog\n\n"
 body = """
 {% if version %}\
 ## [{{ version | trim_start_matches(pat="v") }}](https://github.com/TylerVigario/website/{% if previous.version %}compare/{{ previous.version }}...{{ version }}{% else %}releases/tag/{{ version }}{% endif %}) ({{ timestamp | date(format="%Y-%m-%d") }})
@@ -29,7 +29,9 @@ topo_order = false
 sort_commits = "oldest"
 tag_pattern = "v[0-9].*"
 commit_preprocessors = [
-  { pattern = '\(#\d+\)', replace = "" },
+  # The space before the number goes with it, or every bullet a pull
+  # request merged ends in one.
+  { pattern = '\s*\(#\d+\)', replace = "" },
 ]
 # Angular Conventional Commits. The line these parsers draw is DID THE
 # ARTIFACT CHANGE — because the version names a tarball, and two
@@ -37,8 +39,8 @@ commit_preprocessors = [
 #
 # `feat` / `fix` / `revert` change what the site does. `build` changes
 # how the tarball is assembled, `perf` and `refactor` change the code
-# that gets compiled into it — all five produce different bytes, so all
-# five appear in the changelog and drive a bump.
+# that gets compiled into it — all six produce different bytes, so all
+# six appear in the changelog and drive a bump.
 #
 # `ci` / `docs` / `test` / `chore` / `style` cannot reach the artifact.
 # They stay skipped: no bump, no changelog entry, and a dispatch with
