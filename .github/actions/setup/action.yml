@@ -32,14 +32,13 @@ runs:
       # The release path rewrites package-lock.json's root `version`
       # on every run, so a key based on hashFiles('**/package-lock.json')
       # would rotate every release and accumulate one stale cache per
-      # run. Node major is read from .nvmrc so the key invalidates
-      # correctly when the major bumps.
+      # run. ~/.npm holds tarballs and metadata, nothing tied to a Node
+      # version, so the key names none.
       id: cache-key
       shell: bash
       run: |
-        NODE_MAJOR=$(sed -E 's/^[^0-9]*([0-9]+).*/\1/' .nvmrc)
         HASH=$(jq -S '{dependencies,devDependencies,optionalDependencies,peerDependencies}' package.json | sha256sum | cut -c1-16)
-        echo "key=npm-${{ runner.os }}-node${NODE_MAJOR}-${HASH}" >> "$GITHUB_OUTPUT"
+        echo "key=npm-${{ runner.os }}-${HASH}" >> "$GITHUB_OUTPUT"
 
     - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:

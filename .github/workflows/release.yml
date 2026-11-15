@@ -45,7 +45,7 @@ name: Release
 # THE APP TOKEN NEVER TOUCHES DISK. Checkouts here persist no
 # credentials: nothing in this workflow runs git against the remote — the
 # release commit is created by the forge over GraphQL, and gh reads its
-# token from the environment of the two steps that write. A checkout with
+# token from the environment of the three steps that write. A checkout with
 # the App token and the default persist-credentials wrote it into
 # .git/config for the whole job, readable by every dependency `npm ci` and
 # the build executed, and that token is past main's protection.

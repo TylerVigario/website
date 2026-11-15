@@ -24,12 +24,15 @@ name: CodeQL
 on:
   # No paths filter on push. CodeQL compares each analysis with the
   # previous commit's, and a commit it skipped is a gap it reports as a
-  # missing analysis, not as nothing to see.
+  # missing analysis, not as nothing to see. The one commit main gets
+  # without a run is a release's own, whose message (release.yml) asks
+  # GitHub to run no workflows for it; it changes only the version and
+  # the changelog, and the next push is analysed against it.
   push:
     branches: [main]
   # Every pull request, both languages. main.json's code_scanning rule
   # holds a merge until CodeQL has analysed the pull request, and refuses
-  # one that brings in a high or critical security alert or an error. A
+  # one that brings in a security alert of medium or above, or an error. A
   # paths filter would leave the pull requests it skipped with no
   # analysis for the rule to read.
   pull_request:

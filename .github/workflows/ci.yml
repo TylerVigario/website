@@ -1,9 +1,5 @@
 name: CI
 
-env:
-  HUSKY: 0
-  CI: true
-
 on:
   push:
     branches: [main]
@@ -52,6 +48,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # The Node the pins name, which is what runs the script: Node strips
+      # its types, and the runner image's own Node may not.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
       - name: Verify Node major pins agree
         # .nvmrc and package.json#engines.node must declare the same
         # Node major. CI reads .nvmrc directly (node-version-file, in the

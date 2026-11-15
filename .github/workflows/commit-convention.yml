@@ -33,19 +33,16 @@ on:
   push:
     branches: [main]
 
+# The title comes from the event payload, so no step calls the API.
 permissions:
   contents: read
-  pull-requests: read
-
-env:
-  HUSKY: 0
-  CI: true
 
 jobs:
   validate:
     name: Validate PR title
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -55,13 +52,9 @@ jobs:
           # This job runs on titles anyone opening a PR can write. Nothing
           # after checkout needs the token, so it is not left in .git/config.
           persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-      # `--ignore-scripts` skips the husky `prepare` step (and any
-      # other lifecycle script) — none are needed to run commitlint,
-      # and skipping shaves time off the job.
-      - run: npm ci --ignore-scripts
+      # Node from .nvmrc, the npm cache and `npm ci --ignore-scripts`, as
+      # every other job has them.
+      - uses: ./.github/actions/setup
       - name: Run commitlint on PR title
         env:
           TITLE: ${{ github.event.pull_request.title }}
@@ -73,6 +66,7 @@ jobs:
     name: Lint main
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -80,10 +74,7 @@ jobs:
           # depth of 1 cannot answer that for a push of several commits.
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-      - run: npm ci --ignore-scripts
+      - uses: ./.github/actions/setup
       - name: Lint every commit that landed
         env:
           BEFORE: ${{ github.event.before }}

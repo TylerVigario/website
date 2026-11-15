@@ -74,7 +74,8 @@ node --run typecheck
 # type-aware lint that a change elsewhere breaks, passed every hook and
 # failed in CI. About seven seconds, which is what makes "local is a
 # superset of the gate" true rather than a description.
-node --run lint
+node --run lint:js
+node --run lint:md
 node --run format
 node --run test
 
