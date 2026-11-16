@@ -6,8 +6,9 @@ import { siteRoot } from "@/lib/site";
 /**
  * The frame of a service page: a header, the capability lists, the
  * approach in the default slot, the work that shows it, and the call to
- * action. The markup is the Linux and Windows pages', so a page
- * built on this one looks like its siblings; what differs is passed in.
+ * action. Every service page is built on it but Security Cameras, which has
+ * sections of its own, so a page looks like its siblings; what differs is
+ * passed in.
  *
  * `quoteService` is a catalog title. The call to action links to the
  * quote form with that service ticked, and the form only honours a title
@@ -43,6 +44,12 @@ interface Props {
   quoteService: string;
   ctaTitle: string;
   ctaText: string;
+  /** The Service entity's name, where it is not the page's title. */
+  serviceName?: string;
+  /** The Service entity's description, where it is not the meta description. */
+  serviceDescription?: string;
+  /** The approach section's heading. */
+  approachTitle?: string;
 }
 
 const {
@@ -56,6 +63,9 @@ const {
   quoteService,
   ctaTitle,
   ctaText,
+  serviceName = title,
+  serviceDescription = description,
+  approachTitle = "How we work",
 } = Astro.props;
 
 const site = siteRoot(Astro.site);
@@ -63,8 +73,8 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Service",
   "@id": `${site}${path}#service`,
-  name: title,
-  description,
+  name: serviceName,
+  description: serviceDescription,
   url: `${site}${path}`,
   provider: businessRef(site),
   serviceType: serviceTypes,
@@ -133,7 +143,7 @@ const jsonLd = {
       <div class="mx-auto max-w-6xl px-6">
         <div data-reveal="up">
           <div class="mx-auto max-w-3xl">
-            <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">How we work</h2>
+            <h2 class="text-2xl font-bold tracking-tight text-navy sm:text-4xl">{approachTitle}</h2>
             <div class="mt-6 space-y-4 leading-relaxed text-muted sm:text-lg">
               <slot />
             </div>
