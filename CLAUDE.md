@@ -41,7 +41,9 @@ License: **AGPL-3.0-or-later** for the software, with two categories
 reserved and not granted — brand imagery in `src/assets/images/`, and
 the written content (case studies, service descriptions, landing copy).
 `LICENSE-NOTICE.md` draws that line path by path and is the file to
-update if anything moves.
+update if anything moves. Everything it does not name is granted, so new
+code needs no entry there, and new copy that speaks for the business
+gets one.
 
 The boundary is load-bearing rather than decorative. The reservation
 previously named `public/images/`, which the Astro rebuild emptied when
