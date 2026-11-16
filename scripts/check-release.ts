@@ -4,7 +4,8 @@
  * The build proves the source compiles and check:forms proves the built
  * server takes submissions. Neither touches the artifact: the tarball is
  * assembled afterwards, from a fresh install of the runtime externals
- * with every prebuilt binary but one deleted, and a mistake in that
+ * with every prebuilt binary but one, and what only compiling needs,
+ * deleted, and a mistake in that
  * assembly (a missing file, the wrong native binary, a manifest that does
  * not describe the tree) used to be discovered by the host, at install,
  * after the release was already permanent.
@@ -20,8 +21,8 @@
  * The last runs scripts/check-forms.ts from inside the unpacked tree, so
  * the server it boots is the artifact's, loading the artifact's copy of
  * better-sqlite3. The artifact carries the linux-x64 binary only, so this
- * runs where the artifact runs and nowhere else: CI, not a developer's
- * machine.
+ * runs where the artifact runs and nowhere else: linux-x64, which CI
+ * always is.
  *
  * Usage: node scripts/check-release.ts dist-release/vigario-website-1.2.3.tar.gz
  */
@@ -112,6 +113,15 @@ try {
     fail(`RELEASE says ${release.version} (dirty=${release.dirty}), package.json ${version}`);
   }
 
+  // What the tarball carries beside the bundle: each package in
+  // node_modules, by its directory's name.
+  const modules = path.join(root, "node_modules");
+  const beside = readdirSync(modules)
+    .filter((d) => !d.startsWith("."))
+    .flatMap((d) =>
+      d.startsWith("@") ? readdirSync(path.join(modules, d)).map((s) => `${d}/${s}`) : [d],
+    );
+
   // The licences of what the server bundles, which build.license writes
   // (astro.config.ts), and of what make-release.ts adds beside it from
   // node_modules. This is what notices either stopping, or a package with
@@ -141,38 +151,32 @@ try {
     for (const name of NO_LICENCE_TEXT.keys()) {
       if (!names.has(name)) fail(`${name} is no longer bundled; take it out of NO_LICENCE_TEXT`);
     }
-    // Everything the tarball carries beside the bundle is listed too: each
-    // package in node_modules, by the name its package.json gives, and the
-    // SQLite better-sqlite3 compiles in.
-    const modules = path.join(root, "node_modules");
-    const beside = readdirSync(modules)
-      .filter((d) => !d.startsWith("."))
-      .flatMap((d) =>
-        d.startsWith("@") ? readdirSync(path.join(modules, d)).map((s) => `${d}/${s}`) : [d],
-      );
+    // Everything beside the bundle is listed too, and the SQLite that
+    // better-sqlite3 compiles in.
     const unlisted = [...beside, "SQLite"].filter((name) => !names.has(name));
     if (unlisted.length) fail(`THIRD-PARTY-LICENSES.md does not list ${unlisted.join(", ")}`);
     else {
       const what = beside.length === 1 ? "package" : `${beside.length} packages`;
       console.log(`  ✓ the ${what} in node_modules and SQLite are listed too`);
     }
-    // Only what runs. make-release.ts removes what only compiling
-    // better-sqlite3 needs; any C or C++ source or gyp file left in
-    // node_modules is something the host would download and never read.
-    const toCompile = readdirSync(modules, { recursive: true, encoding: "utf8" }).filter((f) =>
-      /\.(c|cc|cpp|h|hh|hpp|gyp|gypi)$/.test(f),
-    );
-    if (toCompile.length) {
-      fail(
-        `node_modules carries ${toCompile.length} files only compiling needs, such as ${toCompile.slice(0, 3).join(", ")}`,
-      );
-    } else console.log("  ✓ node_modules carries nothing only compiling needs");
     if (!entries.length) fail("THIRD-PARTY-LICENSES.md lists no packages");
     else if (entries.every((e) => e.text || NO_LICENCE_TEXT.has(e.name))) {
       const but = [...NO_LICENCE_TEXT].map(([name, why]) => `, but ${name}: ${why}`).join("");
       console.log(`  ✓ ${entries.length} packages listed, each with its licence text${but}`);
     }
   }
+
+  // Only what runs. make-release.ts removes what only compiling
+  // better-sqlite3 needs; any C or C++ source or gyp file left in
+  // node_modules is something the host would download and never read.
+  const toCompile = readdirSync(modules, { recursive: true, encoding: "utf8" }).filter((f) =>
+    /\.(c|cc|cpp|h|hh|hpp|gyp|gypi)$/.test(f),
+  );
+  if (toCompile.length) {
+    fail(
+      `node_modules carries ${toCompile.length} files only compiling needs, such as ${toCompile.slice(0, 3).join(", ")}`,
+    );
+  } else console.log("  ✓ node_modules carries nothing only compiling needs");
 
   // check-forms resolves the server from its working directory and its
   // own imports from where it lives, so run from here it boots the

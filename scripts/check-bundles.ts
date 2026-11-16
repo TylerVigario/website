@@ -22,9 +22,8 @@
  * thing that would force the Content-Security-Policy to carry per-page
  * hashes. Under the old rule this build would fail for doing exactly
  * what it should, while a 400 KB file went uncounted if it were ever
- * inlined. So the budget counts INLINE AND EXTERNAL TOGETHER. Weight is
- * what the comment above always said mattered; now it is what is
- * measured. Wiring Sentry through its Astro integration once added 85 KB
+ * inlined. So the budget counts INLINE AND EXTERNAL TOGETHER, and weight
+ * is what is measured. Wiring Sentry through its Astro integration once added 85 KB
  * referenced from every page while the build stayed green; that trips
  * this whether it arrives inline or as a file.
  *
@@ -64,7 +63,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { inlineCodeIn } from "./inline-code.ts";
+import { inlineCodeIn, inlineScripts } from "./inline-code.ts";
 
 const ROOT = "dist/client";
 
@@ -102,8 +101,6 @@ function htmlFiles(dir: string): string[] {
     );
 }
 
-// Skips ld+json: structured data is markup in a <script> tag, not code.
-const INLINE = /<script(?![^>]*ld\+json)(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g;
 const EXTERNAL = /<script[^>]*\ssrc="([^"]+)"/g;
 const PRELOAD = /<link[^>]*\brel="modulepreload"[^>]*\bhref="([^"]+)"/g;
 // Static imports in emitted ESM, minified or not: `import "x"`,
@@ -190,7 +187,9 @@ for (const file of htmlFiles(ROOT).sort()) {
     failed = true;
   }
 
-  const inlineCode = [...html.matchAll(INLINE)].map((m) => m[1] ?? "");
+  // Data blocks (JSON-LD, JSON) are skipped: markup in a <script> tag,
+  // never run. inline-code.ts decides what one is, for both checks.
+  const inlineCode = inlineScripts(html);
   const inline = inlineCode.reduce((sum, code) => sum + code.length, 0);
   const named = [
     ...[...html.matchAll(EXTERNAL)].flatMap((m) => (m[1] ? [m[1]] : [])),
