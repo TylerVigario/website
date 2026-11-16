@@ -15,11 +15,6 @@ import { PotsAuditRequest } from "@/lib/api/pots-audit";
  * at request time, on a real submission, on the one path this site exists
  * to serve, with the row lost and only a stack trace in the journal.
  *
- * And the table spends a form's stamp once (src/lib/api/fill-time.ts): a
- * second row with a stamp already written is not written, rows from
- * before stamps share an empty one, and any other failed write is still
- * an error.
- *
  * These assertions run against a real SQLite file created by the real
  * getDb(), not a fixture, so the schema under test is the one that ships.
  */
@@ -70,7 +65,6 @@ describe("the write and the table", () => {
       contact: "ada@example.com",
       services: "Networking",
       details: null,
-      stamp: "round-trip",
     });
     const row = db.getDb().prepare("SELECT * FROM quotes WHERE id = ?").get(id) as Record<
       string,
@@ -79,43 +73,8 @@ describe("the write and the table", () => {
     expect(row.name).toBe("Ada");
     expect(row.services).toBe("Networking");
     expect(row.details).toBeNull();
-    expect(row.stamp).toBe("round-trip");
     // Defaulted rather than written, so it proves the default fires.
     expect(row.created_at).toBeTruthy();
-  });
-
-  it("spends a stamp once: a second row with it is not written", () => {
-    const count = () =>
-      (db.getDb().prepare("SELECT count(*) AS n FROM quotes").get() as { n: number }).n;
-    const row = { name: "Bo", contact: "x", services: "Linux", details: null, stamp: "once" };
-    expect(db.insertSubmission(row)).toEqual(expect.any(Number));
-    const before = count();
-    expect(db.insertSubmission({ ...row, name: "Bo again" })).toBeNull();
-    expect(count()).toBe(before);
-  });
-
-  it("lets rows from before stamps were spent share their empty stamp", () => {
-    const legacy = db
-      .getDb()
-      .prepare("INSERT INTO quotes (name, contact, services) VALUES ('Old', 'x', 'Linux')");
-    expect(() => {
-      legacy.run();
-      legacy.run();
-    }).not.toThrow();
-  });
-
-  it("lets any other failure through, rather than calling it spent", () => {
-    // NOT NULL on name: a write that fails for any reason but the stamp
-    // must surface, not read as a duplicate.
-    expect(() =>
-      db.insertSubmission({
-        name: null as unknown as string,
-        contact: "x",
-        services: "Linux",
-        details: null,
-        stamp: "not-null",
-      }),
-    ).toThrow(/NOT NULL constraint failed: quotes.name/);
   });
 });
 

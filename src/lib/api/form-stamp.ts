@@ -1,5 +1,5 @@
 import { formKey } from "@/lib/db";
-import { keepOrIssue, type FormName } from "@/lib/api/fill-time";
+import { keepOrIssue } from "@/lib/api/fill-time";
 
 /**
  * The stamp a form renders with (fill-time.ts), signed with the key the
@@ -12,7 +12,7 @@ import { keepOrIssue, type FormName } from "@/lib/api/fill-time";
  * from that page is refused as stale, where it would have failed against
  * the same database anyway; /api/health reports the database itself.
  */
-export function servedStamp(form: FormName, values: Record<string, string | string[]>): string {
+export function servedStamp(values: Record<string, string | string[]>): string {
   let key: Buffer;
   try {
     key = formKey();
@@ -20,5 +20,5 @@ export function servedStamp(form: FormName, values: Record<string, string | stri
     console.error("[fill-time] serving a form without a stamp: its key could not be read:", err);
     return "";
   }
-  return keepOrIssue(form, values, key);
+  return keepOrIssue(values, key);
 }

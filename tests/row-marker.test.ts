@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { BILL_RANGES, POTS_AUDIT_MARKER } from "../src/lib/api/pots-audit";
-import { issueStamp, SERVED_FIELD, type FormName } from "../src/lib/api/fill-time";
+import { issueStamp, SERVED_FIELD } from "../src/lib/api/fill-time";
 
 import type { insertSubmission as InsertSubmission } from "@/lib/db";
 
@@ -23,9 +23,7 @@ vi.mock("@/lib/email/mailer", () => ({
 const { submitPotsAudit, submitQuote } = await import("@/lib/api/submit");
 
 /** Served a minute ago, so the fill-time floor has passed. */
-const stamped = (form: FormName) => ({
-  [SERVED_FIELD]: issueStamp(form, KEY, Date.now() - 60_000),
-});
+const stamped = () => ({ [SERVED_FIELD]: issueStamp(KEY, Date.now() - 60_000) });
 
 /**
  * Both forms write to one `quotes` table, and `services` is the only
@@ -50,7 +48,7 @@ describe("the audit row marker", () => {
       name: "Dana",
       contact: "x",
       bill: BILL_RANGES[0],
-      ...stamped("pots-audit"),
+      ...stamped(),
     });
     expect(insertSubmission).toHaveBeenCalledOnce();
     expect(insertSubmission.mock.calls[0]?.[0].services).toBe(POTS_AUDIT_MARKER);
@@ -62,7 +60,7 @@ describe("the audit row marker", () => {
       name: "Dana",
       contact: "x",
       services: ["Custom Software", "Managed IT & Support"],
-      ...stamped("quote"),
+      ...stamped(),
     });
     expect(insertSubmission.mock.calls[0]?.[0].services).toBe(
       "Custom Software, Managed IT & Support",
