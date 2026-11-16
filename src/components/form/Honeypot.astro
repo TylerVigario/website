@@ -1,0 +1,27 @@
+---
+/**
+ * The honeypot (src/lib/api/honeypot.ts). Hidden from people, filled by
+ * bots, which fill every input they find: the first spam this site had
+ * ticked every checkbox it could see. A crawler fills this; a visitor
+ * never sees it.
+ *
+ * Hidden by CLASS, not a style attribute: the site is served under
+ * style-src 'self' with no 'unsafe-inline', so an inline style here would
+ * either be blocked or force the policy open for one field.
+ *
+ * Not display:none — some bots skip those deliberately. Positioned
+ * off-canvas instead, with aria-hidden and tabindex="-1" so it is absent
+ * for a screen reader and unreachable by keyboard, and autocomplete off
+ * so no browser ever fills it for a real person.
+ */
+interface Props {
+  /** The input's id, unique on the page. */
+  id: string;
+}
+const { id } = Astro.props;
+---
+
+<div class="hp-field" aria-hidden="true">
+  <label for={id}>Leave this field empty</label>
+  <input type="text" id={id} name="website" tabindex="-1" autocomplete="off" />
+</div>

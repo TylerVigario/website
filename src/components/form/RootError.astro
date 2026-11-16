@@ -1,0 +1,17 @@
+---
+/** The form-level message, for what names no field: rendered when the
+ *  server sent one back, and filled by enhance.ts on the JSON path. */
+interface Props {
+  message?: string | undefined;
+}
+const { message } = Astro.props;
+---
+
+<p
+  data-form-error
+  role="alert"
+  hidden={!message}
+  class="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700"
+>
+  {message ?? ""}
+</p>
