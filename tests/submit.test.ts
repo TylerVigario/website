@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { BODY_LIMIT_BYTES, MAX, tooLong } from "@/lib/forms/limits";
-import { issueStamp, MAX_AGE_MS, SERVED_FIELD, type FormName } from "@/lib/api/fill-time";
+import { issueStamp, SERVED_FIELD } from "@/lib/api/fill-time";
 import { NOTIFY_CAP, NOTIFY_WINDOW_HOURS } from "@/lib/email/cap";
 import type { insertSubmission as InsertSubmission } from "@/lib/db";
 
@@ -53,13 +53,9 @@ vi.mock("@/lib/email/mailer", () => ({
 const { readSubmission, submitQuote, submitPotsAudit, Unreadable } =
   await import("@/lib/api/submit");
 
-/** A stamp this server issued for `form`, `ago` ms back. */
-const stamp = (form: FormName, ago: number) => ({
-  [SERVED_FIELD]: issueStamp(form, KEY, Date.now() - ago),
-});
-/** The random value a stamp's row spends. */
-const nonceOf = (body: Record<string, unknown>) => String(body[SERVED_FIELD]).split(".")[1];
-/** What was sent, without its stamp: what a stale or spent one hands back. */
+/** A stamp this server issued, `ago` ms back. */
+const stamp = (ago: number) => ({ [SERVED_FIELD]: issueStamp(KEY, Date.now() - ago) });
+/** What was sent, without its stamp. */
 const unstamped = (body: Record<string, unknown>) =>
   Object.fromEntries(Object.entries(body).filter(([key]) => key !== SERVED_FIELD));
 const QUOTE = {
@@ -68,7 +64,7 @@ const QUOTE = {
   services: ["Networking & WiFi"],
   details: "",
   // Served a minute ago: long enough for a person to have filled it in.
-  ...stamp("quote", 60_000),
+  ...stamp(60_000),
 };
 const AUDIT = {
   business: "Acme",
@@ -76,7 +72,7 @@ const AUDIT = {
   contact: "559 555 0100",
   bill: "$100–$300",
   details: "two lines",
-  ...stamp("pots-audit", 60_000),
+  ...stamp(60_000),
 };
 
 beforeEach(() => {
@@ -105,8 +101,6 @@ describe("a valid quote", () => {
       contact: "dana@example.com",
       services: "Networking & WiFi",
       details: null,
-      // The stamp's random value, which this row spends.
-      stamp: nonceOf(QUOTE),
     });
     expect(sendQuoteNotification).toHaveBeenCalledWith(42, expect.anything());
     expect(markNotified).toHaveBeenCalledWith(42);
@@ -200,9 +194,9 @@ describe("a form sent within seconds of being served", () => {
   beforeEach(() => void vi.spyOn(console, "log").mockImplementation(() => {}));
 
   it("is refused, stores and sends nothing, and hands back everything sent", async () => {
-    const body = { ...QUOTE, ...stamp("quote", 0) };
+    const body = { ...QUOTE, ...stamp(0) };
     expect(await submitQuote(body)).toEqual({ kind: "refused", reason: "too-soon", values: body });
-    expect(await submitPotsAudit({ ...AUDIT, ...stamp("pots-audit", 0) })).toMatchObject({
+    expect(await submitPotsAudit({ ...AUDIT, ...stamp(0) })).toMatchObject({
       kind: "refused",
       reason: "too-soon",
     });
@@ -212,27 +206,27 @@ describe("a form sent within seconds of being served", () => {
   });
 
   it("is saved once the floor has passed", async () => {
-    expect(await submitQuote({ ...QUOTE, ...stamp("quote", 4000) })).toEqual({ kind: "saved" });
-    expect(await submitPotsAudit({ ...AUDIT, ...stamp("pots-audit", 4000) })).toEqual({
+    expect(await submitQuote({ ...QUOTE, ...stamp(4000) })).toEqual({ kind: "saved" });
+    expect(await submitPotsAudit({ ...AUDIT, ...stamp(4000) })).toEqual({
       kind: "saved",
     });
     expect(insertSubmission).toHaveBeenCalledTimes(2);
   });
 
   it("hears about a missing field first, and keeps its stamp for the re-render", async () => {
-    const body = { ...QUOTE, name: "", ...stamp("quote", 0) };
+    const body = { ...QUOTE, name: "", ...stamp(0) };
     const out = await submitQuote(body);
     expect(out.kind === "invalid" && out.values[SERVED_FIELD]).toBe(body[SERVED_FIELD]);
   });
 
   it("is still dropped without a word when it also filled the honeypot", async () => {
-    expect(await submitQuote({ ...QUOTE, ...stamp("quote", 0), website: "x" })).toEqual({
+    expect(await submitQuote({ ...QUOTE, ...stamp(0), website: "x" })).toEqual({
       kind: "dropped",
     });
   });
 
   it("logs which form and how soon, and nothing that was in it", async () => {
-    await submitPotsAudit({ ...AUDIT, ...stamp("pots-audit", 0) });
+    await submitPotsAudit({ ...AUDIT, ...stamp(0) });
     const [[line]] = vi.mocked(console.log).mock.calls as [[string]];
     expect(line).toMatch(
       /^\[fill-time\] refused a POTS audit submission sent \d+\.\d s after its form was served$/,
@@ -252,34 +246,19 @@ describe("a form whose stamp is stale", () => {
   it.each([
     ["with no stamp", unstamped],
     ["with a stamp that does not verify", forged],
-    [
-      "with a stamp from the other form",
-      (b: Record<string, unknown>) => ({ ...b, ...stamp("pots-audit", 60_000) }),
-    ],
-    [
-      "with a stamp past its age",
-      (b: Record<string, unknown>) => ({ ...b, ...stamp("quote", MAX_AGE_MS + 60_000) }),
-    ],
-  ])(
-    "is refused %s, stores and sends nothing, and hands back what was sent without it",
-    async (_, make) => {
-      const body = make(QUOTE);
-      expect(await submitQuote(body)).toEqual({
-        kind: "refused",
-        reason: "stale",
-        values: unstamped(body),
-      });
-      expect(insertSubmission).not.toHaveBeenCalled();
-      expect(sendQuoteNotification).not.toHaveBeenCalled();
-    },
-  );
+  ])("is refused %s, stores and sends nothing, and hands back what was sent", async (_, make) => {
+    const body = make(QUOTE);
+    expect(await submitQuote(body)).toEqual({ kind: "refused", reason: "stale", values: body });
+    expect(insertSubmission).not.toHaveBeenCalled();
+    expect(sendQuoteNotification).not.toHaveBeenCalled();
+  });
 
   it("is refused on the audit too", async () => {
     expect(await submitPotsAudit(unstamped(AUDIT))).toMatchObject({
       kind: "refused",
       reason: "stale",
     });
-    expect(await submitPotsAudit({ ...AUDIT, ...stamp("quote", 60_000) })).toMatchObject({
+    expect(await submitPotsAudit(forged(AUDIT))).toMatchObject({
       kind: "refused",
       reason: "stale",
     });
@@ -297,37 +276,15 @@ describe("a form whose stamp is stale", () => {
   });
 });
 
-describe("a form whose stamp is already spent", () => {
-  beforeEach(() => {
-    vi.spyOn(console, "log").mockImplementation(() => {});
-    // The unique index refused the row: a submission saved before it
-    // carried the same stamp.
-    insertSubmission.mockReturnValue(null);
-  });
-
-  it("is refused, sends nothing, and hands back what was sent without its stamp", async () => {
-    expect(await submitQuote(QUOTE)).toEqual({
-      kind: "refused",
-      reason: "spent",
-      values: unstamped(QUOTE),
-    });
-    expect(await submitPotsAudit(AUDIT)).toMatchObject({ kind: "refused", reason: "spent" });
-    expect(insertSubmission).toHaveBeenCalledWith(
-      expect.objectContaining({ stamp: nonceOf(QUOTE) }),
-    );
-    expect(insertSubmission).toHaveBeenCalledWith(
-      expect.objectContaining({ stamp: nonceOf(AUDIT) }),
-    );
-    expect(sendQuoteNotification).not.toHaveBeenCalled();
-    expect(sendPotsAuditNotification).not.toHaveBeenCalled();
-    expect(markNotified).not.toHaveBeenCalled();
-  });
-
-  it("logs it as spent, and nothing that was in it", async () => {
-    await submitQuote(QUOTE);
-    expect(vi.mocked(console.log)).toHaveBeenCalledWith(
-      "[fill-time] refused a quote submission sent with a stamp already spent",
-    );
+describe("a form sent again with the stamp it was sent with", () => {
+  it("is saved again, the way a page restored from memory sends it", async () => {
+    for (let i = 0; i < 2; i++) {
+      expect(await submitQuote(QUOTE)).toEqual({ kind: "saved" });
+      expect(await submitPotsAudit(AUDIT)).toEqual({ kind: "saved" });
+    }
+    expect(insertSubmission).toHaveBeenCalledTimes(4);
+    expect(sendQuoteNotification).toHaveBeenCalledTimes(2);
+    expect(sendPotsAuditNotification).toHaveBeenCalledTimes(2);
   });
 });
 

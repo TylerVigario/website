@@ -112,7 +112,7 @@ export const GET: APIRoute = () => {
     record("form-key", () => {
       // Every form is stamped with this key and every submission checked
       // against it (src/lib/api/fill-time.ts). Without it each page still
-      // renders, unstamped, and every submission is refused as expired:
+      // renders, unstamped, and every submission is refused as stale:
       // the forms would look fine and take nothing.
       if (formKey().length !== 32) throw new Error("the form key is not 32 bytes");
     });
@@ -132,7 +132,6 @@ export const GET: APIRoute = () => {
           contact: "__healthcheck__",
           services: "__healthcheck__",
           details: null,
-          stamp: "__healthcheck__",
         });
         throw new Rollback();
       });

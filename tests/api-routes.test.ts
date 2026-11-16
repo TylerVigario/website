@@ -27,8 +27,7 @@ vi.mock("@/lib/email/mailer", () => ({
   sendPausedNotice: vi.fn(() => Promise.resolve(true)),
 }));
 
-const { ALREADY_SENT_TYPE, STALE_FORM_TYPE, TOO_SOON_TYPE, VALIDATION_TYPE } =
-  await import("@/lib/api/error");
+const { STALE_FORM_TYPE, TOO_SOON_TYPE, VALIDATION_TYPE } = await import("@/lib/api/error");
 
 const quote = await import("@/pages/api/quote");
 const audit = await import("@/pages/api/pots-audit");
@@ -75,7 +74,7 @@ describe("the JSON path", () => {
         name: "Dana",
         contact: "x",
         services: ["Custom Software"],
-        [SERVED_FIELD]: issueStamp("quote", KEY, Date.now() - 60_000),
+        [SERVED_FIELD]: issueStamp(KEY, Date.now() - 60_000),
       }),
     );
     expect(res.status).toBe(200);
@@ -84,15 +83,12 @@ describe("the JSON path", () => {
   });
 
   it.each([
-    ["too soon", 0, 422, TOO_SOON_TYPE, "Sent Too Soon", "too-soon"],
-    ["with a forged stamp", -1, 422, STALE_FORM_TYPE, "Form Expired", "stale"],
-    ["with a spent stamp", 60_000, 409, ALREADY_SENT_TYPE, "Already Sent", "spent"],
+    ["too soon", 0, TOO_SOON_TYPE, "Sent Too Soon", "too-soon"],
+    ["with a forged stamp", -1, STALE_FORM_TYPE, "Form Out of Date", "stale"],
   ] as const)(
-    "answers a quote sent %s with its own problem type, and nothing stored",
-    async (_, ago, status, type, title, reason) => {
-      // A spent stamp is the unique index refusing the row.
-      if (reason === "spent") insertSubmission.mockReturnValueOnce(null);
-      const served = ago < 0 ? "1800000000000.x.y" : issueStamp("quote", KEY, Date.now() - ago);
+    "answers a quote sent %s 422, with its own problem type, and nothing stored",
+    async (_, ago, type, title, reason) => {
+      const served = ago < 0 ? "1800000000000.x" : issueStamp(KEY, Date.now() - ago);
       const res = await call(
         quote,
         jsonPost({
@@ -102,15 +98,15 @@ describe("the JSON path", () => {
           [SERVED_FIELD]: served,
         }),
       );
-      expect(res.status).toBe(status);
+      expect(res.status).toBe(422);
       expect(res.headers.get("content-type")).toContain("application/problem+json");
       expect(await res.json()).toEqual({
         type,
         title,
-        status,
+        status: 422,
         detail: API_MESSAGE[reason],
       });
-      if (reason !== "spent") expect(insertSubmission).not.toHaveBeenCalled();
+      expect(insertSubmission).not.toHaveBeenCalled();
     },
   );
 

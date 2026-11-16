@@ -86,13 +86,6 @@ const MIGRATIONS: readonly ((db: Database.Database) => void)[] = [
     db.exec("CREATE TABLE form_key (id INTEGER PRIMARY KEY CHECK (id = 1), key BLOB NOT NULL)");
     db.prepare("INSERT INTO form_key (id, key) VALUES (1, ?)").run(randomBytes(32));
   },
-  // 4 -> 5: the random value of the stamp each submission was sent with,
-  // unique, so a stamp is spent by the first submission saved with it.
-  // NULL for rows from before stamps were spent, which SQLite lets repeat.
-  (db) => {
-    db.exec("ALTER TABLE quotes ADD COLUMN stamp TEXT");
-    db.exec("CREATE UNIQUE INDEX quotes_stamp ON quotes (stamp)");
-  },
 ];
 
 /** The version a database is brought to. Exported so a test can assert
@@ -184,7 +177,7 @@ export function purgeExpired(db: Database.Database): number {
  *  endpoints write the same row and each used to carry its own copy of
  *  the INSERT. Two copies of a column list are two things to keep in
  *  step with the table, and nothing was checking either of them. */
-export const SUBMISSION_COLUMNS = ["name", "contact", "services", "details", "stamp"] as const;
+export const SUBMISSION_COLUMNS = ["name", "contact", "services", "details"] as const;
 
 export interface Submission {
   name: string;
@@ -192,8 +185,6 @@ export interface Submission {
   /** A real services list for a quote; POTS_AUDIT_MARKER for an audit. */
   services: string;
   details: string | null;
-  /** The random value of the form's stamp, which this row spends. */
-  stamp: string;
 }
 
 /** The key that signs form stamps (src/lib/api/fill-time.ts), read once
@@ -206,7 +197,7 @@ export function formKey(): Buffer {
   if (!key) {
     const row = db.prepare("SELECT key FROM form_key WHERE id = 1").get() as
       { key: Buffer } | undefined;
-    if (!row) throw new Error("form_key holds no key: every form would be refused as expired");
+    if (!row) throw new Error("form_key holds no key: no form stamp can be signed or checked");
     key = row.key;
     keys.set(db, key);
   }
@@ -263,8 +254,7 @@ export function unannouncedCount(minutes = 10): number {
   return row.n;
 }
 
-/** Writes one submission and returns its row id, or null when its stamp
- *  was already spent by a row before it, in which case nothing is written.
+/** Writes one submission and returns its row id.
  *
  *  The single place the table is written, with its columns named once,
  *  in SUBMISSION_COLUMNS: one named there without a field in `Submission`
@@ -272,20 +262,11 @@ export function unannouncedCount(minutes = 10): number {
  *  submit.ts stores fields by name and drops one it does not know;
  *  tests/schema-table-agree.test.ts is what catches that, before a real
  *  submission loses it.
- *
- *  The spend is the unique index's, not a lookup's, so two submissions
- *  racing with one stamp cannot both be written. Only that constraint is
- *  caught; any other failure propagates.
  */
-export function insertSubmission(row: Submission): number | null {
+export function insertSubmission(row: Submission): number {
   const cols = SUBMISSION_COLUMNS.join(", ");
   const placeholders = SUBMISSION_COLUMNS.map(() => "?").join(", ");
   const stmt = getDb().prepare(`INSERT INTO quotes (${cols}) VALUES (${placeholders})`);
-  try {
-    const info = stmt.run(...SUBMISSION_COLUMNS.map((c) => row[c]));
-    return Number(info.lastInsertRowid);
-  } catch (err) {
-    if (err instanceof Database.SqliteError && err.code === "SQLITE_CONSTRAINT_UNIQUE") return null;
-    throw err;
-  }
+  const info = stmt.run(...SUBMISSION_COLUMNS.map((c) => row[c]));
+  return Number(info.lastInsertRowid);
 }

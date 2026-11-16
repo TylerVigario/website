@@ -5,7 +5,6 @@ import POTSLanding from "@/components/POTSLanding.astro";
 import LandingHeader from "@/components/LandingHeader.astro";
 import { readSubmission, submitPotsAudit, unreadableMessage, type Values } from "@/lib/api/submit";
 import { PAGE_MESSAGE } from "@/lib/api/fill-time";
-import { REFUSED_STATUS } from "@/lib/api/error";
 
 // Built from Astro.site so the canonical domain lives in one place.
 const site = Astro.site!.href.replace(/\/$/, "");
@@ -76,12 +75,12 @@ if (Astro.request.method === "POST") {
     Astro.response.status = 422;
   } else if (outcome.kind === "refused") {
     // Refused by its stamp, not dropped: see fill-time.ts. Everything
-    // sent goes back into the form. A stamp that was only early goes back
-    // with it, so sending again counts from when the form was first
-    // served; a stale or spent one was left out, so the form gets a new one.
+    // sent goes back into the form, its stamp too: one that was only early
+    // is kept, so sending again counts from when the form was first
+    // served, and a stale one is replaced.
     values = outcome.values;
     errors = { "(root)": PAGE_MESSAGE[outcome.reason] };
-    Astro.response.status = REFUSED_STATUS[outcome.reason];
+    Astro.response.status = 422;
   } else {
     return Astro.redirect("/pots-migration?sent=1#audit", 303);
   }
