@@ -35,6 +35,12 @@ const SITE = "https://vigario.tech";
 // Internet, Opera Mobile and the rest), because a Baseline query picks
 // their versions by engine, so none runs an older one. When Vite reads
 // the browserslist itself, this goes.
+//
+// So browserslist is a dependency, like everything else the artifact is
+// built from: a bump to it can change the CSS. caniuse-lite is not. The
+// oldest versions, the ones that set the target, come from the Baseline
+// mapping; caniuse-lite supplies the newest, and is declared only so it
+// is kept current and browserslist does not warn that its data is old.
 const VITE_BROWSERS: Record<string, string> = {
   chrome: "chrome",
   and_chr: "chrome",

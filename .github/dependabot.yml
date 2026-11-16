@@ -49,6 +49,13 @@ updates:
         patterns:
           - astro
           - "@astrojs/*"
+      # @tailwindcss/vite pins tailwindcss to its own version, so the two
+      # move together or the bump is red alone.
+      tailwind:
+        dependency-type: production
+        patterns:
+          - tailwindcss
+          - "@tailwindcss/*"
       dev-tooling:
         dependency-type: development
         patterns:
