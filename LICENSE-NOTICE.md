@@ -1,9 +1,11 @@
 # What this licence covers
 
-`LICENSE` is the verbatim AGPL-3.0-or-later text and governs **the
-software**. Two categories are reserved and are **not** granted under
-it. This file states which is which, so nobody has to infer it from a
-directory layout that can move.
+`LICENSE` is the verbatim AGPL-3.0-or-later text. Everything in this
+repository is granted under it except what this file names: two
+categories that are the business's own and are **not** granted, and what
+belongs to other people. They are named path by path, so nobody has to
+infer the line from a directory layout that can move, and a file nobody
+thought to list is granted, not left out.
 
 ## Granted under AGPL-3.0-or-later
 
@@ -11,15 +13,18 @@ Copyright © 2026 Vigario Technology Solutions, licensed under the GNU
 Affero General Public License, version 3 or, at your option, any later
 version.
 
-The machinery. Everything that would still be useful with different
-words and different pictures in it:
+Everything not named in the two sections below. That is the machinery,
+everything that would still be useful with different words and
+different pictures in it, among it:
 
 - `src/components/`, `src/layouts/`, `src/scripts/`, `src/styles/`
 - `src/lib/` — the form pipeline, validation schemas, database access,
   mailer
+- `src/emails/` — the notification emails
 - `src/pages/**/*.ts` — the API routes and generated endpoints
-- `scripts/`, `tests/`, `.github/`, and the build configuration
 - the page structure and markup of `src/pages/**/*.astro`
+- `scripts/`, `tests/`, `.github/`, `.husky/`, the build configuration,
+  and the documentation
 
 Fork it, change it, run it. If you modify it and serve it over a
 network, AGPL §13 obliges you to offer your users your modified source
@@ -27,7 +32,15 @@ in turn. That is the whole reason this licence was chosen.
 
 ## Reserved — © Vigario Technology Solutions, All Rights Reserved
 
-**Brand and imagery.** `src/assets/images/` in full, apart from the
+What says who the business is and what it has done. Granted, it would
+let someone else present the business's work as their own: say they
+built Pipetree, or that they helped Bravo Farms move from POTS lines to
+VoIP, under the business's logo.
+
+**Brand and imagery.** The name Vigario Technology Solutions, VTS, the
+logo, and the founder's name and likeness: this licence grants no right
+to use any of them, under trademark law (AGPL §7(e)) or otherwise, and a
+fork runs under its own name. `src/assets/images/` in full, apart from the
 photographs under `stock/` and the Bravo Farms logo, which are other
 people's (below) — the VTS logo, the social-sharing card, and every
 client screenshot under `src/assets/images/work/`. Also every file in
@@ -37,13 +50,23 @@ and `icon-512.png`. The reservation follows the files, not the path.
 
 **Written content.** The prose, not the markup that arranges it:
 
-- the case studies in `src/pages/work/` and their entries in
-  `src/lib/work.ts`
-- service descriptions in `src/lib/services.ts` and `src/pages/services/`
+- the case studies in `src/pages/work/`, their summaries in
+  `src/pages/work.astro`, their entries in `src/lib/work.ts`, and the
+  captions and descriptions of their screenshots in
+  `src/components/ItalesowellScreenshots.astro` and
+  `src/components/PipetreeScreenshots.astro`
+- service descriptions in `src/lib/services.ts`, `src/pages/services.astro`,
+  `src/pages/services/` and `src/components/Services.astro`
 - the POTS migration copy in `src/components/POTSLanding.astro` and
   `src/pages/pots-migration.astro`
-- the about, hero, and call-to-action copy
+- the about, hero, and call-to-action copy, in `src/pages/index.astro`,
+  `src/components/Hero.astro`, `src/pages/about.astro` and
+  `src/components/About.astro`, and on each page above
 - the privacy policy's text in `src/pages/privacy.astro`
+
+And wherever else the site speaks for the business: what it has done and
+for whom, what it offers, and who it is. That text is reserved wherever
+it sits, in a file this list names or not.
 
 This is the part that is not code with words in it. It is an account of
 real engagements with named clients, written about work that was
