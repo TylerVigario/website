@@ -1,9 +1,10 @@
 ---
-import { areaServed, SEARCH_PLACE } from "@/lib/business";
+import { areaServed, SEARCH_PLACE, PHONE, businessRef } from "@/lib/business";
 import Base from "@/layouts/Base.astro";
+import { siteRoot } from "@/lib/site";
 
 // Built from Astro.site so the canonical domain lives in one place.
-const site = Astro.site!.href.replace(/\/$/, "");
+const site = siteRoot(Astro.site);
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Service",
@@ -12,10 +13,7 @@ const jsonLd = {
   description:
     "Security camera systems with local AI-powered detection via Frigate NVR. No cloud subscriptions required.",
   url: `${site}/services/security-cameras`,
-  provider: {
-    "@type": "ProfessionalService",
-    "@id": `${site}/#business`,
-  },
+  provider: businessRef(site),
   serviceType: [
     "Security Camera Installation",
     "NVR Configuration",
@@ -242,7 +240,7 @@ const capabilities = [
                   </svg>
                 </a>
                 <a
-                  href="tel:+15599001400"
+                  href={PHONE.href}
                   class="inline-flex items-center justify-center gap-3 rounded-xl border border-border px-6 py-3.5 text-base font-medium text-foreground transition-colors hover:border-accent/30 hover:bg-surface-light"
                 >
                   <svg
@@ -258,7 +256,7 @@ const capabilities = [
                       clip-rule="evenodd"
                     />
                   </svg>
-                  (559) 900-1400
+                  {PHONE.display}
                 </a>
               </div>
             </div>

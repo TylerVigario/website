@@ -5,9 +5,10 @@ import { CASE_STUDY_LEAD_SIZES, PHONE_SCREENSHOT_GRID, SCREENSHOT_GRID } from "@
 import imgAddressesFull0 from "@/assets/images/work/pipetree/addresses-full.webp";
 import Base from "@/layouts/Base.astro";
 import PipetreeScreenshots from "@/components/PipetreeScreenshots.astro";
+import { siteRoot } from "@/lib/site";
 
 // Built from Astro.site so the canonical domain lives in one place.
-const site = Astro.site!.href.replace(/\/$/, "");
+const site = siteRoot(Astro.site);
 // The page is a case study, so it is the Article; Pipetree is what it is
 // about. Marked up as the page itself, the software lacked the price and
 // rating Google requires of an app, and its url was this page rather than
