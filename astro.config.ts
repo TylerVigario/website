@@ -90,6 +90,11 @@ export default defineConfig({
   // about 180 KB, so no real submission comes near the cap. A body over it
   // cannot be read, and is answered 413 rather than as a validation failure.
   adapter: node({ mode: "standalone", bodySizeLimit: BODY_LIMIT_BYTES }),
+  // No sessions. Left unset, the Node adapter turns on a store on the
+  // filesystem, and the server bundle carried its driver and a path to it
+  // under the build machine's node_modules, for a site that keeps nothing
+  // between requests. false lets the build leave the session runtime out.
+  session: false,
   trailingSlash: "never",
   // Sharp makes every image variant at build time, for the prerendered
   // pages, and nothing at runtime. The two pages rendered per request use
