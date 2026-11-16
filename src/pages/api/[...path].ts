@@ -1,6 +1,8 @@
 import type { APIRoute } from "astro";
 import { notFound } from "@/lib/api/error";
 
+export const prerender = false;
+
 /**
  * Anything under /api/ that no other route claims.
  *
@@ -11,6 +13,4 @@ import { notFound } from "@/lib/api/error";
  * are unaffected; this only catches what would otherwise have been a
  * page.
  */
-export const prerender = false;
-
 export const ALL: APIRoute = () => notFound();

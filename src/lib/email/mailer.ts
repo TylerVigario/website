@@ -27,8 +27,9 @@ const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || process.env.SMTP_USER || "";
 // malformed address every send would have failed on.
 const MAIL_FROM = process.env.SMTP_FROM || process.env.SMTP_USER || "";
 
-// THREE STATES, NOT TWO. Nothing set is mail deliberately off, and every
-// send logs what it would have sent. Anything set is an intent to send,
+// THREE STATES, NOT TWO. Nothing set is mail deliberately off: in
+// development each send logs what it would have been, and in production
+// that nothing was announced. Anything set is an intent to send,
 // and it is either acted on exactly as written or reported as
 // MISCONFIGURED — off, loudly. What must never happen is a mistake that
 // looks like the first state: a typo in a variable name, or half a pair
@@ -178,8 +179,8 @@ async function sendEmail(options: SendOptions): Promise<boolean> {
 
 /**
  * "Pacific Time" formatter used for the submittedAt subtitle in every
- * notification email. Centralized so the two templates render identical
- * timestamps for submissions that land within the same minute.
+ * notification email. Centralized so every notification renders the same
+ * timestamp for submissions that land within the same minute.
  */
 function formatSubmittedAt(): string {
   return new Date().toLocaleString("en-US", {

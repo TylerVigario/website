@@ -1,7 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { DRAFT_DAYS } from "../retention.ts";
 
-/**
+/*
  * How long a form was open before it was sent, as the server itself
  * recorded it.
  *
@@ -38,6 +38,8 @@ import { DRAFT_DAYS } from "../retention.ts";
  * it only means anything on a page rendered per request. Prerendered,
  * every form would carry the build's time.
  */
+
+/** The hidden field each form carries its stamp in. */
 export const SERVED_FIELD = "served";
 
 /** Three seconds. The access log counts whole seconds, and every fast
@@ -55,7 +57,7 @@ export type FormName = "quote" | "pots-audit";
 export type Refusal = "too-soon" | "stale" | "spent";
 
 /** The form-level message for a submission sent too soon, on both ways in. */
-export const TOO_SOON_MESSAGE =
+const TOO_SOON_MESSAGE =
   "That came in within seconds of the form opening, the way spam does, so it wasn't accepted. Everything you entered is still here — please send it again.";
 
 /** What the page says, re-rendering the form with a stamp that works:

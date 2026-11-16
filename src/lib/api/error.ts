@@ -35,7 +35,7 @@ interface FieldError {
  * Details response at runtime. The server constructs it — annotating the
  * body below is what makes a drift a compile error — and the client
  * reads it by hand, deliberately, to keep zod out of a browser bundle
- * that is otherwise about 2 KB. A schema whose only use is being
+ * that is otherwise about 4.6 KB. A schema whose only use is being
  * `z.infer`'d is a runtime object earning nothing.
  */
 export interface ProblemDetails {
@@ -177,7 +177,7 @@ export function methodNotAllowed(allowed: readonly string[]): Response {
   );
 }
 
-/** FOUR ERRORS UNDER /api/ ARE NOT THIS SHAPE, AND CANNOT BE.
+/* FOUR ERRORS UNDER /api/ ARE NOT THIS SHAPE, AND CANNOT BE.
  *
  *  A cross-site write is rejected by Astro before any middleware or
  *  route runs — `403 text/plain`, "Cross-site POST form submissions are
@@ -209,9 +209,9 @@ export function methodNotAllowed(allowed: readonly string[]): Response {
  *
  *  Below all four, a request Node cannot parse, such as one whose headers
  *  pass 16 KB, is answered by Node itself (`431`, or `400`), with no body
- *  and whatever its path.
- *
- *  404 for a path under /api/ that no route claims.
+ *  and whatever its path. */
+
+/** 404 for a path under /api/ that no route claims.
  *
  *  The namespace answers in one media type. A client that asked for JSON
  *  and got an HTML 404 has to guess whether it reached the API at all. */
