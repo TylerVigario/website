@@ -35,11 +35,11 @@
     "check:install-scripts": "node scripts/check-install-scripts.ts"
   },
   "dependencies": {
-    "@astrojs/node": "^11.1.9",
+    "@astrojs/node": "^11.1.11",
     "@astrojs/sitemap": "^3.7.4",
     "@fontsource-variable/geist": "^5.3.0",
     "@tailwindcss/vite": "^4.3.5",
-    "astro": "^7.4.5",
+    "astro": "^7.4.8",
     "better-sqlite3": "^13.0.3",
     "browserslist": "^4.29.5",
     "nodemailer": "^10.5.0",
