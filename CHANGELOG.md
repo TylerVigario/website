@@ -1,253 +1,301 @@
 # Changelog
+
+## [1.22.0](https://github.com/TylerVigario/website/compare/v1.21.1...v1.22.0) (2026-11-17)
+
+### Features
+
+* Send at most 50 notification emails in any 24 hours
+
+### Bug Fixes
+
+* Match the manifest's theme colour to the pages'
+* Keep the CSS prefixes Safari before 18 needs
+* Build the CSS for the Baseline 2022 browsers
+* Answer 404 at the image endpoint the server never uses
+* Keep a single-line field on one line, each run of control characters a space
+* Sign the form's stamp, and spend it once
+* Have the browser measure a single-line field as the server stores it
+* Grant everything the licence notice does not reserve
+* Let a page restored from memory send its form
+
+### Refactoring
+
+* Correct stale comments and remove dead code
+* Read a spam list's time and contents from one open file
+* Record the 400s that answer under /api/ before any route
+* Make the code's comments say what it does
+* Write the business's phone, reference and site root once
+* Build the Linux, Windows and networking pages on ServicePage
+* Write each part of the two forms once, its confirmation included
+
+### Build & Packaging
+
+* **deps:** Bump astro from 7.4.2 to 7.4.4 in the astro group
+* **deps:** Bump nodemailer from 10.2.1 to 10.3.1
+* Ship the licence in the release tarball
+* Ship the licences of the packages the server bundles
+* **deps:** Bump @tailwindcss/vite from 4.3.3 to 4.3.4
+* **deps:** Bump astro from 7.4.4 to 7.4.5 in the astro group across 1 directory
+* Fix Astro's key in the release build, which publishes it anyway
+* Install the release's runtime tree with npm ci, against the lockfile's hashes
+* List the licences of what the release carries beside the bundle
+* Leave out of the release what only compiling better-sqlite3 needs
+* Leave Astro's session store out of the server
+* Declare what the artifact is built from, as dependencies
+* Write the changelog without a cramped header or trailing spaces
+* **deps:** Bump @tailwindcss/vite from 4.3.4 to 4.3.5
+* **deps:** Bump nodemailer from 10.3.1 to 10.5.0
+* **deps:** Bump the astro group across 1 directory with 2 updates
+
 ## [1.21.1](https://github.com/TylerVigario/website/compare/v1.21.0...v1.21.1) (2026-11-01)
 
 ### Bug Fixes
 
-* **site:** Straighten the rack and server photographs 
+* **site:** Straighten the rack and server photographs
 
 ## [1.21.0](https://github.com/TylerVigario/website/compare/v1.20.0...v1.21.0) (2026-10-31)
 
 ### Features
 
-* **forms:** Flag a submission from a known spam sender 
+* **forms:** Flag a submission from a known spam sender
 
 ### Bug Fixes
 
-* **site:** Show the rack in a sharper photograph 
-* **privacy:** Name everything the log keeps, and how long 
+* **site:** Show the rack in a sharper photograph
+* **privacy:** Name everything the log keeps, and how long
 
 ## [1.20.0](https://github.com/TylerVigario/website/compare/v1.19.1...v1.20.0) (2026-10-30)
 
 ### Features
 
-* **forms:** Refuse a form sent within seconds of being served 
+* **forms:** Refuse a form sent within seconds of being served
 
 ### Bug Fixes
 
-* **api:** Refuse a services list longer than the catalog with one message 
-* **images:** Pass images through at runtime instead of answering /_image with 500 
+* **api:** Refuse a services list longer than the catalog with one message
+* **images:** Pass images through at runtime instead of answering /_image with 500
 
 ### Build & Packaging
 
-* **deps:** Bump zod from 4.6.5 to 4.6.7 
-* **deps:** Bump nodemailer from 10.1.0 to 10.1.4 
-* **deps:** Bump the astro group across 1 directory with 2 updates 
-* **deps:** Bump undici from 8.11.2 to 8.12.3 
-* **deps:** Bump fast-uri from 3.1.8 to 3.1.9 
-* **deps:** Bump nodemailer from 10.1.4 to 10.2.1 
+* **deps:** Bump zod from 4.6.5 to 4.6.7
+* **deps:** Bump nodemailer from 10.1.0 to 10.1.4
+* **deps:** Bump the astro group across 1 directory with 2 updates
+* **deps:** Bump undici from 8.11.2 to 8.12.3
+* **deps:** Bump fast-uri from 3.1.8 to 3.1.9
+* **deps:** Bump nodemailer from 10.1.4 to 10.2.1
 
 ## [1.19.1](https://github.com/TylerVigario/website/compare/v1.19.0...v1.19.1) (2026-10-15)
 
 ### Build & Packaging
 
-* **deps:** Bump the astro group with 2 updates 
-* **deps:** Bump nodemailer from 10.0.13 to 10.1.0 
+* **deps:** Bump the astro group with 2 updates
+* **deps:** Bump nodemailer from 10.0.13 to 10.1.0
 
 ## [1.19.0](https://github.com/TylerVigario/website/compare/v1.18.0...v1.19.0) (2026-10-08)
 
 ### Features
 
-* **site:** Show websites, software and managed IT, and the Bravo Farms engagement 
-* **site:** Give each service its own band on /services, with our own hardware 
+* **site:** Show websites, software and managed IT, and the Bravo Farms engagement
+* **site:** Give each service its own band on /services, with our own hardware
 
 ### Bug Fixes
 
-* **site:** Say we are not a licensed contractor, and speak as we 
-* **seo:** Name the place in service titles, one name per service, and descriptions that fit a result 
+* **site:** Say we are not a licensed contractor, and speak as we
+* **seo:** Name the place in service titles, one name per service, and descriptions that fit a result
 
 ## [1.18.0](https://github.com/TylerVigario/website/compare/v1.17.1...v1.18.0) (2026-10-06)
 
 ### Features
 
-* **site:** Cross-fade between pages, and prerender the next one on hover 
+* **site:** Cross-fade between pages, and prerender the next one on hover
 
 ### Refactoring
 
-* Follow current Tailwind and GitHub conventions, and enforce the no-inline-code rule 
+* Follow current Tailwind and GitHub conventions, and enforce the no-inline-code rule
 
 ## [1.17.1](https://github.com/TylerVigario/website/compare/v1.17.0...v1.17.1) (2026-10-06)
 
 ### Performance
 
-* **site:** Serve images at the width they are drawn, as AVIF 
+* **site:** Serve images at the width they are drawn, as AVIF
 
 ## [1.17.0](https://github.com/TylerVigario/website/compare/v1.16.0...v1.17.0) (2026-10-05)
 
 ### Features
 
-* **site:** Open the homepage on a full-screen photograph 
+* **site:** Open the homepage on a full-screen photograph
 
 ### Bug Fixes
 
-* **forms:** Answer each failure with its own status, and record which leads were announced 
-* **forms:** Discard a draft left untouched for 30 days, and check both forms end to end without JavaScript 
+* **forms:** Answer each failure with its own status, and record which leads were announced
+* **forms:** Discard a draft left untouched for 30 days, and check both forms end to end without JavaScript
 
 ### Refactoring
 
-* Type every index access, and typecheck the build scripts 
-* Write the scripts and the Astro config in TypeScript 
+* Type every index access, and typecheck the build scripts
+* Write the scripts and the Astro config in TypeScript
 
 ### Build & Packaging
 
-* **release:** Make the release tarball a function of its commit 
+* **release:** Make the release tarball a function of its commit
 
 ## [1.16.0](https://github.com/TylerVigario/website/compare/v1.15.2...v1.16.0) (2026-10-05)
 
 ### Features
 
-* **site:** Publish a privacy policy, and delete submissions after 24 months 
+* **site:** Publish a privacy policy, and delete submissions after 24 months
 
 ### Bug Fixes
 
-* **site:** Show the keyboard focus ring where the global reset hid it 
-* **site:** Make printing, the image viewer, the forms and the nav work for everyone 
-* **site:** Describe the business, its site and its case studies correctly to search engines 
-* **site:** Bring every text colour up to WCAG AA contrast 
+* **site:** Show the keyboard focus ring where the global reset hid it
+* **site:** Make printing, the image viewer, the forms and the nav work for everyone
+* **site:** Describe the business, its site and its case studies correctly to search engines
+* **site:** Bring every text colour up to WCAG AA contrast
 
 ### Build & Packaging
 
-* **deps:** Update every dependency, and review which install scripts may run 
+* **deps:** Update every dependency, and review which install scripts may run
 
 ## [1.15.2](https://github.com/TylerVigario/website/compare/v1.15.1...v1.15.2) (2026-09-27)
 
 ### Bug Fixes
 
-* **site:** Link the live business profile and LinkedIn, and tidy search metadata 
+* **site:** Link the live business profile and LinkedIn, and tidy search metadata
 
 ## [1.15.1](https://github.com/TylerVigario/website/compare/v1.15.0...v1.15.1) (2026-09-26)
 
 ### Bug Fixes
 
-* **site:** Keep the space beside links and emphasis across line breaks 
+* **site:** Keep the space beside links and emphasis across line breaks
 
 ## [1.15.0](https://github.com/TylerVigario/website/compare/v1.14.0...v1.15.0) (2026-09-26)
 
 ### Features
 
-* **email:** Let the operator choose how the relay is reached 
+* **email:** Let the operator choose how the relay is reached
 
 ### Bug Fixes
 
-* **site:** Stop the forms losing drafts and swallowing errors 
-* **site:** Let the layout own the page frame 
-* **site:** Take the no-JS submit on the page, and bound what it can store 
-* **site:** Make health see a full disk, and keep what has been committed 
-* **site:** Make the viewer, the forms and the POTS page do what they say 
-* **site:** Trust the proxy's forwarded headers for this site's own origin 
+* **site:** Stop the forms losing drafts and swallowing errors
+* **site:** Let the layout own the page frame
+* **site:** Take the no-JS submit on the page, and bound what it can store
+* **site:** Make health see a full disk, and keep what has been committed
+* **site:** Make the viewer, the forms and the POTS page do what they say
+* **site:** Trust the proxy's forwarded headers for this site's own origin
 
 ## [1.14.0](https://github.com/TylerVigario/website/compare/v1.13.1...v1.14.0) (2026-09-23)
 
 ### Features
 
-* **site:** Make the site servable under a strict CSP, and serve it 
-* **site:** Publish security.txt at the URI researchers actually check 
-* **db:** Version the schema so it can change after it has data 
-* **site:** Trap form spam, and support an unauthenticated relay 
+* **site:** Make the site servable under a strict CSP, and serve it
+* **site:** Publish security.txt at the URI researchers actually check
+* **db:** Version the schema so it can change after it has data
+* **site:** Trap form spam, and support an unauthenticated relay
 
 ### Bug Fixes
 
-* **db:** Make one place own the write, and prove it matches the table 
-* **site:** Forbid storing the pages that echo what someone typed 
-* **api:** Answer an unsupported method with 405, and /api/ in one shape 
+* **db:** Make one place own the write, and prove it matches the table
+* **site:** Forbid storing the pages that echo what someone typed
+* **api:** Answer an unsupported method with 405, and /api/ in one shape
 
 ## [1.13.1](https://github.com/TylerVigario/website/compare/v1.13.0...v1.13.1) (2026-09-11)
 
 ### Bug Fixes
 
-* **seo:** Repair the logo and supply the social and icon assets 
-* **site:** Stop the logo 500ing on the two pages that accept input 
+* **seo:** Repair the logo and supply the social and icon assets
+* **site:** Stop the logo 500ing on the two pages that accept input
 
 ## [1.13.0](https://github.com/TylerVigario/website/compare/v1.12.0...v1.13.0) (2026-09-10)
 
 ### Features
 
-* **site:** Make vigario.tech the canonical domain 
+* **site:** Make vigario.tech the canonical domain
 
 ### Bug Fixes
 
-* **seo:** Point the structured-data logo at a file that exists 
+* **seo:** Point the structured-data logo at a file that exists
 
 ## [1.12.0](https://github.com/TylerVigario/website/compare/v1.11.0...v1.12.0) (2026-09-10)
 
 ### Features
 
-* **site:** Add the Jesus is Lord tagline, drop the retired org link 
+* **site:** Add the Jesus is Lord tagline, drop the retired org link
 
 ### Build & Packaging
 
-* Stop bundling SSR deps in dev, which broke astro dev 
+* Stop bundling SSR deps in dev, which broke astro dev
 
 ## [1.11.0](https://github.com/TylerVigario/website/compare/v1.10.1...v1.11.0) (2026-09-09)
 
 ### Features
 
-* Rebuild the site on Astro, with no UI framework 
-* **release:** Build a self-contained artifact, without the build toolchain 
-* **release:** Verifiable releases — forge-signed commit, attestation, per-file manifest 
-* **health:** Prove a submission would survive, not just that a file opens 
+* Rebuild the site on Astro, with no UI framework
+* **release:** Build a self-contained artifact, without the build toolchain
+* **release:** Verifiable releases — forge-signed commit, attestation, per-file manifest
+* **health:** Prove a submission would survive, not just that a file opens
 
 ### Bug Fixes
 
-* **site:** Derive the notification address, and offer the source 
-* **config:** Call the validator that never ran, and enforce the never-erase rule 
-* **release:** Stop pushing the lockfile through argv 
+* **site:** Derive the notification address, and offer the source
+* **config:** Call the validator that never ran, and enforce the never-erase rule
+* **release:** Stop pushing the lockfile through argv
 
 ### Build & Packaging
 
-* Retire the RPM pipeline 
-* **deps:** Update dependencies to latest, except three that cannot go 
+* Retire the RPM pipeline
+* **deps:** Update dependencies to latest, except three that cannot go
 * **deps:** Update dependencies and action majors
-* **deps:** Bring everything current, including the release path 
+* **deps:** Bring everything current, including the release path
 
 ## [1.10.1](https://github.com/TylerVigario/website/compare/v1.10.0...v1.10.1) (2026-08-14)
 
 ### Bug Fixes
 
-* **ci:** Lint the README I added, and name the placeholder correctly 
+* **ci:** Lint the README I added, and name the placeholder correctly
 
 ## [1.10.0](https://github.com/TylerVigario/website/compare/v1.9.0...v1.10.0) (2026-08-05)
 
 ### Features
 
-* **work:** Add the iTaleSoWell case study 
+* **work:** Add the iTaleSoWell case study
 
 ## [1.9.0](https://github.com/TylerVigario/website/compare/v1.8.1...v1.9.0) (2026-07-23)
 
 ### Features
 
-* **work:** Add product visuals to the /work case-study pages 
+* **work:** Add product visuals to the /work case-study pages
 
 ## [1.8.1](https://github.com/TylerVigario/website/compare/v1.8.0...v1.8.1) (2026-07-23)
 
 ### Bug Fixes
 
-* **build:** Regenerate lockfile under npm 11.17.0 to restore libc guards 
+* **build:** Regenerate lockfile under npm 11.17.0 to restore libc guards
 
 ## [1.8.0](https://github.com/TylerVigario/website/compare/v1.7.0...v1.8.0) (2026-07-22)
 
 ### Features
 
-* **work:** Open pipetree screenshots full-size in a lightbox 
+* **work:** Open pipetree screenshots full-size in a lightbox
 
 ## [1.7.0](https://github.com/TylerVigario/website/compare/v1.6.0...v1.7.0) (2026-07-22)
 
 ### Features
 
-* Add /work case-study index and VoIP case study 
+* Add /work case-study index and VoIP case study
 
 ## [1.6.0](https://github.com/TylerVigario/website/compare/v1.5.4...v1.6.0) (2026-07-22)
 
 ### Features
 
-* Add pipetree case-study page under /work 
+* Add pipetree case-study page under /work
 
 ### Bug Fixes
 
-* **packaging:** Harden the service sandbox (PrivateUsers, owner-only state) 
+* **packaging:** Harden the service sandbox (PrivateUsers, owner-only state)
 
 ### Refactoring
 
-* Drop the dead check:public-env build check 
+* Drop the dead check:public-env build check
 
 ## [1.5.4](https://github.com/TylerVigario/website/compare/v1.5.3...v1.5.4) (2026-05-14)
 
@@ -296,97 +344,97 @@
 
 ### Bug Fixes
 
-* **packaging:** Move rpmbuild topdir to RUNNER_TEMP 
-* **build:** Externalize instrumentation chain to dodge turbopack hash-require bug 
+* **packaging:** Move rpmbuild topdir to RUNNER_TEMP
+* **build:** Externalize instrumentation chain to dodge turbopack hash-require bug
 
 ## [1.4.5](https://github.com/TylerVigario/website/compare/v1.4.4...v1.4.5) (2026-05-12)
 
 ### Refactoring
 
-* **packaging:** Host-portable RPM — operator owns vhost, env overrides, OnFailure 
+* **packaging:** Host-portable RPM — operator owns vhost, env overrides, OnFailure
 
 ## [1.4.4](https://github.com/TylerVigario/website/compare/v1.4.3...v1.4.4) (2026-05-12)
 
 ### Bug Fixes
 
-* **packaging:** Scope rpmbuild to $GITHUB_WORKSPACE, drop the find scan 
+* **packaging:** Scope rpmbuild to $GITHUB_WORKSPACE, drop the find scan
 
 ### Refactoring
 
-* **packaging:** Private/public dnf split + sudo rpmsign 
+* **packaging:** Private/public dnf split + sudo rpmsign
 
 ## [1.4.3](https://github.com/TylerVigario/website/compare/v1.4.2...v1.4.3) (2026-05-11)
 
 ### Bug Fixes
 
-* **packaging:** Own env file root:root to avoid group(website) dep 
+* **packaging:** Own env file root:root to avoid group(website) dep
 
 ## [1.4.2](https://github.com/TylerVigario/website/compare/v1.4.1...v1.4.2) (2026-05-11)
 
 ### Refactoring
 
-* **packaging:** Drop unused SELinux fcontext rules + move env to /etc/sysconfig 
+* **packaging:** Drop unused SELinux fcontext rules + move env to /etc/sysconfig
 
 ## [1.4.1](https://github.com/TylerVigario/website/compare/v1.4.0...v1.4.1) (2026-05-11)
 
 ### Bug Fixes
 
-* **packaging:** Drop rpm --import on self-hosted runner 
+* **packaging:** Drop rpm --import on self-hosted runner
 
 ## [1.4.0](https://github.com/TylerVigario/website/compare/v1.3.6...v1.4.0) (2026-05-11)
 
 ### Features
 
-* **packaging:** Move release job to self-hosted runner on repo host 
+* **packaging:** Move release job to self-hosted runner on repo host
 
 ## [1.3.6](https://github.com/TylerVigario/website/compare/v1.3.5...v1.3.6) (2026-05-11)
 
 ### Bug Fixes
 
-* **packaging:** Import pubkey into rpm's keyring for sign verification 
+* **packaging:** Import pubkey into rpm's keyring for sign verification
 
 ## [1.3.5](https://github.com/TylerVigario/website/compare/v1.3.4...v1.3.5) (2026-05-11)
 
 ### Bug Fixes
 
-* **packaging:** Drop bogus %__gpg_sign_cmd override, use extra_args macro 
+* **packaging:** Drop bogus %__gpg_sign_cmd override, use extra_args macro
 
 ## [1.3.4](https://github.com/TylerVigario/website/compare/v1.3.3...v1.3.4) (2026-05-11)
 
 ### Bug Fixes
 
-* **packaging:** Disable debug_package — no debuginfo for vendored prebuilds 
+* **packaging:** Disable debug_package — no debuginfo for vendored prebuilds
 
 ## [1.3.3](https://github.com/TylerVigario/website/compare/v1.3.2...v1.3.3) (2026-05-11)
 
 ### Bug Fixes
 
-* **packaging:** Declare arch as x86_64 — better-sqlite3 ships native binding 
+* **packaging:** Declare arch as x86_64 — better-sqlite3 ships native binding
 
 ## [1.3.2](https://github.com/TylerVigario/website/compare/v1.3.1...v1.3.2) (2026-05-11)
 
 ### Bug Fixes
 
-* **packaging:** Don't preset NODE_ENV=production before npm ci 
+* **packaging:** Don't preset NODE_ENV=production before npm ci
 
 ## [1.3.1](https://github.com/TylerVigario/website/compare/v1.3.0...v1.3.1) (2026-05-11)
 
 ### Bug Fixes
 
-* **packaging:** Systemd-rpm-macros BuildRequires + annotated release tag 
+* **packaging:** Systemd-rpm-macros BuildRequires + annotated release tag
 
 ## [1.3.0](https://github.com/TylerVigario/website/compare/v1.2.1...v1.3.0) (2026-05-11)
 
 ### Features
 
 * **forms:** Adopt rfc 9457 problem details + react-hook-form
-* **packaging:** Introduce tylervigario-website RPM, retire build-on-prod 
+* **packaging:** Introduce tylervigario-website RPM, retire build-on-prod
 
 ### Bug Fixes
 
-* **packaging:** Use --passphrase-file in rpmsign macros 
-* **packaging:** Use versioned Node binary throughout 
-* **packaging:** Install nodejs24-npm alongside nodejs24 
+* **packaging:** Use --passphrase-file in rpmsign macros
+* **packaging:** Use versioned Node binary throughout
+* **packaging:** Install nodejs24-npm alongside nodejs24
 
 ### Refactoring
 
