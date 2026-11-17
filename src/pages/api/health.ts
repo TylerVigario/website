@@ -36,9 +36,9 @@ export const prerender = false;
  * notification would say the sender is a known spammer; but a failure in
  * any of them is the relay's or the host's configuration, or a flood the
  * notification cap held back (src/lib/email/cap.ts), rather than this
- * release. The updater rolls a
- * release back on anything but a 200, and rolling back cannot fix SMTP
- * settings, so an advisory failure reports "degraded" and keeps the 200.
+ * release. A host that rolls a release back on anything but a 200 could
+ * not fix SMTP settings that way, so an advisory failure reports
+ * "degraded" and keeps the 200.
  *
  * The response names each check and whether it passed, and nothing more.
  * This endpoint is public, and a failure's message can carry a path, a
@@ -112,7 +112,7 @@ export const GET: APIRoute = () => {
     record("form-key", () => {
       // Every form is stamped with this key and every submission checked
       // against it (src/lib/api/fill-time.ts). Without it each page still
-      // renders, unstamped, and every submission is refused as expired:
+      // renders, unstamped, and every submission is refused as stale:
       // the forms would look fine and take nothing.
       if (formKey().length !== 32) throw new Error("the form key is not 32 bytes");
     });
@@ -132,7 +132,6 @@ export const GET: APIRoute = () => {
           contact: "__healthcheck__",
           services: "__healthcheck__",
           details: null,
-          stamp: "__healthcheck__",
         });
         throw new Rollback();
       });

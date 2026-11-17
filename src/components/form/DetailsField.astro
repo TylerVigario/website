@@ -1,0 +1,22 @@
+---
+import { INPUT_CLASS } from "@/components/form/input-class";
+
+/** The optional free-text field both forms end with. Its default value is
+ *  everything between the textarea's tags, so nothing pads it
+ *  (tests/never-erase.test.ts). */
+interface Props {
+  value: string;
+  rows: number;
+}
+const { value, rows } = Astro.props;
+---
+
+<div class="mb-4">
+  <label for="details" class="mb-1.5 block text-sm font-medium text-foreground">
+    Anything else? <span class="font-normal text-muted">(optional)</span>
+  </label>
+  <p id="details-hint" class="mb-1.5 text-sm text-muted">
+    Please don't include passwords, account numbers or health details.
+  </p>
+  <textarea id="details" name="details" rows={rows} aria-describedby="details-hint" class={INPUT_CLASS}>{value}</textarea>
+</div>

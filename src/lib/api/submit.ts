@@ -12,7 +12,7 @@ import { BODY_LIMIT_BYTES } from "@/lib/forms/limits";
 import { QuoteRequest } from "@/lib/api/quote";
 import { POTS_AUDIT_MARKER, PotsAuditRequest } from "@/lib/api/pots-audit";
 import { isTrapped } from "@/lib/api/honeypot";
-import { checkStamp, SERVED_FIELD, type FormName, type Refusal } from "@/lib/api/fill-time";
+import { checkStamp, SERVED_FIELD, type Refusal } from "@/lib/api/fill-time";
 import { listed, type Listing } from "@/lib/api/spam-list";
 import {
   sendPausedNotice,
@@ -46,11 +46,10 @@ export type Outcome =
   | { kind: "dropped" }
   | { kind: "invalid"; values: Values; errors: Record<string, string>; failure: SafeParseFailure }
   /** Refused by its form's stamp (fill-time.ts): sent sooner after its
-   *  form was served than a person fills one in, with a stamp that is
-   *  missing, does not verify or has expired, or with one already spent.
-   *  Never stored, with what was sent handed back for the form; a stale
-   *  or spent stamp is left out of it, so the form comes back with a new
-   *  one. */
+   *  form was served than a person fills one in, or with a stamp that is
+   *  missing or does not verify. Never stored, with what was sent handed
+   *  back for the form, its stamp included: the form keeps one that was
+   *  only early and replaces a stale one. */
   | { kind: "refused"; reason: Refusal; values: Values }
   /** The body could not be read, so there is nothing to validate or echo. */
   | { kind: "unreadable"; status: 400 | 413 };
@@ -182,9 +181,9 @@ async function hold(id: number) {
  *  change and a distinct success teaches it that it got through. The log
  *  line says which form and nothing about what was in it, so the trap's
  *  catch rate can be read from the journal without keeping the spam. */
-function trapped(form: string, body: unknown): boolean {
+function trapped(label: string, body: unknown): boolean {
   if (!isTrapped(body)) return false;
-  console.log(`[honeypot] dropped a ${form} submission`);
+  console.log(`[honeypot] dropped a ${label} submission`);
   return true;
 }
 
@@ -193,19 +192,16 @@ function trapped(form: string, body: unknown): boolean {
  *  be read from the journal like the honeypot's. */
 function refused(label: string, reason: Refusal, why: string, body: unknown): Outcome {
   console.log(`[fill-time] refused a ${label} submission sent ${why}`);
-  const values = echo(body);
-  if (reason !== "too-soon") delete values[SERVED_FIELD];
-  return { kind: "refused", reason, values };
+  return { kind: "refused", reason, values: echo(body) };
 }
 
 /** After validation, unlike the honeypot: a person who was quick and also
  *  missed a field hears about the field first, and fixing it takes the
- *  seconds the floor asks for. Returns the stamp's random value for the
- *  row to spend, or the refusal. */
-function stamped(form: FormName, label: string, body: unknown): string | Outcome {
+ *  seconds the floor asks for. Returns the refusal, or null. */
+function refusedByStamp(label: string, body: unknown): Outcome | null {
   const sent = body && typeof body === "object" ? (body as Values)[SERVED_FIELD] : undefined;
-  const check = checkStamp(form, sent, formKey());
-  if (check.kind === "ok") return check.nonce;
+  const check = checkStamp(sent, formKey());
+  if (check.kind === "ok") return null;
   if (check.kind === "stale") return refused(label, "stale", check.why, body);
   const seconds = (Math.max(0, check.elapsed) / 1000).toFixed(1);
   return refused(label, "too-soon", `${seconds} s after its form was served`, body);
@@ -227,8 +223,8 @@ export async function submitQuote(body: unknown, sender: Sender = {}): Promise<O
   if (trapped("quote", body)) return { kind: "dropped" };
   const parsed = QuoteRequest.safeParse(body);
   if (!parsed.success) return invalid(body, parsed);
-  const stamp = stamped("quote", "quote", body);
-  if (typeof stamp !== "string") return stamp;
+  const refusal = refusedByStamp("quote", body);
+  if (refusal) return refusal;
 
   const { name, contact, services, details } = parsed.data;
   const id = insertSubmission({
@@ -236,9 +232,7 @@ export async function submitQuote(body: unknown, sender: Sender = {}): Promise<O
     contact,
     services: services.join(", "),
     details: details || null,
-    stamp,
   });
-  if (id === null) return refused("quote", "spent", "with a stamp already spent", body);
   await notify(id, () =>
     sendQuoteNotification(id, {
       name,
@@ -256,8 +250,8 @@ export async function submitPotsAudit(body: unknown, sender: Sender = {}): Promi
   if (trapped("POTS audit", body)) return { kind: "dropped" };
   const parsed = PotsAuditRequest.safeParse(body);
   if (!parsed.success) return invalid(body, parsed);
-  const stamp = stamped("pots-audit", "POTS audit", body);
-  if (typeof stamp !== "string") return stamp;
+  const refusal = refusedByStamp("POTS audit", body);
+  if (refusal) return refusal;
 
   const { business, name, contact, bill, details } = parsed.data;
   // Both forms land in one table; `services` carries the literal marker
@@ -267,9 +261,7 @@ export async function submitPotsAudit(body: unknown, sender: Sender = {}): Promi
     contact,
     services: POTS_AUDIT_MARKER,
     details: [`Business: ${business}`, `Monthly bill: ${bill}`, details].filter(Boolean).join("\n"),
-    stamp,
   });
-  if (id === null) return refused("POTS audit", "spent", "with a stamp already spent", body);
   await notify(id, () =>
     sendPotsAuditNotification(id, {
       business,

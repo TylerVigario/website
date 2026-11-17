@@ -1,4 +1,5 @@
 ---
+import { PHONE } from "@/lib/business";
 import imgVtsLogo0 from "@/assets/images/vts-logo.png";
 import GitHub from "@/components/icons/GitHub.astro";
 import LinkedIn from "@/components/icons/LinkedIn.astro";
@@ -93,8 +94,8 @@ const year = new Date().getFullYear();
     <div
       class="mt-6 flex flex-col items-center gap-3 text-sm text-muted md:flex-row md:justify-center md:gap-6"
     >
-      <a href="tel:+15599001400" class="py-3 transition-colors hover:text-foreground">
-        (559) 900-1400
+      <a href={PHONE.href} class="py-3 transition-colors hover:text-foreground">
+        {PHONE.display}
       </a>
       <span class="hidden text-border md:inline">|</span>
       <a

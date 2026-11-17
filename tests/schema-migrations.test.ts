@@ -3,7 +3,6 @@ import Database from "better-sqlite3";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
 
 /**
  * Migrations have to work on a database that already exists, not just
@@ -34,12 +33,6 @@ async function openAt(file: string) {
   process.env.SQLITE_PATH = path.join(dir, file);
   return mod;
 }
-
-/** A row id, from an insert that is expected to be written. */
-const written = (id: number | null): number => {
-  if (id === null) throw new Error("the row was not written: its stamp was already spent");
-  return id;
-};
 
 const version = (file: string): number => {
   const db = new Database(path.join(dir, file), { readonly: true });
@@ -116,15 +109,7 @@ describe("schema migrations", () => {
       ).notified_at;
     expect(notified(1)).toBe("unknown");
 
-    const id = written(
-      db.insertSubmission({
-        name: "New",
-        contact: "x",
-        services: "Linux",
-        details: null,
-        stamp: "n",
-      }),
-    );
+    const id = db.insertSubmission({ name: "New", contact: "x", services: "Linux", details: null });
     expect(notified(id)).toBeNull();
     // Too recent to count: its send may still be in flight.
     expect(db.unannouncedCount()).toBe(0);
@@ -218,15 +203,7 @@ describe("what the notification cap reads", () => {
     const db = await openAt("cap.db");
     const handle = db.getDb();
     const row = () =>
-      written(
-        db.insertSubmission({
-          name: "N",
-          contact: "x",
-          services: "Linux",
-          details: null,
-          stamp: randomUUID(),
-        }),
-      );
+      db.insertSubmission({ name: "N", contact: "x", services: "Linux", details: null });
     const set = (id: number, value: string) =>
       handle.prepare(`UPDATE quotes SET notified_at = ${value} WHERE id = ?`).run(id);
     db.markNotified(row());

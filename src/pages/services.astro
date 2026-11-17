@@ -1,6 +1,6 @@
 ---
 import type { ImageMetadata } from "astro";
-import { areaServed, SEARCH_PLACE } from "@/lib/business";
+import { areaServed, SEARCH_PLACE, businessRef } from "@/lib/business";
 import Base from "@/layouts/Base.astro";
 import ServiceIcon from "@/components/ServiceIcon.astro";
 import BandPicture from "@/components/BandPicture.astro";
@@ -12,9 +12,10 @@ import patchCables from "@/assets/images/stock/network-patch-cables.jpg";
 import camera from "@/assets/images/stock/security-camera-wall.jpg";
 import rack from "@/assets/images/infrastructure/rack.jpg";
 import serverBuild from "@/assets/images/infrastructure/server-build.jpg";
+import { siteRoot } from "@/lib/site";
 
 // Built from Astro.site so the canonical domain lives in one place.
-const site = Astro.site!.href.replace(/\/$/, "");
+const site = siteRoot(Astro.site);
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Service",
@@ -23,10 +24,7 @@ const jsonLd = {
   description:
     "Full-stack IT services — websites and hosting, custom software, managed IT, networking, security cameras, and Windows & Linux systems.",
   url: `${site}/services`,
-  provider: {
-    "@type": "ProfessionalService",
-    "@id": `${site}/#business`,
-  },
+  provider: businessRef(site),
   serviceType: [
     ...services.map((s) => s.title),
     "Windows Systems Management",

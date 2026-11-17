@@ -27,7 +27,7 @@ which a test holds to the same verdicts and messages as the schemas.
 
 No UI framework. A plain page ships about 500 B of JavaScript (the
 scroll reveal), a case study with screenshots about 5.2 KB, image viewer
-included, and the two input pages about 5.7 KB, form script included,
+included, and the two input pages about 5.6 KB, form script included,
 all as files rather than inline. `npm run check:bundles` budgets every
 prerendered page, following imports, so a page that outgrows its budget
 fails the build. Logs go to stdout and errors to stderr, for whatever
@@ -150,11 +150,11 @@ you modify it and serve it over a network, §13 obliges you to offer your
 users your modified source in turn. That obligation runs to forkers,
 never to the author.
 
-**Two things are reserved and not granted under it:** the brand and
-imagery in `src/assets/images/` (logo, our own photographs, every client screenshot),
-and the written content — the case studies, service descriptions and
-landing copy. Those are © Vigario Technology Solutions, All Rights
-Reserved.
+**Two things are reserved and not granted under it:** the brand — the
+name and the logo — with the imagery in `src/assets/images/` (our own
+photographs, every client screenshot), and the written content — the
+case studies, service descriptions and landing copy. Those are
+Vigario Technology Solutions' own, All Rights Reserved.
 
 The line is drawn precisely in [LICENSE-NOTICE.md](LICENSE-NOTICE.md),
 path by path, so nobody has to infer it. The short version: the
