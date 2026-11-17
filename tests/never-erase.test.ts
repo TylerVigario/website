@@ -105,21 +105,14 @@ describe("nothing erases what someone typed", () => {
     expect(padded, "a textarea whose content is padded with whitespace").toEqual([]);
   });
 
-  // innerHTML is only dangerous on a subtree that might hold live input.
-  // Writing to an element created moments earlier cannot destroy
-  // anything, so the rule is about the target rather than the API.
-  it("only assigns innerHTML to elements it just created", () => {
-    const offenders = hits(INNER_HTML).filter(({ file, line, text }) => {
-      const target = /(\w+)\.innerHTML/.exec(text)?.[1];
-      if (!target) return true;
-      const lines = readFileSync(file, "utf8").split("\n");
-      const before = lines.slice(Math.max(0, line - 12), line).join("\n");
-      return !new RegExp(`${target}\\s*=\\s*document\\.createElement`).test(before);
-    });
+  // innerHTML replaces a subtree, and the subtree may hold live input.
+  // Nothing needs it: a confirmation is cloned from the <template> the
+  // page renders (src/lib/forms/confirmation.ts).
+  it("assigns innerHTML nowhere", () => {
     expect(
-      offenders.map((f) => `${f.file}:${f.line}  ${f.text}`),
-      "innerHTML on an element that was queried rather than created can " +
-        "replace a subtree someone is typing into.",
+      hits(INNER_HTML).map((f) => `${f.file}:${f.line}  ${f.text}`),
+      "innerHTML replaces a subtree, which may be one someone is typing " +
+        "into. Clone a <template> the page renders instead.",
     ).toHaveLength(0);
   });
 });

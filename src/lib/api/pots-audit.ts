@@ -2,15 +2,15 @@ import * as z from "zod/mini";
 import { MAX, tooLong } from "@/lib/forms/limits";
 import { oneLine } from "@/lib/api/one-line";
 
-// The POTS audit form's shape, enforced wherever an audit is submitted
-// (src/lib/api/submit.ts, for both the JSON API and the no-JS page).
-// Messages are user-facing: they render beside the field, and
-// src/lib/forms/rules.ts repeats them in the browser, verified by
-// tests/form-rules.test.ts.
 /** What the bill select offers, and so all the schema accepts. Exported
  *  for PotsAuditForm, which renders the options from it. */
 export const BILL_RANGES = ["$100–$300", "$300–$500", "$500–$1,000", "$1,000+"] as const;
 
+/** The POTS audit form's shape, enforced wherever an audit is submitted
+ *  (src/lib/api/submit.ts, for both the JSON API and the no-JS page).
+ *  Messages are user-facing: they render beside the field, and
+ *  src/lib/forms/rules.ts repeats them in the browser, verified by
+ *  tests/form-rules.test.ts. */
 export const PotsAuditRequest = z.object({
   business: z
     .string()
@@ -49,7 +49,7 @@ export type PotsAuditRequest = z.infer<typeof PotsAuditRequest>;
  * anything — it silently makes audits indistinguishable from quotes,
  * for every row written afterwards and with nothing to detect it later.
  *
- * Exported so the route and the test that guards it read the same
+ * Exported so the submit path and the test that guards it read the same
  * constant rather than two copies of a string.
  */
 export const POTS_AUDIT_MARKER = "POTS Migration Audit";

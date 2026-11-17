@@ -1,9 +1,9 @@
 ---
+import { PHONE } from "@/lib/business";
 import Base from "@/layouts/Base.astro";
 import QuoteForm from "@/components/QuoteForm.astro";
 import { readSubmission, submitQuote, unreadableMessage, type Values } from "@/lib/api/submit";
 import { PAGE_MESSAGE } from "@/lib/api/fill-time";
-import { REFUSED_STATUS } from "@/lib/api/error";
 import { services as catalog } from "@/lib/services";
 
 // Rendered per request, not prerendered: this page takes the form's
@@ -27,10 +27,10 @@ Astro.response.headers.set("Cache-Control", "no-store");
 // the query string: that put names and messages into browser history and
 // access logs, failed outright once the text outgrew a request line, and
 // let anyone put words in the form's alert box through a crafted link.
-// Now a failure re-renders this page, 422, with every value still in the
-// form, and nothing typed is ever in a URL. Success redirects, so a
-// reload cannot submit twice. The work is submitQuote(), the same function
-// the JSON API calls.
+// Now a failure re-renders this page with its own status, and with every
+// value still in the form wherever any was read; nothing typed is ever in
+// a URL. Success redirects, so a reload cannot submit twice. The work
+// is submitQuote(), the same function the JSON API calls.
 let values: Values = {};
 let errors: Record<string, string> = {};
 if (Astro.request.method === "POST") {
@@ -48,12 +48,12 @@ if (Astro.request.method === "POST") {
     Astro.response.status = 422;
   } else if (outcome.kind === "refused") {
     // Refused by its stamp, not dropped: see fill-time.ts. Everything
-    // sent goes back into the form. A stamp that was only early goes back
-    // with it, so sending again counts from when the form was first
-    // served; a stale or spent one was left out, so the form gets a new one.
+    // sent goes back into the form, its stamp too: one that was only early
+    // is kept, so sending again counts from when the form was first
+    // served, and a stale one is replaced.
     values = outcome.values;
     errors = { "(root)": PAGE_MESSAGE[outcome.reason] };
-    Astro.response.status = REFUSED_STATUS[outcome.reason];
+    Astro.response.status = 422;
   } else {
     return Astro.redirect("/contact?sent=1", 303);
   }
@@ -70,7 +70,7 @@ if (Astro.request.method !== "POST" && preselect && catalog.some((s) => s.title 
 }
 ---
 
-<Base title="Contact" description="Get a free quote for websites, custom software, managed IT, networking, cameras or servers across the Central Valley. Call or text (559) 900-1400." mainClass="mx-auto max-w-2xl px-6 pt-32 pb-16">
+<Base title="Contact" description={`Get a free quote for websites, custom software, managed IT, networking, cameras or servers across the Central Valley. Call or text ${PHONE.display}.`} mainClass="mx-auto max-w-2xl px-6 pt-32 pb-16">
   <h1 class="text-3xl font-bold text-navy">Get in touch</h1>
   <div class="mt-8"><QuoteForm values={values} errors={errors} submitted={submitted} /></div>
 </Base>

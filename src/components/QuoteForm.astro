@@ -1,6 +1,12 @@
 ---
 import { services as serviceCatalog } from "@/lib/services";
 import { servedStamp } from "@/lib/api/form-stamp";
+import Honeypot from "@/components/form/Honeypot.astro";
+import RootError from "@/components/form/RootError.astro";
+import DetailsField from "@/components/form/DetailsField.astro";
+import SubmitRow from "@/components/form/SubmitRow.astro";
+import FormConfirmation from "@/components/form/FormConfirmation.astro";
+import { INPUT_CLASS } from "@/components/form/input-class";
 
 // Without JavaScript the form posts to its own page (/contact), which
 // re-renders this component with `values` and `errors` populated when
@@ -17,55 +23,20 @@ const serviceOptions = serviceCatalog.map((s) => s.title);
 const str = (k: string) => (typeof values[k] === "string" ? values[k] : "");
 const picked = Array.isArray(values.services) ? values.services : [];
 
-const inputClass =
-  "w-full rounded-lg border border-border bg-background px-4 py-2.5 text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent aria-invalid:border-red-500";
 ---
 
 {
   submitted ? (
-    <div role="status" class="rounded-lg border border-border bg-surface-light p-6">
-      <p class="font-medium text-foreground">Thanks — that's through.</p>
-      <p class="mt-1 text-sm text-muted">
-        We'll get back to you shortly. If it's urgent, call{" "}
-        <a href="tel:+15599001400" class="text-accent-ink underline">(559) 900-1400</a>.
-      </p>
-    </div>
+    <FormConfirmation form="quote" />
   ) : (
+    <>
     <form method="post" action="/contact" novalidate data-quote-form class="group">
-      {/* Honeypot. Hidden from people, filled by bots — the first spam
-          this site had ticked every checkbox it could find. A crawler
-          fills this; a visitor never sees it.
-
-          Hidden by CLASS, not a style attribute: the site is served under
-          style-src 'self' with no 'unsafe-inline', so an inline style here
-          would either be blocked or force the policy open for one field.
-
-          Not display:none — some bots skip those deliberately. Positioned
-          off-canvas instead, with aria-hidden and tabindex="-1" so it is
-          absent for a screen reader and unreachable by keyboard, and
-          autocomplete off so no browser ever fills it for a real person. */}
-      <div class="hp-field" aria-hidden="true">
-        <label for="quote-website">Leave this field empty</label>
-        <input
-          type="text"
-          id="quote-website"
-          name="website"
-          tabindex="-1"
-          autocomplete="off"
-        />
-      </div>
+      <Honeypot id="quote-website" />
       {/* When the server rendered this form, so a submission can be told
           from one posted straight back by a script. A re-render after a
           failed send keeps the stamp it was sent with. See fill-time.ts. */}
-      <input type="hidden" name="served" value={servedStamp("quote", values)} />
-      <p
-        data-form-error
-        role="alert"
-        hidden={!errors["(root)"]}
-        class="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700"
-      >
-        {errors["(root)"] ?? ""}
-      </p>
+      <input type="hidden" name="served" value={servedStamp(values)} />
+      <RootError message={errors["(root)"]} />
 
       <div class="mb-4">
         <label for="name" class="mb-1.5 block text-sm font-medium text-foreground">Name</label>
@@ -78,7 +49,7 @@ const inputClass =
           aria-required="true"
           aria-invalid={errors.name ? "true" : undefined}
           aria-describedby={errors.name ? "name-error" : undefined}
-          class={inputClass}
+          class={INPUT_CLASS}
         />
         {errors.name && (
           <p id="name-error" role="alert" class="mt-1.5 text-sm text-red-600">
@@ -103,7 +74,7 @@ const inputClass =
           aria-required="true"
           aria-describedby={errors.contact ? "contact-error contact-hint" : "contact-hint"}
           aria-invalid={errors.contact ? "true" : undefined}
-          class={inputClass}
+          class={INPUT_CLASS}
         />
         {errors.contact && (
           <p id="contact-error" role="alert" class="mt-1.5 text-sm text-red-600">
@@ -144,34 +115,14 @@ const inputClass =
         </p>
       )}
 
-      <div class="mb-4">
-        <label for="details" class="mb-1.5 block text-sm font-medium text-foreground">
-          Anything else? <span class="font-normal text-muted">(optional)</span>
-        </label>
-        <p id="details-hint" class="mb-1.5 text-sm text-muted">
-          Please don't include passwords, account numbers or health details.
-        </p>
-        <textarea
-          id="details"
-          name="details"
-          rows="4"
-          aria-describedby="details-hint"
-          class={inputClass}
-        >{str("details")}</textarea>
-      </div>
+      <DetailsField value={str("details")} rows={4} />
 
-      <button
-        type="submit"
-        class="w-full rounded-lg bg-accent px-6 py-3 font-semibold text-white transition-colors hover:bg-accent-ink disabled:opacity-70 group-data-submitting:cursor-progress"
-      >
-        <span class="group-data-submitting:hidden">Send it over</span>
-        <span class="hidden group-data-submitting:inline">Sending…</span>
-      </button>
-      <p class="mt-3 text-center text-xs text-muted">
-        Used only to reply to you, and checked for spam.{" "}
-        <a href="/privacy" class="underline hover:text-foreground">How it's handled</a>
-      </p>
+      <SubmitRow label="Send it over" />
     </form>
+    <template data-confirmation="quote">
+      <FormConfirmation form="quote" />
+    </template>
+    </>
   )
 }
 

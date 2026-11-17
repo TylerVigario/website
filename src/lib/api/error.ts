@@ -35,7 +35,7 @@ interface FieldError {
  * Details response at runtime. The server constructs it — annotating the
  * body below is what makes a drift a compile error — and the client
  * reads it by hand, deliberately, to keep zod out of a browser bundle
- * that is otherwise about 2 KB. A schema whose only use is being
+ * that is otherwise about 5.1 KB. A schema whose only use is being
  * `z.infer`'d is a runtime object earning nothing.
  */
 export interface ProblemDetails {
@@ -64,14 +64,10 @@ export const VALIDATION_TYPE = "tag:vigario.tech,2026:validation";
  *  will succeed. Stable, like VALIDATION_TYPE. */
 export const TOO_SOON_TYPE = "tag:vigario.tech,2026:too-soon";
 
-/** The problem type of a form whose stamp is missing, does not verify, or
- *  has expired (fill-time.ts): the page has to be loaded again before it
- *  can be sent. Stable, like VALIDATION_TYPE. */
+/** The problem type of a form whose stamp is missing or does not verify
+ *  (fill-time.ts): the page has to be loaded again before it can be sent.
+ *  Stable, like VALIDATION_TYPE. */
 export const STALE_FORM_TYPE = "tag:vigario.tech,2026:stale-form";
-
-/** The problem type of a form whose stamp a saved submission already
- *  spent: what it sent has arrived. Stable, like VALIDATION_TYPE. */
-export const ALREADY_SENT_TYPE = "tag:vigario.tech,2026:already-sent";
 
 /** A Problem Details response. */
 function problem(body: ProblemDetails, headers: Record<string, string> = {}): Response {
@@ -110,27 +106,18 @@ export function zodError(result: SafeParseFailure): Response {
   return problem(body);
 }
 
-/** Refused by its form's stamp (fill-time.ts). 422 for one sent within
- *  MIN_FILL_MS of being served or with a stale stamp, 409 for a stamp a
- *  saved submission already spent, which conflicts with what is stored;
- *  the page that takes the no-JS submit answers each the same, so the two
- *  ways in agree. No `errors`: no field is at fault, so the form shows
- *  `detail` at the top and every field keeps what was typed. */
+/** Refused by its form's stamp (fill-time.ts): sent within MIN_FILL_MS
+ *  of being served, or with a stale stamp. 422, as the page that takes
+ *  the no-JS submit answers it, so the two ways in agree. No `errors`: no
+ *  field is at fault, so the form shows `detail` at the top and every
+ *  field keeps what was typed. */
 export function stampRefused(reason: Refusal): Response {
   const kinds = {
     "too-soon": { type: TOO_SOON_TYPE, title: "Sent Too Soon" },
-    stale: { type: STALE_FORM_TYPE, title: "Form Expired" },
-    spent: { type: ALREADY_SENT_TYPE, title: "Already Sent" },
+    stale: { type: STALE_FORM_TYPE, title: "Form Out of Date" },
   } as const;
-  return problem({ ...kinds[reason], status: REFUSED_STATUS[reason], detail: API_MESSAGE[reason] });
+  return problem({ ...kinds[reason], status: 422, detail: API_MESSAGE[reason] });
 }
-
-/** The status a stamp's refusal is answered with, on both ways in. */
-export const REFUSED_STATUS: Record<Refusal, 409 | 422> = {
-  "too-soon": 422,
-  stale: 422,
-  spent: 409,
-};
 
 /** 400 for a body that could not be read: malformed JSON, or a form body
  *  that does not parse. Before this, such a body reached the schema as
@@ -177,7 +164,7 @@ export function methodNotAllowed(allowed: readonly string[]): Response {
   );
 }
 
-/** FOUR ERRORS UNDER /api/ ARE NOT THIS SHAPE, AND CANNOT BE.
+/* FOUR ERRORS UNDER /api/ ARE NOT THIS SHAPE, AND CANNOT BE.
  *
  *  A cross-site write is rejected by Astro before any middleware or
  *  route runs — `403 text/plain`, "Cross-site POST form submissions are
@@ -209,9 +196,9 @@ export function methodNotAllowed(allowed: readonly string[]): Response {
  *
  *  Below all four, a request Node cannot parse, such as one whose headers
  *  pass 16 KB, is answered by Node itself (`431`, or `400`), with no body
- *  and whatever its path.
- *
- *  404 for a path under /api/ that no route claims.
+ *  and whatever its path. */
+
+/** 404 for a path under /api/ that no route claims.
  *
  *  The namespace answers in one media type. A client that asked for JSON
  *  and got an HTML 404 has to guess whether it reached the API at all. */

@@ -57,6 +57,15 @@ export const areaServed = [
   { "@type": "Place", name: "Central Valley, CA", containedInPlace: california },
 ] as const;
 
+/** The business's phone, in each form a page needs it: to read, to dial,
+ *  and as structured data writes it. One number, so the header, the
+ *  footer and a page's copy cannot disagree about it. */
+export const PHONE = {
+  display: "(559) 900-1400",
+  href: "tel:+15599001400",
+  schema: "+1-559-900-1400",
+} as const;
+
 /** A reference to the business entity defined on the home page. */
 export const businessRef = (site: string) =>
   ({

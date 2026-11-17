@@ -5,10 +5,10 @@ import POTSLanding from "@/components/POTSLanding.astro";
 import LandingHeader from "@/components/LandingHeader.astro";
 import { readSubmission, submitPotsAudit, unreadableMessage, type Values } from "@/lib/api/submit";
 import { PAGE_MESSAGE } from "@/lib/api/fill-time";
-import { REFUSED_STATUS } from "@/lib/api/error";
+import { siteRoot } from "@/lib/site";
 
 // Built from Astro.site so the canonical domain lives in one place.
-const site = Astro.site!.href.replace(/\/$/, "");
+const site = siteRoot(Astro.site);
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Service",
@@ -55,10 +55,10 @@ Astro.response.headers.set("Cache-Control", "no-store");
 // the query string: that put names and messages into browser history and
 // access logs, failed outright once the text outgrew a request line, and
 // let anyone put words in the form's alert box through a crafted link.
-// Now a failure re-renders this page, 422, with every value still in the
-// form, and nothing typed is ever in a URL. Success redirects, so a
-// reload cannot submit twice. The work is submitPotsAudit(), the same function
-// the JSON API calls.
+// Now a failure re-renders this page with its own status, and with every
+// value still in the form wherever any was read; nothing typed is ever in
+// a URL. Success redirects, so a reload cannot submit twice. The work
+// is submitPotsAudit(), the same function the JSON API calls.
 let values: Values = {};
 let errors: Record<string, string> = {};
 if (Astro.request.method === "POST") {
@@ -76,12 +76,12 @@ if (Astro.request.method === "POST") {
     Astro.response.status = 422;
   } else if (outcome.kind === "refused") {
     // Refused by its stamp, not dropped: see fill-time.ts. Everything
-    // sent goes back into the form. A stamp that was only early goes back
-    // with it, so sending again counts from when the form was first
-    // served; a stale or spent one was left out, so the form gets a new one.
+    // sent goes back into the form, its stamp too: one that was only early
+    // is kept, so sending again counts from when the form was first
+    // served, and a stale one is replaced.
     values = outcome.values;
     errors = { "(root)": PAGE_MESSAGE[outcome.reason] };
-    Astro.response.status = REFUSED_STATUS[outcome.reason];
+    Astro.response.status = 422;
   } else {
     return Astro.redirect("/pots-migration?sent=1#audit", 303);
   }

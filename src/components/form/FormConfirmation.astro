@@ -1,0 +1,37 @@
+---
+import { PHONE } from "@/lib/business";
+
+/**
+ * What a form says once it is sent, written once for both ways of
+ * sending it: the page renders it after a no-JS send, and into a
+ * <template> the enhanced form clones after a JSON one
+ * (src/lib/forms/confirmation.ts), so the two cannot say different things.
+ */
+interface Props {
+  form: "quote" | "pots-audit";
+}
+const { form } = Astro.props;
+---
+
+<div role="status" class="rounded-lg border border-border bg-surface-light p-6">
+  {
+    form === "quote" ? (
+      <>
+        <p class="font-medium text-foreground">Thanks — that's through.</p>
+        <p class="mt-1 text-sm text-muted">
+          We'll get back to you shortly. If it's urgent, call{" "}
+          <a href={PHONE.href} class="text-accent-ink underline">{PHONE.display}</a>.
+        </p>
+      </>
+    ) : (
+      <>
+        <p class="font-medium text-foreground">Got it — we'll take a look.</p>
+        <p class="mt-1 text-sm text-muted">
+          We'll come back with what your lines actually cost and what they'd cost after. If it's
+          urgent, call{" "}
+          <a href={PHONE.href} class="text-accent-ink underline">{PHONE.display}</a>.
+        </p>
+      </>
+    )
+  }
+</div>

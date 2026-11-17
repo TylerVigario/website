@@ -24,14 +24,15 @@ describe("the honeypot", () => {
   });
 
   it("is rendered by both forms, under the name the server checks", () => {
+    const markup = readFileSync("src/components/form/Honeypot.astro", "utf8");
+    expect(markup).toContain(`name="${HONEYPOT_FIELD}"`);
+    // Hidden by class: an inline style would be blocked by the CSP.
+    expect(markup).toContain("hp-field");
+    expect(markup).toContain('aria-hidden="true"');
+    expect(markup).toContain('tabindex="-1"');
+    expect(markup).not.toMatch(/name="website"[^>]*required/);
     for (const f of ["src/components/QuoteForm.astro", "src/components/PotsAuditForm.astro"]) {
-      const markup = readFileSync(f, "utf8");
-      expect(markup).toContain(`name="${HONEYPOT_FIELD}"`);
-      // Hidden by class: an inline style would be blocked by the CSP.
-      expect(markup).toContain("hp-field");
-      expect(markup).toContain('aria-hidden="true"');
-      expect(markup).toContain('tabindex="-1"');
-      expect(markup).not.toMatch(/name="website"[^>]*required/);
+      expect(readFileSync(f, "utf8")).toMatch(/<Honeypot id="[\w-]+" \/>/);
     }
   });
 

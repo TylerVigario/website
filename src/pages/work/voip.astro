@@ -4,13 +4,14 @@ import Base from "@/layouts/Base.astro";
 import ogCard from "@/assets/images/og-card.png";
 import OutcomePanel from "@/components/OutcomePanel.astro";
 import { caseStudies } from "@/lib/work";
+import { siteRoot } from "@/lib/site";
 
 // The same logo and outcome as this study's card on /work.
 const outcome = caseStudies.find((cs) => cs.slug === "voip")?.outcome;
 if (!outcome) throw new Error("No outcome for voip in src/lib/work.ts");
 
 // Built from Astro.site so the canonical domain lives in one place.
-const site = Astro.site!.href.replace(/\/$/, "");
+const site = siteRoot(Astro.site);
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "Article",

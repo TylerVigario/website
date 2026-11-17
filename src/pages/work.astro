@@ -18,23 +18,21 @@ import { caseStudies, projects } from "@/lib/work";
 import { WORK_CARD_SIZES } from "@/lib/image-sizes";
 import OutcomePanel from "@/components/OutcomePanel.astro";
 import PhotoCredit from "@/components/PhotoCredit.astro";
+import { siteRoot } from "@/lib/site";
+import { businessRef } from "@/lib/business";
 
 // The photos faded behind the cards, each once.
 const backdrops = [...new Set(caseStudies.flatMap((cs) => cs.outcome?.backdrop ?? []))];
 
 // Built from Astro.site so the canonical domain lives in one place.
-const site = Astro.site!.href.replace(/\/$/, "");
+const site = siteRoot(Astro.site);
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "CollectionPage",
   "@id": `${site}/work#collection`,
   name: "Case Studies — Vigario Technology Solutions",
   url: `${site}/work`,
-  about: {
-    "@type": "ProfessionalService",
-    "@id": `${site}/#business`,
-    name: "Vigario Technology Solutions",
-  },
+  about: businessRef(site),
   hasPart: caseStudies.map((cs) => ({
     "@type": "CreativeWork",
     name: cs.title,

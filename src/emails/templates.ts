@@ -1,10 +1,10 @@
 /**
  * Notification email bodies, as plain HTML.
  *
- * Deliberately plain: one table to line labels up with values,
- * inline styles, no web fonts, no images. Mail clients are a worse rendering target than any browser,
- * and this only has to be legible in one — the recipient reads it,
- * calls the number, and never sees it again.
+ * Deliberately plain: one table to line labels up with values, inline
+ * styles, no web fonts, no images. Mail clients are a worse rendering
+ * target than any browser, and this only has to be legible in one — the
+ * recipient reads it, calls the number, and never sees it again.
  */
 
 /** Escape anything a submitter typed. These bodies interpolate
