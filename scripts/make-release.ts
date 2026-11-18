@@ -31,9 +31,10 @@
  * from the registry on the day), Astro's encryption key (fixed, and why
  * that costs nothing is where the build runs), and the archive itself
  * (entries sorted, owners and modes normalised, gzip without its
- * timestamp). The path is the caveat: Astro writes absolute source paths
- * into the server bundle, so a rebuild has to happen at the same path the
- * release used.
+ * timestamp, all written by the Node .nvmrc names rather than the
+ * machine's tools). The path is the caveat: Astro writes absolute source
+ * paths into the server bundle, so a rebuild has to happen at the same
+ * path the release used.
  *
  * Usage:
  *   node scripts/make-release.ts                 # version from package.json
@@ -48,6 +49,7 @@ import path from "node:path";
 import os from "node:os";
 import { createHash } from "node:crypto";
 import { RUNTIME_EXTERNALS } from "../runtime-externals.ts";
+import { sharedZlib, tarGz } from "./tar-gz.ts";
 
 /** `--name value` from the command line, or the fallback. */
 function arg(name: string, fallback: string): string {
@@ -448,33 +450,19 @@ console.log(`  manifest: ${lines.length} files`);
 
 const tarball = path.join(outDir, `${name}.tar.gz`);
 fs.rmSync(tarball, { force: true });
-// GNU tar can write an archive that depends only on its contents:
-// entries in name order rather than the filesystem's, every timestamp
-// the commit's, no builder's uid or umask, and gzip without its own
-// timestamp. Elsewhere (bsdtar on Windows or macOS) the archive is
-// correct but not reproducible, and says so.
-if (run("tar", ["--version"]).includes("GNU tar")) {
-  run("tar", [
-    "--sort=name",
-    `--mtime=@${epoch}`,
-    "--owner=0",
-    "--group=0",
-    "--numeric-owner",
-    "--mode=go-w",
-    "--format=gnu",
-    "--use-compress-program=gzip -n",
-    "-cf",
-    tarball,
-    "-C",
-    outDir,
-    name,
-  ]);
-} else {
-  console.warn("  warning: not GNU tar, so this archive is not reproducible");
-  run("tar", ["-czf", tarball, "-C", outDir, name]);
+// Written in Node rather than by the machine's tar and gzip, so the Node
+// .nvmrc names is the whole toolchain: scripts/tar-gz.ts says how it is
+// laid out. Its zlib is the one thing a distribution's build of that
+// Node can change, and then the archive is correct but not reproducible.
+if (sharedZlib) {
+  console.warn(
+    "  warning: this Node links a system zlib, so the archive will not match nodejs.org's build",
+  );
 }
+fs.writeFileSync(tarball, tarGz(outDir, name, Number(epoch)));
 
 const size = fs.statSync(tarball).size;
 console.log(`\n  ${tarball}`);
 console.log(`  ${(size / 1024 / 1024).toFixed(1)} MB`);
+console.log(`  sha256 ${createHash("sha256").update(fs.readFileSync(tarball)).digest("hex")}`);
 console.log(`  entrypoint: dist/server/entry.mjs`);
