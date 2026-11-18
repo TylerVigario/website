@@ -172,9 +172,14 @@ account of what was built. `make-release.ts` dates everything from the
 commit (`SOURCE_DATE_EPOCH`), installs the runtime tree from the
 lockfile with `npm ci`, so each package is checked against the hash the
 lockfile records and a tarball the registry serves differently is
-refused, fixes Astro's `key` and writes the archive deterministically with GNU
-tar. A rebuild needs the same Node, Linux x64, and the same checkout
-path, because Astro writes absolute source paths into the server bundle.
+refused, fixes Astro's `key` and writes the archive itself, in Node
+(`scripts/tar-gz.ts`, held by a test to the bytes GNU tar writes), so
+the Node `.nvmrc` names is the whole toolchain. A rebuild needs
+nodejs.org's build of that Node, Linux x64, and the same checkout path,
+because Astro writes absolute source paths into the server bundle. A
+distribution's build of the same version may link the system's zlib, as
+Fedora's does, and compress the archive differently; the release script
+warns when it runs on one.
 Every byte of a rebuild matches, from a cold cache as from a warm one
 (measured on astro 7.4.5).
 
