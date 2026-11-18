@@ -1,1 +1,5 @@
+#!/bin/sh
+# Run by git directly: core.hooksPath names this tracked folder (scripts/install-hooks.ts).
+set -e
+
 npx --no -- commitlint --edit "$1" --verbose

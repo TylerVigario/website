@@ -8,8 +8,8 @@ name: Commit convention
 #
 # The repo squash-merges, so the PR title is what lands on main as the
 # commit message. A bad title means a bad commit on main, and main is
-# linear-only — there's no force-push fix. husky only runs against
-# commit messages, not PR titles, so without the first job a
+# linear-only — there's no force-push fix. The commit-msg hook only
+# runs against commit messages, not PR titles, so without the first job a
 # non-conventional title slips through and the release silently
 # no-bumps.
 #
