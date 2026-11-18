@@ -45,12 +45,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
       # The Node the pins name, which is what runs the script: Node strips
       # its types, and the runner image's own Node may not.
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version-file: .nvmrc
           package-manager-cache: false
@@ -70,13 +70,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
       # Node setup + npm cache + `npm ci`, factored into a composite so
       # every job here and the release build install the same way. Reads
       # the Node version from .nvmrc.
-      - uses: ./.github/actions/setup
+      - uses: $/.github/actions/setup
       - name: Every install script is reviewed
         # A dependency that brought a new install script in, or moved past
         # its pinned approval, is named here. See
@@ -88,10 +88,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup
+      - uses: $/.github/actions/setup
       - run: npm run typecheck
 
   eslint:
@@ -99,10 +99,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup
+      - uses: $/.github/actions/setup
       - run: npm run lint:js
 
   markdown:
@@ -110,10 +110,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup
+      - uses: $/.github/actions/setup
       - run: npm run lint:md
 
   workflows:
@@ -121,24 +121,79 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
       # actionlint is a devDependency (@kjanat/actionlint), so the install
       # brings the version every clone runs, and the runner's shellcheck
       # checks the shell in each run: block.
-      - uses: ./.github/actions/setup
+      - uses: $/.github/actions/setup
       - run: npm run lint:actions
+
+  # .github/workflows/actions.lock holds the commit each action runs at,
+  # and the workflow-lockfile policy refuses to start a workflow it does
+  # not record, with no reason given. This names what is missing.
+  lockfile:
+    name: Actions lockfile
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      # The tool is a binary this job downloads, so it is held here by
+      # its release and the digest that release records, and its build
+      # provenance is checked before it runs.
+      LOCK_TOOL_VERSION: v0.4.1
+      LOCK_TOOL_SHA256: 39deb2fe714dbf74b073d8245fc7f3d50cd0eee18d5c0900e9e849ae933ae17e
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install gh-actions-lock, checked by digest and provenance
+        run: |
+          # Before 2.102.0, gh matched --signer-workflow against only the
+          # start of the signer (GHSA-wjmr-j3rp-mh2g).
+          have=$(gh --version | sed -n 's/^gh version \([0-9.]*\).*/\1/p')
+          if [ "$(printf '%s\n' 2.102.0 "$have" | sort -V | head -n 1)" != 2.102.0 ]; then
+            echo "::error::gh ${have:-of unknown version} is older than 2.102.0, so the provenance check cannot run"
+            exit 1
+          fi
+          dir="$RUNNER_TEMP/gh-actions-lock"
+          mkdir -p "$dir"
+          gh release download "$LOCK_TOOL_VERSION" -R github/gh-actions-lock -p linux-amd64 -O "$dir/gh-actions-lock"
+          echo "$LOCK_TOOL_SHA256  $dir/gh-actions-lock" | sha256sum -c -
+          signer=$(gh attestation verify "$dir/gh-actions-lock" \
+            --repo github/gh-actions-lock \
+            --signer-workflow github/gh-actions-lock/.github/workflows/release.yml \
+            --source-ref "refs/tags/$LOCK_TOOL_VERSION" \
+            --deny-self-hosted-runners \
+            --format json --jq '.[].verificationResult.signature.certificate.buildSignerURI' | sort -u)
+          want="https://github.com/github/gh-actions-lock/.github/workflows/release.yml@refs/tags/$LOCK_TOOL_VERSION"
+          if [ "$signer" != "$want" ]; then
+            echo "::error::gh-actions-lock's provenance names '$signer', not '$want'"
+            exit 1
+          fi
+          chmod +x "$dir/gh-actions-lock"
+          cd "$dir" && gh extension install .
+      # Passes on the tool's answer, not on its exit status alone.
+      - name: Verify the lockfile records every workflow, at commits that still resolve
+        run: |
+          status=0
+          gh actions-lock --verify --json=valid,findings > "$RUNNER_TEMP/lock.json" || status=$?
+          cat "$RUNNER_TEMP/lock.json"
+          if [ "$status" -ne 0 ] || [ "$(jq -r .valid "$RUNNER_TEMP/lock.json")" != true ]; then
+            echo "::error::the lockfile does not verify (exit $status): run gh actions-lock and commit what it writes"
+            exit 1
+          fi
 
   format:
     name: Formatting
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup
+      - uses: $/.github/actions/setup
       - run: npm run format
 
   test:
@@ -146,10 +201,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup
+      - uses: $/.github/actions/setup
       - run: npm test
 
   build:
@@ -157,10 +212,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup
+      - uses: $/.github/actions/setup
       - name: Validate build
         # `astro build` prerenders every page and compiles the server
         # entry. No secrets are needed: the build reads no credentials,
@@ -173,10 +228,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup
+      - uses: $/.github/actions/setup
       - run: npm run build
       - name: Page budgets, inline code, titles and unused images
         # The same script as `npm run check:bundles`, so it fails locally
@@ -190,10 +245,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup
+      - uses: $/.github/actions/setup
       - run: npm run build
       - name: The forms work without JavaScript
         # The built server on a scratch database, posted to the way a
@@ -207,10 +262,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup
+      - uses: $/.github/actions/setup
       - name: The release artifact runs
         # The tarball a release would publish, built from this
         # commit, unpacked, checked against its manifest and booted from
@@ -231,10 +286,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - uses: ./.github/actions/setup
+      - uses: $/.github/actions/setup
       - name: The dev server boots
         # Every other job tests the BUILT output. Nothing tested the
         # thing developers actually run, which is how `ssr.noExternal:

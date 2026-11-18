@@ -90,8 +90,9 @@ hook runs all of it for you; `pre-commit` keeps to the fast checks
 
 `.github/workflows/ci.yml` runs each of those checks as its own job, on
 every PR and every push to main, and as the gate of every release, plus
-a Node-major pin check, a run of the release artifact itself, and a
-dev-server boot. Each job is a required check of its own, so a red one
+a Node-major pin check, a run of the release artifact itself, a
+dev-server boot, and a check that `.github/workflows/actions.lock` records
+every workflow. Each job is a required check of its own, so a red one
 names what failed. actionlint, which `npm run lint` runs over the
 workflows, is a devDependency, so every clone has it. The shellcheck it
 uses on `run:` blocks is found on your PATH: locally that pass is skipped
