@@ -459,10 +459,10 @@ if (sharedZlib) {
     "  warning: this Node links a system zlib, so the archive will not match nodejs.org's build",
   );
 }
-fs.writeFileSync(tarball, tarGz(outDir, name, Number(epoch)));
+const archive = tarGz(outDir, name, Number(epoch));
+fs.writeFileSync(tarball, archive);
 
-const size = fs.statSync(tarball).size;
 console.log(`\n  ${tarball}`);
-console.log(`  ${(size / 1024 / 1024).toFixed(1)} MB`);
-console.log(`  sha256 ${createHash("sha256").update(fs.readFileSync(tarball)).digest("hex")}`);
+console.log(`  ${(archive.length / 1024 / 1024).toFixed(1)} MB`);
+console.log(`  sha256 ${createHash("sha256").update(archive).digest("hex")}`);
 console.log(`  entrypoint: dist/server/entry.mjs`);

@@ -84,22 +84,41 @@ export function tar(parent: string, name: string, mtime: number): Buffer {
     if (data.length > 0) out.push(padded(data));
   };
 
-  const walk = (member: string) => {
-    const full = path.join(parent, ...member.split("/"));
-    const st = fs.lstatSync(full);
-    if (st.isDirectory()) {
-      entry(`${member}/`, 0o755, "5", Buffer.alloc(0));
-      for (const child of fs.readdirSync(full).sort(byBytes)) walk(`${member}/${child}`);
-    } else if (st.isFile()) {
-      entry(member, st.mode & 0o111 ? 0o755 : 0o644, "0", fs.readFileSync(full));
-    } else {
-      // A link would be archived as itself, and the manifest does not
-      // follow one, so nothing would check where it points.
-      throw new Error(`${member} is neither a file nor a directory, and the archive takes neither`);
+  // A link would be archived as itself, and the manifest does not follow
+  // one, so nothing would check where it points.
+  const refused = (member: string) =>
+    new Error(`${member} is neither a file nor a directory, and the archive takes neither`);
+
+  // Opened once, without following a link, and the type, mode and bytes
+  // all taken from that descriptor, so what is archived is what was
+  // checked: a file swapped for a link after the directory was read is
+  // refused, not read through.
+  const file = (member: string, full: string) => {
+    const fd = fs.openSync(full, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
+    try {
+      const st = fs.fstatSync(fd);
+      if (!st.isFile()) throw refused(member);
+      entry(member, st.mode & 0o111 ? 0o755 : 0o644, "0", fs.readFileSync(fd));
+    } finally {
+      fs.closeSync(fd);
     }
   };
 
-  walk(name);
+  const directory = (member: string, full: string) => {
+    entry(`${member}/`, 0o755, "5", Buffer.alloc(0));
+    const children = fs
+      .readdirSync(full, { withFileTypes: true })
+      .sort((a, b) => byBytes(a.name, b.name));
+    for (const child of children) {
+      const childMember = `${member}/${child.name}`;
+      const childFull = path.join(full, child.name);
+      if (child.isDirectory()) directory(childMember, childFull);
+      else if (child.isFile()) file(childMember, childFull);
+      else throw refused(childMember);
+    }
+  };
+
+  directory(name, path.join(parent, name));
   out.push(Buffer.alloc(2 * BLOCK)); // end of archive
   const body = Buffer.concat(out);
   const rest = body.length % RECORD;
