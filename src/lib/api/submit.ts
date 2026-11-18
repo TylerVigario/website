@@ -11,7 +11,6 @@ import { NOTIFY_CAP, NOTIFY_WINDOW_HOURS } from "@/lib/email/cap";
 import { BODY_LIMIT_BYTES } from "@/lib/forms/limits";
 import { QuoteRequest } from "@/lib/api/quote";
 import { POTS_AUDIT_MARKER, PotsAuditRequest } from "@/lib/api/pots-audit";
-import { isTrapped } from "@/lib/api/honeypot";
 import { checkStamp, SERVED_FIELD, type Refusal } from "@/lib/api/fill-time";
 import { listed, type Listing } from "@/lib/api/spam-list";
 import {
@@ -28,7 +27,7 @@ import {
  * re-renders with the errors — nothing typed ever travels in a URL, where
  * it would land in browser history and access logs and could outgrow a
  * request line. Both routes call these functions, so they cannot disagree
- * about what is trapped, what is valid or what is stored.
+ * about what is valid, what is too soon or what is stored.
  */
 
 export type Values = Record<string, string | string[]>;
@@ -42,8 +41,6 @@ export interface Sender {
 
 export type Outcome =
   | { kind: "saved" }
-  /** Caught by the honeypot. Answered exactly like "saved", never stored. */
-  | { kind: "dropped" }
   | { kind: "invalid"; values: Values; errors: Record<string, string>; failure: SafeParseFailure }
   /** Refused by its form's stamp (fill-time.ts): sent sooner after its
    *  form was served than a person fills one in, or with a stamp that is
@@ -176,28 +173,17 @@ async function hold(id: number) {
   }
 }
 
-/** Before validation and before the database: a trapped submission is
- *  answered like a real one, because an error teaches a bot what to
- *  change and a distinct success teaches it that it got through. The log
- *  line says which form and nothing about what was in it, so the trap's
- *  catch rate can be read from the journal without keeping the spam. */
-function trapped(label: string, body: unknown): boolean {
-  if (!isTrapped(body)) return false;
-  console.log(`[honeypot] dropped a ${label} submission`);
-  return true;
-}
-
 /** A submission its stamp refused. The log line says which form and
  *  why, and nothing about what was in it, so the stamp's catch rate can
- *  be read from the journal like the honeypot's. */
+ *  be read from the journal without keeping the spam. */
 function refused(label: string, reason: Refusal, why: string, body: unknown): Outcome {
   console.log(`[fill-time] refused a ${label} submission sent ${why}`);
   return { kind: "refused", reason, values: echo(body) };
 }
 
-/** After validation, unlike the honeypot: a person who was quick and also
- *  missed a field hears about the field first, and fixing it takes the
- *  seconds the floor asks for. Returns the refusal, or null. */
+/** After validation: a person who was quick and also missed a field
+ *  hears about the field first, and fixing it takes the seconds the
+ *  floor asks for. Returns the refusal, or null. */
 function refusedByStamp(label: string, body: unknown): Outcome | null {
   const sent = body && typeof body === "object" ? (body as Values)[SERVED_FIELD] : undefined;
   const check = checkStamp(sent, formKey());
@@ -211,7 +197,7 @@ function refusedByStamp(label: string, body: unknown): Outcome | null {
  *  marks the notification, so a lookup can never cost the row. The log
  *  line says which row and what matched, and nothing that was sent, so
  *  the lists' catch rate can be read from the journal like the
- *  honeypot's. */
+ *  stamp's. */
 function flagged(id: number, contact: string, sender: Sender): Listing[] {
   const found = listed(contact, sender.ip);
   if (found.length) console.log(`[spam-list] submission #${id} matched ${found.join(" and ")}`);
@@ -220,7 +206,6 @@ function flagged(id: number, contact: string, sender: Sender): Listing[] {
 
 export async function submitQuote(body: unknown, sender: Sender = {}): Promise<Outcome> {
   if (body instanceof Unreadable) return { kind: "unreadable", status: body.status };
-  if (trapped("quote", body)) return { kind: "dropped" };
   const parsed = QuoteRequest.safeParse(body);
   if (!parsed.success) return invalid(body, parsed);
   const refusal = refusedByStamp("quote", body);
@@ -247,7 +232,6 @@ export async function submitQuote(body: unknown, sender: Sender = {}): Promise<O
 
 export async function submitPotsAudit(body: unknown, sender: Sender = {}): Promise<Outcome> {
   if (body instanceof Unreadable) return { kind: "unreadable", status: body.status };
-  if (trapped("POTS audit", body)) return { kind: "dropped" };
   const parsed = PotsAuditRequest.safeParse(body);
   if (!parsed.success) return invalid(body, parsed);
   const refusal = refusedByStamp("POTS audit", body);

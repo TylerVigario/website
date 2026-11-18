@@ -257,11 +257,6 @@ await check(
   (res, text) => status(res, 413) || contains(text, "more than this form can take"),
 );
 await check(
-  "a submission caught by the honeypot is answered like a real one",
-  () => post("/contact", { ...QUOTE, name: "check-forms trapped", website: "http://spam.example" }),
-  (res) => redirectTo(res, 303, "/contact?sent=1"),
-);
-await check(
   "/contact stamps its form with the time it was served",
   () => fetch(`${BASE}/contact`),
   (res, text) =>

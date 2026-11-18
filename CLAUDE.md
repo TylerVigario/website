@@ -391,7 +391,7 @@ src/
 │   │   ├── enhance.ts                # progressive enhancement; never erases input
 │   │   ├── rules.ts                  # client rules mirroring the schemas
 │   │   └── limits.ts                 # field lengths, shared by the schemas and the client rules
-│   ├── api/                          # submit.ts (the one submission path), error.ts (RFC 9457), the schemas, honeypot.ts,
+│   ├── api/                          # submit.ts (the one submission path), error.ts (RFC 9457), the schemas,
 │   │                                 #   one-line.ts (a single-line field's control characters, made a space),
 │   │                                 #   fill-time.ts + form-stamp.ts (the signed form stamp), spam-list.ts,
 │   │                                 #   image-endpoint.ts (/_image: a 404, since the server makes no images)
@@ -450,11 +450,11 @@ fail.
 ## Route handler pattern
 
 One submission path, two ways in. [`submit.ts`](src/lib/api/submit.ts)
-does the work once: honeypot before validation, the zod schema, the
-form's stamp, the insert, and the best-effort email, which says when
-the sender is on the host's spam lists. The API route
+does the work once: the zod schema, the form's stamp, the insert, and
+the best-effort email, which says when the sender is on the host's spam
+lists. The API route
 and the page both call it, so they cannot disagree about what is
-trapped, valid, too soon or stored. A form sent within seconds of being
+valid, too soon or stored. A form sent within seconds of being
 served is refused rather than dropped, because a person can be that
 fast. The stamp is signed with a key the database holds, so it cannot
 be backdated or made up. It is not spent and does not expire, so a page
@@ -478,7 +478,6 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   if (outcome.kind === "unreadable") return outcome.status === 413 ? contentTooLarge() : badRequest();
   if (outcome.kind === "invalid") return zodError(outcome.failure); // 422, RFC 9457
   if (outcome.kind === "refused") return stampRefused(outcome.reason); // too soon or stale
-  // "dropped" by the honeypot answers the same.
   return new Response(JSON.stringify({ success: true }), {
     status: 200,
     headers: { "Content-Type": "application/json" },

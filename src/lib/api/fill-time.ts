@@ -4,7 +4,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * How long a form was open before it was sent, as the server itself
  * recorded it.
  *
- * The spam that gets past the honeypot comes from scripts that load the
+ * The spam that reaches these forms comes from scripts that load the
  * page and post the form straight back. Of the 22 that reached a form
  * between 15 and 29 October 2026, 18 posted within two seconds of loading
  * it, and so did both ads that were stored. No person enters a name and a
@@ -12,11 +12,10 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * carries a stamp of when the server rendered it, and a submission sent
  * less than MIN_FILL_MS after that is refused.
  *
- * Refused, not dropped the way the honeypot drops what it catches. A
- * person can be that fast too: a draft restored on reload, or autofill,
- * and then Send. A silent drop would tell them it went through and throw
- * it away. The refusal says what happened, keeps everything they entered,
- * and sending again a moment later goes through.
+ * Refused, not dropped. A person can be that fast too: a draft restored
+ * on reload, or autofill, and then Send. A silent drop would tell them it
+ * went through and throw it away. The refusal says what happened, keeps
+ * everything they entered, and sending again a moment later goes through.
  *
  * The stamp is the time and a signature over it, made with a key only the
  * server holds (src/lib/db.ts). A client can read it and can change it,
