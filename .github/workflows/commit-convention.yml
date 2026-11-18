@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           # Shallow is fine — commitlint only reads the piped string,
           # not git history.
@@ -54,7 +54,7 @@ jobs:
           persist-credentials: false
       # Node from .nvmrc, the npm cache and `npm ci --ignore-scripts`, as
       # every other job has them.
-      - uses: ./.github/actions/setup
+      - uses: $/.github/actions/setup
       - name: Run commitlint on PR title
         env:
           TITLE: ${{ github.event.pull_request.title }}
@@ -68,13 +68,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           # The whole history: the range below asks what landed, and a
           # depth of 1 cannot answer that for a push of several commits.
           fetch-depth: 0
           persist-credentials: false
-      - uses: ./.github/actions/setup
+      - uses: $/.github/actions/setup
       - name: Lint every commit that landed
         env:
           BEFORE: ${{ github.event.before }}

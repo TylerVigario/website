@@ -56,8 +56,9 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 done
 
 # Everything above validates the ref name. What follows validates the
-# tree with the checks CI runs, all but the dev server and the release
-# artifact, so a failure is found here rather than there. Bypass with
+# tree with the checks CI runs, all but the dev server, the release
+# artifact and the lockfile's check upstream, so a failure is found here
+# rather than there. Bypass with
 # --no-verify when you are pushing a known-broken WIP branch.
 #
 # The cheap ones first, so a mismatched Node pin, an unreviewed install
@@ -65,6 +66,15 @@ done
 node --run check:pins
 node --run check:install-scripts
 node --run lint:actions
+# Every workflow and the actions it uses are in the lockfile. Offline, so
+# this checks coverage only; CI's Actions lockfile job also checks each
+# pin against upstream, which needs the network.
+if gh actions-lock --version >/dev/null 2>&1; then
+  lock=$(gh actions-lock --verify-local --json=valid,findings) || { printf '%s\n' "$lock" >&2; exit 1; }
+  printf '%s' "$lock" | grep -Eq '"valid": *true' || { printf '%s\n' "$lock" >&2; exit 1; }
+else
+  echo "pre-push: SKIPPED the lockfile check: gh-actions-lock is not installed (gh extension install github/gh-actions-lock). CI runs it." >&2
+fi
 # Types and tests run at every commit as well, but a commit can reach a
 # push without that hook: one made with --no-verify, or rewritten by a
 # rebase, which runs no commit hook. They run again here, as CI will.

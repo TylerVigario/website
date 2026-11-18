@@ -3,10 +3,8 @@ description: >-
   Install Node (version pinned by .nvmrc), cache npm, and run
   `npm ci`. The reusable block every job that runs npm scripts needs.
 
-  Caller is responsible for `actions/checkout` BEFORE invoking this
-  composite — local-path action references (`uses: ./.github/...`)
-  require the action.yml to already be on disk, so checkout has to
-  land first.
+  Caller runs `actions/checkout` BEFORE invoking this composite: the
+  cache key and `npm ci` read the repository's package files.
 
   Node-pin verification lives in its own job (ci.yml's "Node pins
   agree") — a repo-state check (.nvmrc vs package.json#engines.node),
@@ -15,7 +13,7 @@ description: >-
 runs:
   using: composite
   steps:
-    - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+    - uses: actions/setup-node@v7.1.0
       with:
         # .nvmrc IS the pin. Reading it here means the composite needs
         # no node-version input — that would just be another place to
@@ -40,7 +38,7 @@ runs:
         HASH=$(jq -S '{dependencies,devDependencies,optionalDependencies,peerDependencies}' package.json | sha256sum | cut -c1-16)
         echo "key=npm-${{ runner.os }}-${HASH}" >> "$GITHUB_OUTPUT"
 
-    - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+    - uses: actions/cache@v6.1.0
       with:
         path: ~/.npm
         key: ${{ steps.cache-key.outputs.key }}
