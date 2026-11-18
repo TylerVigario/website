@@ -105,8 +105,10 @@ same commits.
 
 ## Things that have bitten me / will bite me again
 
-- **Node major drift**. Bump `.nvmrc` and `engines.node` together — CI
-  reads `.nvmrc` directly, so there is no third pin to forget.
+- **Node version drift**. Bump `.nvmrc`, `engines.node` and
+  `.github/actions/node/node-linux-x64.sha256` together: CI installs
+  the version `.nvmrc` names and refuses it without its digest, and
+  `npm run check:pins` fails until all three agree.
 - **better-sqlite3 native binding**. Since v13 it is N-API-based, so
   the prebuilt binary ships with the package and survives a Node major
   bump — that stopped being a rebuild trigger. It still compiles from
