@@ -167,26 +167,20 @@ describe("an invalid submission", () => {
   });
 });
 
-describe("the honeypot", () => {
-  it("is checked before validation: a trapped body that is also invalid is dropped, not refused", async () => {
-    // An error would tell a bot which fields to fix.
-    expect(await submitQuote({ website: "http://spam.example" })).toEqual({ kind: "dropped" });
-    expect(await submitPotsAudit({ website: "http://spam.example" })).toEqual({ kind: "dropped" });
-  });
-
-  it("logs which form it caught, and nothing that was in it", async () => {
-    const log = vi.spyOn(console, "log").mockImplementation(() => {});
-    await submitPotsAudit({ ...AUDIT, website: "http://spam.example" });
-    expect(log).toHaveBeenCalledWith("[honeypot] dropped a POTS audit submission");
-    expect(JSON.stringify(log.mock.calls)).not.toMatch(/Acme|Dana|spam\.example/);
-  });
-
-  it("stores and sends nothing, however valid the rest is", async () => {
-    expect(await submitQuote({ ...QUOTE, website: "x" })).toEqual({ kind: "dropped" });
-    expect(await submitPotsAudit({ ...AUDIT, website: "x" })).toEqual({ kind: "dropped" });
-    expect(insertSubmission).not.toHaveBeenCalled();
-    expect(sendQuoteNotification).not.toHaveBeenCalled();
-    expect(sendPotsAuditNotification).not.toHaveBeenCalled();
+describe("a field the form no longer has", () => {
+  it("is ignored, so a page served before a release still sends", async () => {
+    // A page left open across a release posts what it was served with:
+    // the hidden `website` field, until 2026-11. Nobody can see that field
+    // to empty it, so refusing on it would lose the lead.
+    expect(await submitQuote({ ...QUOTE, ...stamp(4000), website: "x" })).toEqual({
+      kind: "saved",
+    });
+    expect(await submitPotsAudit({ ...AUDIT, ...stamp(4000), website: "" })).toEqual({
+      kind: "saved",
+    });
+    for (const [row] of vi.mocked(insertSubmission).mock.calls) {
+      expect(row).not.toHaveProperty("website");
+    }
   });
 });
 
@@ -217,12 +211,6 @@ describe("a form sent within seconds of being served", () => {
     const body = { ...QUOTE, name: "", ...stamp(0) };
     const out = await submitQuote(body);
     expect(out.kind === "invalid" && out.values[SERVED_FIELD]).toBe(body[SERVED_FIELD]);
-  });
-
-  it("is still dropped without a word when it also filled the honeypot", async () => {
-    expect(await submitQuote({ ...QUOTE, ...stamp(0), website: "x" })).toEqual({
-      kind: "dropped",
-    });
   });
 
   it("logs which form and how soon, and nothing that was in it", async () => {

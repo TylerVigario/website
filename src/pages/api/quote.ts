@@ -32,7 +32,6 @@ export const POST: APIRoute = async ({ request, clientAddress }) => {
   }
   if (outcome.kind === "invalid") return zodError(outcome.failure);
   if (outcome.kind === "refused") return stampRefused(outcome.reason);
-  // "dropped" answers exactly as "saved" does: see submit.ts.
   return new Response(JSON.stringify({ success: true }), {
     status: 200,
     headers: { "Content-Type": "application/json" },

@@ -1,7 +1,6 @@
 ---
 import { services as serviceCatalog } from "@/lib/services";
 import { servedStamp } from "@/lib/api/form-stamp";
-import Honeypot from "@/components/form/Honeypot.astro";
 import RootError from "@/components/form/RootError.astro";
 import DetailsField from "@/components/form/DetailsField.astro";
 import SubmitRow from "@/components/form/SubmitRow.astro";
@@ -31,7 +30,6 @@ const picked = Array.isArray(values.services) ? values.services : [];
   ) : (
     <>
     <form method="post" action="/contact" novalidate data-quote-form class="group">
-      <Honeypot id="quote-website" />
       {/* When the server rendered this form, so a submission can be told
           from one posted straight back by a script. A re-render after a
           failed send keeps the stamp it was sent with. See fill-time.ts. */}

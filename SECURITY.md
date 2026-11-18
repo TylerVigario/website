@@ -29,7 +29,7 @@ This is a public marketing site with two unauthenticated forms, each taking a PO
 
 The following are **not** security issues for the purposes of this policy:
 
-- Form spam within the limits: a submission a person could have sent. The honeypot and the fill-time check (`src/lib/api/fill-time.ts`) filter the crudest of it, and are not claimed to stop the rest.
+- Form spam within the limits: a submission a person could have sent. The fill-time check (`src/lib/api/fill-time.ts`) filters the crudest of it, and is not claimed to stop the rest.
 - UX confusion or copy/spec drift.
 - Self-XSS or attacks requiring control the attacker already has.
 - Findings in a deployment's reverse proxy / TLS config — those are the operator's, not this repository's.

@@ -5,8 +5,8 @@ import path from "node:path";
 /**
  * Known spam senders, looked up on this machine.
  *
- * What gets past the honeypot and the fill-time floor is advertising,
- * sent by services whose addresses are already on public spam lists. Of
+ * What gets past the fill-time floor is advertising, sent by services
+ * whose addresses are already on public spam lists. Of
  * the seven sources that posted to /contact between 25 and 30 October
  * 2026, StopForumSpam had six on record by IP. Of the three ads that were
  * stored, the lists it publishes name the contact email of two and the

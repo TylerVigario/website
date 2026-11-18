@@ -9,12 +9,11 @@ import {
 } from "@/lib/api/fill-time";
 
 /**
- * Like the honeypot, the stamp has to be rendered by the forms AND read
- * on the server, or it is nothing. Here: that a stamp verifies only as
- * this server issued it, and from MIN_FILL_MS old on, at any age. What a
- * refusal does to a submission, and that a stamp sent again saves again,
- * are proved in submit.test.ts, and all of it against the built server by
- * check-forms.
+ * The stamp has to be rendered by the forms AND read on the server, or it
+ * is nothing. Here: that a stamp verifies only as this server issued it,
+ * and from MIN_FILL_MS old on, at any age. What a refusal does to a
+ * submission, and that a stamp sent again saves again, are proved in
+ * submit.test.ts, and all of it against the built server by check-forms.
  */
 const KEY = Buffer.alloc(32, 7);
 const OTHER_KEY = Buffer.alloc(32, 8);
