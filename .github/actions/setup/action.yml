@@ -1,22 +1,29 @@
 name: Setup CI environment
 description: >-
-  Install Node (the version .nvmrc names, checked by digest), cache npm,
-  and run `npm ci`. The reusable block every job that runs npm scripts
-  needs.
+  Install Node (the exact version .nvmrc names), cache npm, and run
+  `npm ci`. The reusable block every job that runs npm scripts needs.
 
   Caller runs `actions/checkout` BEFORE invoking this composite: the
   cache key and `npm ci` read the repository's package files.
 
   Node-pin verification lives in its own job (ci.yml's "Node pins
-  agree") — a repo-state check (.nvmrc, package.json#engines.node and
-  the node action's digest file), so running it once is enough.
+  agree") — a repo-state check (.nvmrc vs package.json#engines.node),
+  so running it once is enough.
 
 runs:
   using: composite
   steps:
-    # .nvmrc IS the pin, read inside the action, so this composite takes
-    # no node-version input to drift from the file.
-    - uses: $/.github/actions/node
+    - uses: actions/setup-node@v7.1.0
+      with:
+        # .nvmrc IS the pin. Reading it here means the composite needs
+        # no node-version input — that would just be another place to
+        # drift from the file.
+        node-version-file: .nvmrc
+        # setup-node caches on its own whenever package.json names npm in
+        # packageManager, keyed on the lockfile — the key the step below
+        # exists to avoid. Two caches of one directory, one of them
+        # rotating every release.
+        package-manager-cache: false
 
     - name: Compute npm cache key
       # Hash package.json's dep fields ONLY, not the full lockfile.
