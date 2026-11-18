@@ -90,7 +90,7 @@ hook runs all of it for you; `pre-commit` keeps to the fast checks
 
 `.github/workflows/ci.yml` runs each of those checks as its own job, on
 every PR and every push to main, and as the gate of every release, plus
-a Node-major pin check, a run of the release artifact itself, a
+a Node pin check, a run of the release artifact itself, a
 dev-server boot, and a check that `.github/workflows/actions.lock` records
 every workflow. Each job is a required check of its own, so a red one
 names what failed. actionlint, which `npm run lint` runs over the
@@ -105,10 +105,9 @@ same commits.
 
 ## Things that have bitten me / will bite me again
 
-- **Node version drift**. Bump `.nvmrc`, `engines.node` and
-  `.github/actions/node/node-linux-x64.sha256` together: CI installs
-  the version `.nvmrc` names and refuses it without its digest, and
-  `npm run check:pins` fails until all three agree.
+- **Node version drift**. Bump `.nvmrc` and `engines.node` together:
+  CI installs the exact version `.nvmrc` names, and
+  `npm run check:pins` fails until the two agree.
 - **better-sqlite3 native binding**. Since v13 it is N-API-based, so
   the prebuilt binary ships with the package and survives a Node major
   bump — that stopped being a rebuild trigger. It still compiles from

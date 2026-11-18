@@ -1,22 +1,26 @@
 /**
- * Asserts the three Node pins name the same Node.
+ * Asserts the two Node pins name the same Node, and that `.nvmrc` names
+ * one exactly.
  *
- * `.nvmrc` is the exact version CI installs (the node action reads it),
- * `package.json#engines.node` is the major npm checks at install time,
- * and warns on (engine-strict is not set), and
- * `.github/actions/node/node-linux-x64.sha256` is the digest of the one
- * archive CI accepts for that version. Nothing derives one from another,
- * so they drift silently: a bump to `.nvmrc` alone leaves engines
- * claiming a major that is no longer used, or leaves CI refusing every
- * job for want of a digest.
+ * `.nvmrc` is the exact version CI installs (setup-node reads it through
+ * `node-version-file`), and `package.json#engines.node` is the major npm
+ * checks at install time, and warns on (engine-strict is not set).
+ * Nothing derives one from the other, so they drift silently: a bump to
+ * one leaves the other claiming a major that is no longer used, and the
+ * failure shows up as an install warning nobody reads or a CI job running
+ * a different runtime than the developer did.
+ *
+ * Exact, because setup-node takes the first match it finds in the
+ * runner's tool cache: given "24", a job runs whichever 24.x the runner
+ * image carries that week, so the Node a release was built on would
+ * change with no commit changing. Named exactly, the version is fixed by
+ * the commit, and the release's RELEASE file records the one that ran.
  *
  * This lived as inline bash in the gate, which meant the check existed
  * only after a push. It is a script so the pre-push hook and the gate
- * can run the identical comparison rather than two transcriptions of it.
+ * run the identical comparison.
  */
 import fs from "node:fs";
-
-const DIGEST_FILE = ".github/actions/node/node-linux-x64.sha256";
 
 const fail = (message: string): never => {
   console.error(`error: ${message}`);
@@ -25,7 +29,7 @@ const fail = (message: string): never => {
 
 const nvmrc = fs.readFileSync(".nvmrc", "utf8").trim();
 if (!/^\d+\.\d+\.\d+$/.test(nvmrc)) {
-  fail(`.nvmrc names "${nvmrc}", not an exact version; the digest is for one archive`);
+  fail(`.nvmrc names "${nvmrc}", not an exact version, so CI would run whatever matches it`);
 }
 
 const pkg = JSON.parse(fs.readFileSync("package.json", "utf8")) as { engines?: { node?: string } };
@@ -35,15 +39,6 @@ if (engines !== major) {
   fail(
     `Node major mismatch: .nvmrc=${nvmrc}, engines.node=${pkg.engines?.node}. Bump both together.`,
   );
-}
-
-const digest = fs.readFileSync(DIGEST_FILE, "utf8");
-const line = /^[0-9a-f]{64} {2}node-v(\d+\.\d+\.\d+)-linux-x64\.tar\.xz\n?$/.exec(digest);
-if (!line) {
-  fail(`${DIGEST_FILE} is not one line copied from Node's SHASUMS256.txt for linux-x64.tar.xz`);
-}
-if (line?.[1] !== nvmrc) {
-  fail(`${DIGEST_FILE} is for Node ${line?.[1]}, but .nvmrc names ${nvmrc}. Bump them together.`);
 }
 
 console.log(`  node pins agree: ${nvmrc}`);
