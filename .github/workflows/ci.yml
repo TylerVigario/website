@@ -137,41 +137,14 @@ jobs:
     timeout-minutes: 10
     env:
       GH_TOKEN: ${{ github.token }}
-      # The tool is a binary this job downloads, so it is held here by
-      # its release and the digest that release records, and its build
-      # provenance is checked before it runs.
-      LOCK_TOOL_VERSION: v0.4.1
-      LOCK_TOOL_SHA256: 39deb2fe714dbf74b073d8245fc7f3d50cd0eee18d5c0900e9e849ae933ae17e
     steps:
       - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
-      - name: Install gh-actions-lock, checked by digest and provenance
-        run: |
-          # Before 2.102.0, gh matched --signer-workflow against only the
-          # start of the signer (GHSA-wjmr-j3rp-mh2g).
-          have=$(gh --version | sed -n 's/^gh version \([0-9.]*\).*/\1/p')
-          if [ "$(printf '%s\n' 2.102.0 "$have" | sort -V | head -n 1)" != 2.102.0 ]; then
-            echo "::error::gh ${have:-of unknown version} is older than 2.102.0, so the provenance check cannot run"
-            exit 1
-          fi
-          dir="$RUNNER_TEMP/gh-actions-lock"
-          mkdir -p "$dir"
-          gh release download "$LOCK_TOOL_VERSION" -R github/gh-actions-lock -p linux-amd64 -O "$dir/gh-actions-lock"
-          echo "$LOCK_TOOL_SHA256  $dir/gh-actions-lock" | sha256sum -c -
-          signer=$(gh attestation verify "$dir/gh-actions-lock" \
-            --repo github/gh-actions-lock \
-            --signer-workflow github/gh-actions-lock/.github/workflows/release.yml \
-            --source-ref "refs/tags/$LOCK_TOOL_VERSION" \
-            --deny-self-hosted-runners \
-            --format json --jq '.[].verificationResult.signature.certificate.buildSignerURI' | sort -u)
-          want="https://github.com/github/gh-actions-lock/.github/workflows/release.yml@refs/tags/$LOCK_TOOL_VERSION"
-          if [ "$signer" != "$want" ]; then
-            echo "::error::gh-actions-lock's provenance names '$signer', not '$want'"
-            exit 1
-          fi
-          chmod +x "$dir/gh-actions-lock"
-          cd "$dir" && gh extension install .
+      # Held at its release. v0.4.1 is an immutable release, so the
+      # version fixes the binary: GitHub refuses to replace its assets.
+      - name: Install gh-actions-lock
+        run: gh extension install github/gh-actions-lock --pin v0.4.1
       # Passes on the tool's answer, not on its exit status alone.
       - name: Verify the lockfile records every workflow, at commits that still resolve
         run: |
