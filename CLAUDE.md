@@ -105,7 +105,8 @@ entries copied from the repo's that `npm ci` installed from (node-addon-api's
 among them: the lockfile records the install, before the compile-only
 files were removed), `CHANGELOG.md`,
 `LICENSE` and `LICENSE-NOTICE.md`, `RELEASE` (the version, the commit the
-source came from, and the platform and Node that built it), and `MANIFEST.sha256` — a sha256 of every other file in the tree. It runs
+source came from, the platform and Node that built it, and whether the
+tree held uncommitted changes, which a release refuses), and `MANIFEST.sha256` — a sha256 of every other file in the tree. It runs
 on `node dist/server/entry.mjs` with `SQLITE_PATH` set, needs no
 toolchain and no network, and is about 18 MB, most of it image variants.
 
