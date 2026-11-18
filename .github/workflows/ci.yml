@@ -50,15 +50,11 @@ jobs:
           persist-credentials: false
       # The Node the pins name, which is what runs the script: Node strips
       # its types, and the runner image's own Node may not.
-      - uses: actions/setup-node@v7.1.0
-        with:
-          node-version-file: .nvmrc
-          package-manager-cache: false
-      - name: Verify Node major pins agree
-        # .nvmrc and package.json#engines.node must declare the same
-        # Node major. CI reads .nvmrc directly (node-version-file, in the
-        # setup composite and in commit-convention.yml), so there's no
-        # separate workflow pin.
+      - uses: $/.github/actions/node
+      - name: Verify the Node pins agree
+        # .nvmrc names the exact version CI installs, engines.node its
+        # major, and the node action's digest file the one archive CI
+        # accepts; all three must name the same Node.
         #
         # It is a script rather than inline bash so the pre-push hook runs
         # the identical comparison. Inline, the check existed only on the
