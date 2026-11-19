@@ -1,6 +1,7 @@
 import * as z from "zod/mini";
 import { MAX, tooLong } from "@/lib/forms/limits";
 import { oneLine } from "@/lib/api/one-line";
+import { atOurDomain, OUR_DOMAIN_MESSAGE } from "@/lib/forms/our-domain";
 import { services as catalog } from "@/lib/services";
 
 // The quote form's shape, enforced wherever a quote is submitted
@@ -18,14 +19,13 @@ export const QuoteRequest = z.object({
       z.minLength(1, "Please enter your name."),
       z.maxLength(MAX.name, tooLong(MAX.name)),
     ),
-  contact: z
-    .string()
-    .check(
-      oneLine,
-      z.trim(),
-      z.minLength(1, "Please enter a phone number or email."),
-      z.maxLength(MAX.contact, tooLong(MAX.contact)),
-    ),
+  contact: z.string().check(
+    oneLine,
+    z.trim(),
+    z.minLength(1, "Please enter a phone number or email."),
+    z.maxLength(MAX.contact, tooLong(MAX.contact)),
+    z.refine((v) => !atOurDomain(v), OUR_DOMAIN_MESSAGE),
+  ),
   // Only the catalog's titles, which is all the form's checkboxes can
   // send. Anything else is a request the form did not make, and one of
   // them was POTS_AUDIT_MARKER: a quote could store the audit's marker

@@ -32,6 +32,7 @@
  */
 
 import { MAX, toOneLine, tooLong } from "@/lib/forms/limits";
+import { atOurDomain, OUR_DOMAIN_MESSAGE } from "@/lib/forms/our-domain";
 
 export type FieldValue = string | string[];
 export type Rule = (value: FieldValue) => string | null;
@@ -51,6 +52,13 @@ const upTo = (max: number): Rule => {
   return (value) => (typeof value === "string" && value.trim().length > max ? tooLong(max) : null);
 };
 
+// Filled and within its limit, then not an address at the site's own
+// domain (our-domain.ts): the order the schema checks them in, so a long
+// address of ours gets the same message from both.
+const contact: Rule = (value) =>
+  filled("Please enter a phone number or email.", MAX.contact)(value) ??
+  (typeof value === "string" && atOurDomain(toOneLine(value)) ? OUR_DOMAIN_MESSAGE : null);
+
 const chosen = (message: string): Rule => {
   return (value) => (Array.isArray(value) && value.length > 0 ? null : message);
 };
@@ -59,7 +67,7 @@ const chosen = (message: string): Rule => {
  *  read identically to a user; the test proves they stay that way. */
 export const quoteRules: Rules = {
   name: filled("Please enter your name.", MAX.name),
-  contact: filled("Please enter a phone number or email.", MAX.contact),
+  contact,
   services: chosen("Pick at least one service."),
   details: upTo(MAX.details),
 };
@@ -68,7 +76,7 @@ export const quoteRules: Rules = {
 export const potsAuditRules: Rules = {
   business: filled("Please enter the business name.", MAX.business),
   name: filled("Please enter your name.", MAX.name),
-  contact: filled("Please enter a phone number or email.", MAX.contact),
+  contact,
   bill: filled("Pick a range.", Infinity),
   details: upTo(MAX.details),
 };

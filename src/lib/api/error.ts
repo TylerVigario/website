@@ -35,7 +35,7 @@ interface FieldError {
  * Details response at runtime. The server constructs it — annotating the
  * body below is what makes a drift a compile error — and the client
  * reads it by hand, deliberately, to keep zod out of a browser bundle
- * that is otherwise about 5.1 KB. A schema whose only use is being
+ * that is otherwise about 5.4 KB. A schema whose only use is being
  * `z.infer`'d is a runtime object earning nothing.
  */
 export interface ProblemDetails {

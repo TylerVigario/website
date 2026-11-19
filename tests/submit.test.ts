@@ -5,6 +5,8 @@ import path from "node:path";
 import { BODY_LIMIT_BYTES, MAX, tooLong } from "@/lib/forms/limits";
 import { issueStamp, SERVED_FIELD } from "@/lib/api/fill-time";
 import { NOTIFY_CAP, NOTIFY_WINDOW_HOURS } from "@/lib/email/cap";
+import { OUR_DOMAIN_MESSAGE } from "@/lib/forms/our-domain";
+import { SITE } from "@/lib/site";
 import type { insertSubmission as InsertSubmission } from "@/lib/db";
 
 /**
@@ -164,6 +166,35 @@ describe("an invalid submission", () => {
   it("that is not an object at all still comes back as a validation failure", async () => {
     const out = await submitQuote(null);
     expect(out.kind === "invalid" && out.values).toEqual({});
+  });
+});
+
+describe("a contact address at the site's own domain", () => {
+  const ours = new URL(SITE).hostname;
+
+  it("is refused beside the field, stores and sends nothing, and hands back what was typed", async () => {
+    const quote = await submitQuote({ ...QUOTE, contact: `les@${ours}` });
+    expect(quote.kind === "invalid" && quote.errors).toEqual({ contact: OUR_DOMAIN_MESSAGE });
+    expect(quote.kind === "invalid" && quote.values.contact).toBe(`les@${ours}`);
+    const audit = await submitPotsAudit({ ...AUDIT, contact: `Juliann@${ours.toUpperCase()}` });
+    expect(audit.kind === "invalid" && audit.errors).toEqual({ contact: OUR_DOMAIN_MESSAGE });
+    expect(insertSubmission).not.toHaveBeenCalled();
+    expect(sendQuoteNotification).not.toHaveBeenCalled();
+    expect(sendPotsAuditNotification).not.toHaveBeenCalled();
+  });
+
+  it("is refused at a subdomain, and wherever it sits in what was typed", async () => {
+    for (const contact of [`les@mail.${ours}`, `559 555 0100 or les@${ours}.`]) {
+      const out = await submitQuote({ ...QUOTE, contact });
+      expect(out.kind === "invalid" && out.errors).toEqual({ contact: OUR_DOMAIN_MESSAGE });
+    }
+  });
+
+  it("is not confused with a domain that only resembles it", async () => {
+    for (const contact of [`les@not${ours}`, `les@${ours}x`, `les@${ours}.example`]) {
+      expect(await submitQuote({ ...QUOTE, contact })).toEqual({ kind: "saved" });
+    }
+    expect(insertSubmission).toHaveBeenCalledTimes(3);
   });
 });
 

@@ -27,7 +27,7 @@ which a test holds to the same verdicts and messages as the schemas.
 
 No UI framework. A plain page ships about 500 B of JavaScript (the
 scroll reveal), a case study with screenshots about 5.2 KB, image viewer
-included, and the two input pages about 5.6 KB, form script included,
+included, and the two input pages about 5.9 KB, form script included,
 all as files rather than inline. `npm run check:bundles` budgets every
 prerendered page, following imports, so a page that outgrows its budget
 fails the build. Logs go to stdout and errors to stderr, for whatever

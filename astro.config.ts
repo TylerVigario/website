@@ -6,6 +6,7 @@ import tailwindcss from "@tailwindcss/vite";
 import browserslist from "browserslist";
 import { RUNTIME_EXTERNALS } from "./runtime-externals.ts";
 import { BODY_LIMIT_BYTES } from "./src/lib/forms/limits.ts";
+import { SITE } from "./src/lib/site.ts";
 
 // Hybrid, not static and not server. `output: "static"` with an adapter
 // present means every page prerenders to HTML at build time unless it
@@ -22,7 +23,6 @@ import { BODY_LIMIT_BYTES } from "./src/lib/forms/limits.ts";
 // shape back with extra steps: Node serving static bytes it has no
 // reason to touch, and one crashed process taking every static page
 // down with it. See "Serving contract" in CLAUDE.md.
-const SITE = "https://vigario.tech";
 
 // The browsers the site is built for are named once, as package.json's
 // browserslist: Baseline 2022. That is the oldest Baseline year in which

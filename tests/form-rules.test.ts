@@ -3,6 +3,7 @@ import { potsAuditRules, quoteRules, type FieldValue } from "@/lib/forms/rules";
 import { QuoteRequest } from "@/lib/api/quote";
 import { BILL_RANGES, PotsAuditRequest } from "@/lib/api/pots-audit";
 import { services as catalog } from "@/lib/services";
+import { SITE } from "@/lib/site";
 
 /** Paired HERE rather than in rules.ts: that module is imported by the
  *  browser, and importing a zod schema alongside the rules pulled zod
@@ -33,6 +34,8 @@ const RULE_SCHEMA_PAIRS = [
  *     same user-facing message
  */
 
+const OURS = new URL(SITE).hostname;
+
 /** Only what a DOM form can actually produce: strings and arrays of
  *  strings. Never undefined — a text input with nothing in it yields
  *  "", and an unticked checkbox group yields []. Testing `undefined`
@@ -56,6 +59,17 @@ const SAMPLES: FieldValue[] = [
   "\t\t",
   "x".repeat(50) + "\t".repeat(60) + "x".repeat(49),
   "x".repeat(50) + "\t".repeat(60) + "x".repeat(50),
+  // An address at the site's own domain, which the contact field refuses
+  // (our-domain.ts), and ones that only resemble it, which it takes.
+  `les@${OURS}`,
+  `Les@${OURS.toUpperCase()}`,
+  `les@mail.${OURS}`,
+  `email les@${OURS}.`,
+  `les@${OURS}.example`,
+  `les@not${OURS}`,
+  `les@${OURS}x`,
+  // Over the limit and ours: both sides name the limit first.
+  "x".repeat(250) + `@${OURS}`,
 ];
 /** Choice fields can only send what they offer — the checkbox group its
  *  catalog titles, the select its ranges or its empty placeholder — so
