@@ -1,6 +1,7 @@
 import * as z from "zod/mini";
 import { MAX, tooLong } from "@/lib/forms/limits";
 import { oneLine } from "@/lib/api/one-line";
+import { atOurDomain, OUR_DOMAIN_MESSAGE } from "@/lib/forms/our-domain";
 
 /** What the bill select offers, and so all the schema accepts. Exported
  *  for PotsAuditForm, which renders the options from it. */
@@ -28,14 +29,13 @@ export const PotsAuditRequest = z.object({
       z.minLength(1, "Please enter your name."),
       z.maxLength(MAX.name, tooLong(MAX.name)),
     ),
-  contact: z
-    .string()
-    .check(
-      oneLine,
-      z.trim(),
-      z.minLength(1, "Please enter a phone number or email."),
-      z.maxLength(MAX.contact, tooLong(MAX.contact)),
-    ),
+  contact: z.string().check(
+    oneLine,
+    z.trim(),
+    z.minLength(1, "Please enter a phone number or email."),
+    z.maxLength(MAX.contact, tooLong(MAX.contact)),
+    z.refine((v) => !atOurDomain(v), OUR_DOMAIN_MESSAGE),
+  ),
   bill: z.enum(BILL_RANGES, "Pick a range."),
   details: z.optional(z.string().check(z.trim(), z.maxLength(MAX.details, tooLong(MAX.details)))),
 });

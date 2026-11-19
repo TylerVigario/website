@@ -396,7 +396,8 @@ src/
 │   ├── forms/
 │   │   ├── enhance.ts                # progressive enhancement; never erases input
 │   │   ├── rules.ts                  # client rules mirroring the schemas
-│   │   └── limits.ts                 # field lengths, shared by the schemas and the client rules
+│   │   ├── limits.ts                 # field lengths, shared by the schemas and the client rules
+│   │   └── our-domain.ts             # an address at the site's own domain, which the contact field refuses
 │   ├── api/                          # submit.ts (the one submission path), error.ts (RFC 9457), the schemas,
 │   │                                 #   one-line.ts (a single-line field's control characters, made a space),
 │   │                                 #   fill-time.ts + form-stamp.ts (the signed form stamp), spam-list.ts,
@@ -450,7 +451,7 @@ fail.
 - Errors render as sibling nodes next to the field. The form is never re-rendered, so the DOM the user is typing into is never replaced underneath them.
 - On `!res.ok` the response is parsed as Problem Details and each `errors[]` entry is matched to its field by name. Unmatched or top-level failures render in a form-level `role="alert"`.
 - Client rules live in [`rules.ts`](src/lib/forms/rules.ts), hand-written and deliberately more permissive than the schema, so the browser never rejects something the server would have accepted. [`tests/form-rules.test.ts`](tests/form-rules.test.ts) proves the two agree in both directions, including field-set equality — it already caught two fields missing from the POTS rules.
-- Validation is structural, not stylistic: a field that accepts one shape says so and checks it, and a field that accepts anything does not pretend otherwise. `contact` asks for a phone or an email, "whichever you'd rather we use", and means it, so it has a length limit and no format. A constraint is stated on the field before it can be failed. And a single-line field keeps to one line: each run of control characters in a name, business or contact is stored and emailed as one space (`src/lib/api/one-line.ts`), while the form is echoed back as it was sent.
+- Validation is structural, not stylistic: a field that accepts one shape says so and checks it, and a field that accepts anything does not pretend otherwise. `contact` asks for a phone or an email, "whichever you'd rather we use", and means it, so it has a length limit and no format. It refuses one thing, an address at the site's own domain (`src/lib/forms/our-domain.ts`): that is never the visitor's, ad senders give one, and no spam list will name it. A constraint is stated on the field before it can be failed. And a single-line field keeps to one line: each run of control characters in a name, business or contact is stored and emailed as one space (`src/lib/api/one-line.ts`), while the form is echoed back as it was sent.
 - a11y baseline: `aria-required`, `aria-invalid` toggled dynamically, `aria-describedby` linking input → error node. Chip groups are `<fieldset><legend>` around native checkboxes sharing one `name`, so the browser aggregates them into an array with no script involved.
 
 ## Route handler pattern
