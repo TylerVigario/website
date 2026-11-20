@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.23.0](https://github.com/TylerVigario/website/compare/v1.22.0...v1.23.0) (2026-11-20)
+
+### Features
+
+* **forms:** Refuse a contact address at the site's own domain
+
+### Bug Fixes
+
+* Remove the honeypot, which caught no spam and could drop a lead unseen
+
+### Build & Packaging
+
+* Build and test on Node 24.22.1, the version production runs
+* Write the release archive in Node, so .nvmrc names the toolchain
+
 ## [1.22.0](https://github.com/TylerVigario/website/compare/v1.21.1...v1.22.0) (2026-11-17)
 
 ### Features
