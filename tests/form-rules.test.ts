@@ -86,7 +86,7 @@ function schemaMessageFor(
   schema: { safeParse: (v: unknown) => { success: boolean; error?: { issues: unknown[] } } },
   base: Record<string, FieldValue>,
   field: string,
-  value: FieldValue,
+  value: unknown,
 ): string | null {
   const result = schema.safeParse({ ...base, [field]: value });
   if (result.success) return null;
@@ -95,13 +95,17 @@ function schemaMessageFor(
   return hit ? hit.message : null;
 }
 
-describe.each(RULE_SCHEMA_PAIRS)("$name rules match the schema", ({ rules, schema }) => {
-  const fields = Object.keys(rules);
-
-  // A valid baseline so that changing one field is the only thing under
-  // test — otherwise every case fails on unrelated missing fields.
+/** A valid submission, so that changing one field is the only thing
+ *  under test — otherwise every case fails on unrelated missing fields. */
+function baseline(fields: string[]): Record<string, FieldValue> {
   const valid: Record<string, FieldValue> = {};
   for (const f of fields) valid[f] = CHOICES[f]?.baseline ?? "x";
+  return valid;
+}
+
+describe.each(RULE_SCHEMA_PAIRS)("$name rules match the schema", ({ rules, schema }) => {
+  const fields = Object.keys(rules);
+  const valid = baseline(fields);
 
   it("the baseline is actually valid, or every case below is meaningless", () => {
     expect(schema.safeParse(valid).success).toBe(true);
@@ -126,4 +130,37 @@ describe.each(RULE_SCHEMA_PAIRS)("$name rules match the schema", ({ rules, schem
       if (mine !== null) expect(mine).toBe(theirs);
     });
   }
+});
+
+/**
+ * What only a script sends: a field left out, or a value no form control
+ * produces. No rule in the browser ever sees one, so there is nothing to
+ * agree with. What holds instead is that the schema answers in its own
+ * words. A message zod supplies comes from whichever locale the server's
+ * bundle happens to load, which depends on what else is bundled: English
+ * while Astro's own code brings in the rest of zod, "Invalid input" when
+ * it does not. A required field answers as the browser does when empty.
+ */
+const NOT_FROM_A_FORM: unknown[] = [undefined, null, 0, true, {}];
+const NOT_TEXT = "Please write the details as text.";
+const NOT_AN_OBJECT = "That submission could not be read. Please send it again.";
+
+describe.each(RULE_SCHEMA_PAIRS)("$name schema answers what no form sends", ({ rules, schema }) => {
+  const valid = baseline(Object.keys(rules));
+
+  for (const [field, rule] of Object.entries(rules)) {
+    const empty: FieldValue = Array.isArray(CHOICES[field]?.baseline) ? [] : "";
+    // Also a list where one value belongs, and one value where a list does.
+    const values = [...NOT_FROM_A_FORM, Array.isArray(empty) ? "x" : ["x"]];
+    it.each(values.map((v) => [v]))(`${field} answers %j in its own words`, (value) => {
+      // A field that may be empty may be left out, and takes nothing else.
+      const expected = rule(empty) ?? (value === undefined ? null : NOT_TEXT);
+      expect(schemaMessageFor(schema, valid, field, value)).toBe(expected);
+    });
+  }
+
+  it.each([[null], [[]], ["x"], [0]])("a body of %j is answered in its own words", (body) => {
+    const result = schema.safeParse(body);
+    expect(result.error?.issues.map((i) => i.message)).toEqual([NOT_AN_OBJECT]);
+  });
 });
