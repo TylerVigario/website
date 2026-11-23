@@ -93,7 +93,7 @@
     "baseline 2022 with downstream"
   ],
   "allowScripts": {
-    "better-sqlite3@13.0.3": true,
-    "fsevents": false
+    "fsevents": false,
+    "better-sqlite3@13.2.0": true
   }
 }
