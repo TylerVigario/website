@@ -165,9 +165,10 @@ export default defineConfig({
       // anyone else's, so the client's file would say exactly that, from
       // a site that serves the Geist font files to every visitor.
       //
-      // Not the default name. That is .vite/license.md, and the build
-      // deletes .vite/ from each output directory once it has read the
-      // manifests there, so the file was written and then removed.
+      // Not the default name, .vite/license.md: a notice owed to whoever
+      // receives the code goes where they will see it, beside entry.mjs,
+      // rather than in a hidden folder. (Until 7.4.11 Astro also deleted
+      // that folder once it had read its manifest, file and all.)
       {
         name: "vigario:third-party-licences",
         configEnvironment(name) {
