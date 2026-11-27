@@ -32,11 +32,17 @@ runs:
       # would rotate every release and accumulate one stale cache per
       # run. ~/.npm holds tarballs and metadata, nothing tied to a Node
       # version, so the key names none.
+      #
+      # The OS comes from the runner's own RUNNER_OS, which holds what
+      # runner.os does. An expression in a script is spliced into its
+      # text before it runs, which is how outside text gets executed, so
+      # no script here carries one, even one that could hold nothing
+      # outside.
       id: cache-key
       shell: bash
       run: |
         HASH=$(jq -S '{dependencies,devDependencies,optionalDependencies,peerDependencies}' package.json | sha256sum | cut -c1-16)
-        echo "key=npm-${{ runner.os }}-${HASH}" >> "$GITHUB_OUTPUT"
+        echo "key=npm-${RUNNER_OS}-${HASH}" >> "$GITHUB_OUTPUT"
 
     - uses: actions/cache@v6.1.0
       with:
